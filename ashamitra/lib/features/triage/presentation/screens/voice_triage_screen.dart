@@ -181,7 +181,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     await _stt.listen(
       localeId: 'bn_IN',
       listenFor: const Duration(seconds: 60),
-      pauseFor: const Duration(seconds: 4),
+      pauseFor: const Duration(seconds: 7), // Gap 6: rural workers speak slowly
       listenOptions: opts,
       onResult: _onSpeechResult,
       onSoundLevelChange: (level) {
@@ -196,7 +196,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       _sttFallback.listen(
         localeId: 'hi_IN',
         listenFor: const Duration(seconds: 60),
-        pauseFor: const Duration(seconds: 4),
+        pauseFor: const Duration(seconds: 7),
         listenOptions: opts,
         onResult: _onSpeechResult,
       );
@@ -222,29 +222,27 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   // ── Core: process any input through conversational AI ─────────
   Future<void> _processInput(String input) async {
     if (input.trim().isEmpty || _isProcessing) return;
+    // Gap 5: detect uncertainty before processing
+    final uncertain = _isUncertain(input);
     setState(() {
       _isProcessing = true;
       _transcript = input;
       _orbState = OrbState.processing;
       _statusText = 'বিশ্লেষণ করছি...';
     });
-
-    // Add ASHA's turn to history
     _history.add(ConversationTurn(role: 'asha', text: input));
     _turnCount++;
-
     final online = await _hasInternet();
     _isOffline = !online;
-
     if (_isOffline) {
-      await _processOffline(input);
+      await _processOffline(input, uncertain: uncertain);
     } else {
-      await _processOnline(input);
+      await _processOnline(input, uncertain: uncertain);
     }
   }
 
   // ── Online: true Gemini conversation ──────────────────────────
-  Future<void> _processOnline(String input) async {
+  Future<void> _processOnline(String input, {bool uncertain = false}) async {
     try {
       final response = await _conversationService.respond(
         caseType: _caseType,
@@ -256,9 +254,12 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
 
       if (!mounted) return;
 
-      // Merge extracted answers
-      _extractedAnswers.addAll(response.extractedAnswers);
-      // Local deterministic risk overrides Gemini's hint for high/emergency
+      // Gap 5: if uncertain, only accept false (no danger) extractions
+      final toMerge = uncertain
+          ? Map.fromEntries(
+              response.extractedAnswers.entries.where((e) => e.value == false))
+          : response.extractedAnswers;
+      _extractedAnswers.addAll(toMerge);
       final localRisk = _computeLocalRiskLevel();
       final geminiRisk = response.riskLevel;
       const riskOrder = ['low', 'medium', 'high', 'emergency'];
@@ -290,20 +291,25 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       }
     } catch (_) {
       if (!mounted) return;
-      await _processOffline(input);
+      await _processOffline(input, uncertain: uncertain);
     }
   }
 
   // ── Offline: CLUP + OfflineBrain dialogue ─────────────────────
-  Future<void> _processOffline(String input) async {
+  Future<void> _processOffline(String input, {bool uncertain = false}) async {
     if (!mounted) return;
 
-    // Extract any symptoms from what was said
     final extraction = _situationExtractor.extract(
       situation: input,
       moduleId: _moduleId,
     );
-    _extractedAnswers.addAll(extraction.preAnswers);
+    // Gap 5: uncertain input — only accept false (no danger) extractions
+    if (uncertain) {
+      _extractedAnswers.addAll(Map.fromEntries(
+          extraction.preAnswers.entries.where((e) => e.value == false)));
+    } else {
+      _extractedAnswers.addAll(extraction.preAnswers);
+    }
 
     // Update risk level deterministically after every extraction
     _riskLevel = _computeLocalRiskLevel();
@@ -508,21 +514,36 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     return 'low';
   }
 
-  // ── Submit to rule engine ─────────────────────────────────────
+  // ── Submit to rule engine — Gap 4 Fix ────────────────────────
   void _submitAnswers() {
-    // Build qaList from history for the result screen
-    final qaList = _history
-        .where((t) => t.role == 'asha')
-        .map((t) => '${t.text}|||${t.text}')
-        .join(';;');
-
+    // Build proper Q&A pairs: assistant question → ASHA answer
+    final qaPairs = <String>[];
+    for (int i = 0; i < _history.length - 1; i++) {
+      if (_history[i].role == 'assistant' && _history[i + 1].role == 'asha') {
+        qaPairs.add('${_history[i].text}|||${_history[i + 1].text}');
+      }
+    }
     final args = <String, dynamic>{
       '_caseType': _caseType,
       '_situation': _history.isNotEmpty ? _history.first.text : '',
-      '_qaList': qaList,
+      '_qaList': qaPairs.join(';;'),
       ..._extractedAnswers,
     };
     Get.toNamed(AppRoutes.triageResult, arguments: args);
+  }
+
+  // ── Gap 5: uncertainty detection ─────────────────────────────
+  static const _uncertaintyWords = [
+    'মনে হয়', 'মনে হচ্ছে', 'হয়তো', 'নিশ্চিত না', 'জানি না',
+    'মনে হইতেছে', 'মনে হয় গো', 'হয়তো গো', 'নিশ্চিত না গো',
+    'একটু', 'হালকা', 'কিছুটা', 'মাঝে মাঝে',
+    'maybe', 'not sure', 'shayad', 'pata nahi', 'lagta hai',
+    'thoda', 'halka', 'kabhi kabhi',
+  ];
+
+  bool _isUncertain(String text) {
+    final lower = text.toLowerCase();
+    return _uncertaintyWords.any((w) => lower.contains(w));
   }
 
   // ── Risk color ────────────────────────────────────────────────
