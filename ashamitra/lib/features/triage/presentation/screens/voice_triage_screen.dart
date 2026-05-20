@@ -258,7 +258,13 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
 
       // Merge extracted answers
       _extractedAnswers.addAll(response.extractedAnswers);
-      _riskLevel = response.riskLevel;
+      // Local deterministic risk overrides Gemini's hint for high/emergency
+      final localRisk = _computeLocalRiskLevel();
+      final geminiRisk = response.riskLevel;
+      const riskOrder = ['low', 'medium', 'high', 'emergency'];
+      _riskLevel = riskOrder.indexOf(localRisk) >= riskOrder.indexOf(geminiRisk)
+          ? localRisk
+          : geminiRisk;
       _lastAssistantText = response.spokenResponse;
 
       // Add assistant turn to history
@@ -299,7 +305,34 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     );
     _extractedAnswers.addAll(extraction.preAnswers);
 
-    // Check for emergency via CLUP
+    // Update risk level deterministically after every extraction
+    _riskLevel = _computeLocalRiskLevel();
+
+    // Auto-finish on emergency risk (2+ RED danger signs confirmed)
+    if (_riskLevel == 'emergency') {
+      final confirmedSigns = _extractedAnswers.entries
+          .where((e) => e.value == true)
+          .length;
+      final emergencyText =
+          'সতর্কতা! $confirmedSignsটি গুরুত্বর বিপদচিহ্ন পাওয়া গেছে। এখনই ১০৮ কল করুন এবং রোগীকে FRU-তে রেফার করুন।';
+      _history.add(
+          ConversationTurn(role: 'assistant', text: emergencyText));
+      setState(() {
+        _isProcessing = false;
+        _lastAssistantText = emergencyText;
+        _orbState = OrbState.idle;
+        _statusText = 'মাইক ট্যাপ করুন কথা বলতে';
+        _transcript = '';
+      });
+      await _tts.speak(emergencyText);
+      if (mounted) {
+        await Future.delayed(const Duration(milliseconds: 800));
+        _submitAnswers();
+      }
+      return;
+    }
+
+    // Check for emergency via CLUP (keyword-based, catches things extractor misses)
     final decision = _clup.process(input: input, moduleId: _moduleId);
     if (decision.isEmergency) {
       const emergencyText =
@@ -364,7 +397,8 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     String responseText;
 
     if (remaining.isEmpty || confirmedYes.length >= 3 || _turnCount >= 8) {
-      // Enough info — finish
+      // Ensure risk level is current before finishing
+      _riskLevel = _computeLocalRiskLevel();
       final summary = confirmedYes.isEmpty
           ? 'ধন্যবাদ। কোনো গুরুতর বিপদচিহ্ন পাওয়া যায়নি।'
           : 'ধন্যবাদ। ${confirmedYes.length}টি বিপদচিহ্ন পাওয়া গেছে। ফলাফল দেখাচ্ছি।';
@@ -428,6 +462,50 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       return 'ঠিক আছে।';
     }
     return 'বুঝেছি।';
+  }
+
+  // ── Deterministic local risk level ─────────────────────────
+  // Runs after every turn using extracted answers + engine rule weights.
+  // This is the ground truth — Gemini's risk_level is only used as a hint.
+  String _computeLocalRiskLevel() {
+    final yes = _extractedAnswers.entries
+        .where((e) => e.value == true)
+        .map((e) => e.key)
+        .toSet();
+
+    if (yes.isEmpty) return 'low';
+
+    // Hard-stop RED question IDs per module (from engine JSON)
+    const redIds = {
+      // Pregnancy
+      'p1', 'p3', 'p4', 'p6',
+      // Postpartum
+      'pp1',
+      // Newborn — ALL are RED
+      'n1', 'n2', 'n3', 'n4', 'n5', 'n6',
+      // Child
+      'c1', 'c5',
+      // Emergency — ALL are RED
+      'e1', 'e2', 'e3', 'e4',
+    };
+
+    // YELLOW question IDs
+    const yellowIds = {
+      'p2', 'p5',
+      'pp2', 'pp3', 'pp4', 'pp5', 'pp6',
+      'c2', 'c3', 'c4', 'c6',
+      'im1', 'im2', 'im4', 'im5',
+    };
+
+    // Any confirmed RED = emergency if 2+, else high
+    final redCount = yes.where((id) => redIds.contains(id)).length;
+    final yellowCount = yes.where((id) => yellowIds.contains(id)).length;
+
+    if (redCount >= 2) return 'emergency';
+    if (redCount == 1) return 'high';
+    if (yellowCount >= 2) return 'medium';
+    if (yellowCount == 1) return 'medium';
+    return 'low';
   }
 
   // ── Submit to rule engine ─────────────────────────────────────
