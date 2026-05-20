@@ -1,0 +1,23 @@
+Design a complete IMNCI-based newborn (0–28 days) clinical decision support engine.
+
+Use HBNC + IMNCI guidelines.
+
+REQUIREMENTS:
+
+1. Extract all newborn danger signs
+2. Convert symptoms into structured JSON mapping (include Bengali + English variants)
+3. Build full decision tree (question → answer → next step)
+4. Create classification system:
+   - Green (Safe)
+   - Yellow (Refer)
+   - Red (Emergency)
+
+5. Define emergency hard-stop rules:
+   - If detected, stop all further questions
+
+6. Provide full JSON schema for implementation in a mobile app
+
+IMPORTANT:
+- Must be ASHA worker friendly
+- Must work in offline environment
+- Must be deterministic (no AI hallucination)

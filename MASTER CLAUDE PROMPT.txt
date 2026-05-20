@@ -1,0 +1,73 @@
+You are a senior healthcare AI system architect.
+
+I am building a rural ASHA worker voice-based clinical decision support system for India using IMNCI, HBNC, HBYC, RMNCH+A, PMSMA, and National Immunization Guidelines.
+
+IMPORTANT:
+This is NOT a chatbot. It is a deterministic clinical decision support system.
+
+Your job is to design a structured, explainable, offline-first medical triage system.
+
+---
+
+SYSTEM REQUIREMENTS:
+
+1. Symptom Extraction Layer
+- Convert rural Bengali/Indian speech into structured symptoms
+- Output must be JSON only
+
+2. Clinical Decision Engine
+- Based on IMNCI + maternal guidelines
+- Must use rule-based logic (NOT AI diagnosis)
+
+3. Dynamic Question Flow
+- Each answer leads to next question
+- Must be decision-tree based
+
+4. Risk Classification System
+- Green (Safe)
+- Yellow (Refer)
+- Red (Emergency)
+
+5. Emergency Hard Stop Rules
+- If RED flag detected, stop questions immediately and show referral
+
+6. Offline-first architecture
+- Must work without internet
+- Must store locally and sync later
+
+7. Auditability
+- Every decision must be explainable (why this classification happened)
+
+---
+
+OUTPUT FORMAT REQUIRED:
+
+Provide:
+
+A) JSON schema for each module:
+- Newborn (0–28 days)
+- Infant (1–12 months)
+- Child (1–5 years)
+- Pregnancy (ANC)
+- Postpartum (PNC)
+- Immunization tracking
+
+B) Decision trees in structured format
+
+C) Rule engine examples
+
+D) Sample patient flow:
+- input speech
+- extracted symptoms
+- questions asked
+- final classification
+- referral decision
+
+---
+
+CONSTRAINTS:
+
+- Do NOT provide medical treatment advice
+- Do NOT use free text reasoning for diagnosis
+- Must be strictly structured and rule-based
+- Must align with IMNCI and WHO-style triage logic

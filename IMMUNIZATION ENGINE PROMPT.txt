@@ -1,0 +1,31 @@
+Design a full immunization tracking system for India (UIP schedule).
+
+REQUIREMENTS:
+
+1. Convert vaccine schedule into structured JSON by age groups:
+   - Birth
+   - 6 weeks
+   - 10 weeks
+   - 14 weeks
+   - 9–12 months
+   - 16–24 months
+   - 5 years
+   - 10 years
+   - 16 years
+   - Pregnancy
+
+2. Build:
+   - Due vaccine detection logic
+   - Missed vaccine detection logic
+   - Catch-up vaccination logic
+
+3. Create reminder system design
+
+4. Include ASHA voice assistant flow
+
+5. Must support offline-first architecture
+
+OUTPUT:
+- JSON schema
+- logic rules
+- sample flow

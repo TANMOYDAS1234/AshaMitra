@@ -1,0 +1,171 @@
+Based on reading every file in the codebase, here is the complete test list covering every situation and unknown situation the app can encounter.
+
+AshaМітра — Complete Test List
+BLOCK 1 — Case Detection (SelectCaseScreen)
+#	Input	Expected
+1.1	Say "গর্ভবতী মায়ের মাথা ব্যথা হচ্ছে"	Detects pregnancy, confidence ≥ 80%, goes to CaseConfirmScreen
+1.2	Say "নবজাতক শিশু দুধ খাচ্ছে না"	Detects newborn, confidence ≥ 80%
+1.3	Say "শিশুর জ্বর পাঁচ দিন ধরে"	Detects child, confidence ≥ 80%
+1.4	Say "প্রসবের পর রক্তপাত হচ্ছে"	Detects postpartum, confidence ≥ 80%
+1.5	Say "টিকা মিস হয়েছে"	Detects immunization, confidence ≥ 80%
+1.6	Say "খিঁচুনি হচ্ছে"	Detects emergency, confidence ≥ 80%
+1.7	Say "আজকে বৃষ্টি হচ্ছে" (non-clinical)	confidence = 0.0, snackbar "বোঝা যায়নি", stays on SelectCaseScreen — does NOT navigate
+1.8	Say "হ্যাঁ" (single word, no clinical content)	confidence = 0.0, stays on SelectCaseScreen
+1.9	Say nothing, tap stop mic	No navigation, no crash
+1.10	Tap any case card manually	Goes directly to VoiceTriageScreen with correct caseId, no situation
+1.11	Confidence ≥ 95% auto-proceed countdown	3-second countdown fires, proceeds to VoiceTriageScreen
+1.12	Tap "পরিবর্তন করুন" on CaseConfirmScreen	Bottom sheet shows all cases, selecting one proceeds correctly
+BLOCK 2 — Situation Extraction & Pre-answering
+#	Situation spoken	Expected pre-answers
+2.1	"মাথা ব্যথা হচ্ছে" (pregnancy)	p1=true pre-filled, p1 question skipped in Q&A loop
+2.2	"পা ফুলেছে" (pregnancy)	p2=true pre-filled
+2.3	"রক্তপাত হচ্ছে" (pregnancy)	p3=true pre-filled
+2.4	"বাচ্চা নড়ছে না" (pregnancy)	p4=true pre-filled
+2.5	"দুধ খাচ্ছে না" (newborn)	n1=true pre-filled
+2.6	"জ্বর আছে" (newborn)	n2=true pre-filled
+2.7	"মাথা ব্যথা, পা ফুলেছে, রক্তপাত" (pregnancy)	p1, p2, p3 all pre-filled, those 3 questions skipped
+2.8	All 6 pregnancy symptoms described	All 6 pre-filled, _questions empty → goes directly to result screen, no crash
+2.9	Empty situation (tap "এড়িয়ে যান")	No pre-answers, all questions asked normally
+2.10	Pre-answered questions appear in Q&A summary on result screen	✅ qaList includes pre-answered items with correct হ্যাঁ/না
+BLOCK 3 — Voice Answer Matching (VoiceTriageScreen)
+#	Question shown	Voice input	Expected
+3.1	Any yes/no question	"হ্যাঁ"	Recorded as true, advances to next question
+3.2	Any yes/no question	"না"	Recorded as false, advances
+3.3	Any yes/no question	"জি হ্যাঁ"	Matches yes keyword, recorded as true
+3.4	Any yes/no question	"নাহ গো"	Matches no keyword, recorded as false
+3.5	Any yes/no question	"हाँ" (Hindi)	Matches yes keyword via fallback STT
+3.6	Any yes/no question	"yes" (English)	Matches yes keyword
+3.7	Any yes/no question	"আজকে রোদ আছে"	No match → snackbar "বোঝা যায়নি", question re-spoken, no advance
+3.8	Any yes/no question	Silence / empty	No match, no crash
+3.9	Any question	Tap হ্যাঁ button	Recorded as true, advances
+3.10	Any question	Tap না button	Recorded as false, advances
+3.11	Any question	Double-tap হ্যাঁ button rapidly	Only one answer recorded, no index corruption
+3.12	Last question answered	Any valid answer	Goes to TriageResultScreen
+BLOCK 4 — CLUP Pipeline (Clarification Loop)
+#	Scenario	Expected
+4.1	Say "স্বামীর জ্বর" (third-party)	Clarification asked: "আপনার নিজের কোনো শারীরিক সমস্যা হচ্ছে?" — shown in question card AND spoken
+4.2	Say "শরীর খারাপ" (vague)	Module-specific clarification asked, e.g. "মাথা ব্যথা, পা ফোলা, বা রক্তপাত হচ্ছে?"
+4.3	Say "বেতন বেড়েছে" (non-clinical)	Clarification asked: "আপনার কি কোনো শারীরিক সমস্যা হচ্ছে?"
+4.4	After clarification, say "হ্যাঁ মাথা ব্যথা"	Clarification loop exits, p1 pre-filled as true, engine question spoken — NOT the clarification again
+4.5	After clarification, say "না কোনো সমস্যা নেই"	Clarification loop exits, no pre-fill, engine question spoken
+4.6	After clarification, say "খিঁচুনি হচ্ছে" (emergency)	Emergency detected, yes answer recorded, proceeds
+4.7	Clarification question shown in card	Card text matches what TTS speaks — same Bengali text
+4.8	Say "আগে জ্বর ছিল" (historical)	Historical clarification: "এটা কি এখনও হচ্ছে, নাকি আগে হয়েছিল?"
+BLOCK 5 — Emergency Detection
+#	Input	Expected
+5.1	Say "খিঁচুনি হচ্ছে" during any question	Emergency detected, yes answer recorded for current question, proceeds to result
+5.2	Say "অজ্ঞান হয়ে গেছে"	Emergency detected
+5.3	Say "শ্বাস বন্ধ হয়ে গেছে"	Emergency detected
+5.4	Say "রক্ত থামছে না"	Emergency detected
+5.5	All questions pre-answered, late STT emergency fires	_questions.isEmpty guard triggers _submitAnswers(), no crash
+5.6	pregnancy module, answer p2=true (bleeding)	Safety cross-sweep fires EM-001, final band = RED regardless of other answers
+BLOCK 6 — Rule Engine Bands (RuleExecutor)
+#	Module	Answers	Expected band
+6.1	newborn	n1=true (poor feeding)	RED — NB-001 hard-stop
+6.2	newborn	n2=true (fever)	RED — NB-002 hard-stop
+6.3	newborn	n3=true (breathing)	RED — NB-003 hard-stop
+6.4	newborn	n2=true, n3=true	RED — NB-COMB-001 combination
+6.5	newborn	all false	GREEN
+6.6	child	c1=true (fever >5 days)	RED — CH-001 hard-stop
+6.7	child	c5=true (dehydration)	RED — CH-005 hard-stop
+6.8	child	c2=true (cough only)	YELLOW — CH-002
+6.9	child	c3=true (diarrhoea only)	YELLOW — CH-003
+6.10	child	all false	GREEN
+6.11	pregnancy	p1=true (headache/BP)	RED — ANC-001 hard-stop
+6.12	pregnancy	p3=true (bleeding)	RED — ANC-003 hard-stop
+6.13	pregnancy	p1=true, p2=true	RED — ANC-COMB-001
+6.14	pregnancy	p2=true only (swelling)	YELLOW — ANC-002
+6.15	pregnancy	p5=true only (missed ANC)	YELLOW — ANC-005
+6.16	pregnancy	all false	GREEN
+6.17	delivery_pnc	pp1=true (bleeding)	RED — PNC-001 hard-stop
+6.18	delivery_pnc	pp1=true, pp2=true	RED — PNC-COMB-001
+6.19	delivery_pnc	pp2=true only (fever)	YELLOW — PNC-002
+6.20	delivery_pnc	pp3=true (breast pain)	YELLOW — PNC-003
+6.21	delivery_pnc	all false	GREEN
+6.22	immunisation	im1="০-৬ মাস"	YELLOW — IMM-001
+6.23	immunisation	im4=true (ill now)	YELLOW — IMM-004
+6.24	immunisation	all no-match answers	GREEN
+6.25	emergency	e1=true	RED — EM-001
+6.26	emergency	e2=true	RED — EM-002
+6.27	emergency	all false	GREEN
+BLOCK 7 — Vital / Numeric Rules
+#	Module	Vital	Expected
+7.1	newborn	spo2=85	RED — NB-VITAL-001
+7.2	newborn	respiratory_rate=65	RED — NB-VITAL-002
+7.3	newborn	temperature_c=38.0	RED — NB-VITAL-003
+7.4	newborn	weight_kg=1.2	YELLOW — NB-VITAL-004
+7.5	child	muac_cm=11.0	RED — CH-VITAL-002 (SAM)
+7.6	child	muac_cm=12.0	YELLOW — CH-VITAL-003 (MAM)
+7.7	pregnancy	systolic_bp=145	RED — ANC-VITAL-001
+7.8	pregnancy	diastolic_bp=95	RED — ANC-VITAL-002
+7.9	pregnancy	haemoglobin=6.5	RED — ANC-VITAL-003
+7.10	pregnancy	haemoglobin=8.5	YELLOW — ANC-VITAL-004
+7.11	delivery_pnc	temperature_c=38.5	RED — PNC-VITAL-001
+7.12	delivery_pnc	haemoglobin=6.0	RED — PNC-VITAL-002
+BLOCK 8 — Safety Escalation Layer
+#	Scenario	Expected
+8.1	pregnancy answers all false, but e1=true in emergency cross-sweep	Final band = RED (SAFETY_B_001)
+8.2	RED hard-stop fired, adaptive risk tries to downgrade	Band stays RED — red_lock permanent
+8.3	GREEN band but danger signs present in ruleEngine	Escalated to YELLOW (SAFETY_E_001)
+8.4	RED band, referral string empty	Default referral "FRU / SNCU / DH immediately" applied (SAFETY_D_001)
+8.5	PNC-001 fires (sign_off_pending=true)	signOffPending badge shown on result screen
+BLOCK 9 — Contradiction Checker
+#	Module	Answers	Expected
+9.1	newborn	n6=true (cyanosis), n3=false (no breathing difficulty)	Blocking contradiction CONTRA_NB_002 → pipeline blocked, UNKNOWN band
+9.2	newborn	n5=true (lethargic), n1=false (feeding ok)	Non-blocking warning CONTRA_NB_001, pipeline continues
+9.3	pregnancy	p6=true (blurred vision), p1=false (no headache)	Non-blocking warning CONTRA_ANC_001
+9.4	Any	spo2=105	Blocking CONTRA_VIT_001 → pipeline blocked
+9.5	Any	diastolic_bp=100, systolic_bp=90	Blocking CONTRA_VIT_005 → pipeline blocked
+BLOCK 10 — Adaptive Risk Engine
+#	Scenario	Expected
+10.1	newborn, age=5 days, band=YELLOW	Escalated to RED (ADAPT_D_001 — first week)
+10.2	newborn, weight=1.8kg, band=GREEN	Escalated to YELLOW (ADAPT_D_002 — LBW)
+10.3	child, age=60 days, band=YELLOW	Escalated to RED (ADAPT_D_003 — infant <3 months)
+10.4	pregnancy, maternal age=16, band=GREEN	Escalated to YELLOW (ADAPT_D_004 — age <18)
+10.5	Any module, prior RED band in history, band=GREEN	Escalated to YELLOW (ADAPT_H_001)
+10.6	pregnancy, HRP flagged, band=GREEN	Escalated to YELLOW (ADAPT_H_002)
+10.7	pregnancy, 2 missed ANC, band=GREEN	Escalated to YELLOW (ADAPT_H_003)
+BLOCK 11 — Result Screen
+#	Scenario	Expected
+11.1	RED result	Red card, "জরুরি" button, "এখনই অ্যাম্বুলেন্স কল করুন" action
+11.2	YELLOW result	Yellow card, "রেফার" button, "২৪ ঘণ্টার মধ্যে PHC" action
+11.3	GREEN result	Green card, "ফলো-আপ সংরক্ষণ" button, "বাড়িতে যত্ন নিন" action
+11.4	Q&A summary shown	All questions including pre-answered ones appear with হ্যাঁ/না
+11.5	Decision trace expanded	All rule IDs shown, fired rule highlighted in correct band colour
+11.6	Tap "ফলো-আপ সংরক্ষণ"	Report saved, navigates to patient list
+11.7	Tap "জরুরি" on RED result	Navigates to EmergencyScreen
+11.8	Tap "হোমে ফিরুন"	Navigates to HomeScreen, clears stack
+11.9	pipelineBlocked=true (e.g. contradiction)	Shows GREEN with "ইনপুট যাচাই ব্যর্থ" action card, no crash
+11.10	signOffPending=true	Yellow warning badge "চূড়ান্ত অনুমোদনের অপেক্ষায়" shown
+BLOCK 12 — Offline Mode
+#	Scenario	Expected
+12.1	No internet, start triage	"🔴 Offline" badge shown, plain engine questions used (no Gemini)
+12.2	No internet, voice answer	STT uses on-device mode, answer still recorded correctly
+12.3	No internet, complete triage	Result screen shows correct band, report saved to SQLite
+12.4	Internet returns mid-session	No crash, session continues with offline questions already loaded
+BLOCK 13 — Unknown / Edge Situations
+#	Scenario	Expected
+13.1	Unknown caseType passed to VoiceTriageScreen	_toModuleId returns 'emergency', emergency questions asked
+13.2	Unknown moduleId passed to RuleExecutor	InputValidator blocks with INPUT_002, result screen shows UNKNOWN band, no crash
+13.3	asha_engine.json missing or corrupt	RuleExecutor.load() throws, app shows error, does not crash silently
+13.4	Gemini API returns malformed JSON	enrichQuestions catch block returns plain questions, triage continues
+13.5	Gemini API returns question IDs not in module	Validation strips unknown IDs, missing ones appended in default order
+13.6	Gemini API times out (>12s)	Fallback to plain engine questions, no crash
+13.7	STT returns empty string repeatedly	No match loop, no crash, question re-spoken each time
+13.8	STT returns very long transcript (500+ chars)	Keyword matching still works, no crash
+13.9	User taps back during question loading	_loadingQuestions=true spinner shown, back navigates cleanly
+13.10	User taps back during STT listening	STT stopped, TTS stopped, navigates back cleanly
+13.11	DynamicTriageScreen completes all questions	Synthetic dyn_0..n keys passed, engine returns GREEN, Q&A summary shown correctly
+13.12	All 6 newborn symptoms pre-answered from situation	_questions empty → _submitAnswers() called immediately, no crash, result shown
+13.13	Double-tap answer button	Only one answer recorded, _answer() looks up by ID not index, no corruption
+13.14	Cyanosis=true + no breathing difficulty (blocking contradiction)	Pipeline blocked, UNKNOWN band, action card shows error text
+13.15	SpO2 vital = 105 (impossible value)	CONTRA_VIT_001 blocks pipeline, UNKNOWN band shown
+13.16	Diastolic BP > Systolic BP	CONTRA_VIT_005 blocks pipeline
+13.17	newborn module, patient age = 35 days	AGE_MOD_004 error, pipeline blocked, suggests "child" module
+13.18	pregnancy module, patient sex = male	AGE_MOD_001 error, pipeline blocked
+13.19	Session with zero vitals provided	Vital check warns but does NOT block, adaptive risk escalates conservatively
+13.20	MDSR hook: RED result in delivery_pnc	MDSR entry written to SQLite mdsr_queue with correct boolean answers
+13.21	MDSR hook: RED result in newborn	MDSR entry written
+13.22	MDSR hook: RED result in pregnancy	NOT written (only delivery_pnc and newborn trigger MDSR)
+13.23	Report saved, app restarted, reports screen opened	Reports load correctly, all types sanitized (no type errors)
+13.24	Protocol hash mismatch on second load	HASH_001 error, pipeline blocked, no band emitted

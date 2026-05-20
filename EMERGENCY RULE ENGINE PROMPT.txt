@@ -1,0 +1,24 @@
+Design a medical emergency detection rule engine for maternal + child health.
+
+Use IMNCI + maternal guidelines.
+
+REQUIREMENTS:
+
+1. List all RED FLAG conditions:
+   - newborn
+   - child
+   - pregnancy
+   - postpartum
+
+2. Build hard-stop system:
+   - If RED detected → stop all questions immediately
+
+3. Create rule-based scoring system
+
+4. Ensure fast referral logic (no delay)
+
+5. Output must be JSON rule engine
+
+IMPORTANT:
+- Must prioritize life-saving over conversation
+- Must be deterministic and explainable

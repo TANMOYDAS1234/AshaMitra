@@ -1,0 +1,22 @@
+Design a pregnancy (ANC) risk assessment and triage engine.
+
+Use RMNCH+A + PMSMA + WHO maternal guidelines.
+
+REQUIREMENTS:
+
+1. List all high-risk pregnancy conditions
+2. Extract all maternal danger signs
+3. Build structured question flow system
+4. Create risk scoring system (0–10)
+5. Define classification:
+   - Green
+   - Yellow
+   - Red
+
+6. Add referral triggers for emergency cases
+7. Provide JSON schema for implementation
+
+CONSTRAINTS:
+- No diagnosis
+- Only risk detection + classification
+- Must be explainable and auditable

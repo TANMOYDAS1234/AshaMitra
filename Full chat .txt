@@ -1,0 +1,388 @@
+ami akta app banachi ASHA worker der jonno to oi khane asha worker der jonno akta ai voice assistent thatbe je tader guide korbe, to ami 7ta case korchi 
+1	pregnancy	🤰 গর্ভবতী মায়ের চেকআপ	Pregnant Mother Checkup	6
+2	postpartum	🤱 প্রসব-পরবর্তী চেকআপ	Postpartum Checkup	6
+3	newborn	👶 নবজাতক চেকআপ (০-২৮ দিন)	Newborn Checkup (0-28 days)	6
+4	infant	👶 শিশু চেকআপ (১-১২ মাস)	Infant Checkup (1-12 months)	6
+5	child	🧒 শিশু স্বাস্থ্য যাচাই (১-৫ বছর)	Child Health Check (1-5 years)	6
+6	immunization	💉 টিকা মিস / ইমিউনাইজেশন	Immunization Missed	4
+7	emergency	🚨 জরুরি অবস্থা যাচাই	Emergency Case 4
+
+to ami chai worker mic on kore akta setuation bolbe then amader app sei setuation are respect e kota questions korbe dynamically beacause sobar setuation same hobe na right? to joto khon na akta end result a aschi totokhon r ki amader app question korbe to ami STT r TTS ta korechi r end result er o akta stucture ready ache like 3te case hobe Safe (green) , Reffer (yellow), Emergency(red)m like that 
+
+to ki korle ami 100% accurate result pabo like puro advance way bolo r ami akta data sync er feature o add korbo like offline to online becasue sob somoy network nao thakte pare tar jonno karon at the end ei data gulo akta amader app er report section a store hobe then sei report ta goverment website e automatically upload hobe
+
+to amader app e 2 way ache 1st direct mic e click kore setuation bolo the automatically correct case detect hobe (jokhon woker bujhte parbe na) then oi realted question answer hobe dynamically, r 2nd worker nijei case select korbe then dynamic question anser hobe then besed on the conversation correct end result show hobe r sei data gulo store hobe r tar report ta report section a store hobe, o ha tar age akge pasent add korar o feature ache app e, to amder app jate auto matically case gulo detect kore report section a show kore 
+ami: asha worker der 100% correct, accurate, perfect guidence dawa
+sob advance tips and recommendation use kore amake final bolo amake ki ki korte hobe step by step jate accuracy high hoy r amader app mortality rate ta komate pare
+
+Step 1: Official Clinical Protocol সংগ্রহ করো ============================================= এটাই পুরো system-এর backbone। Use ONLY trusted sources: ------------------------- ### Maternal * ANC protocol * PNC protocol ### Child * IMNCI * HBNC ### Immunization * National Immunization Schedule ### Emergency * WHO danger signs
+
+ki kore korbo?
+
+National Health Mission (India)
+
+RMNCH+A+
+Go Back
+Title	Download
+Common orders	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.3 MB) 
+ 
+
+ 
+ADOLESCENT HEALTH (RKSK)
+ 
+ 
+Title	Download
+Letter to state on school health program under Ayushman Bharat	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (279 KB) 
+ 
+CHILD HEALTH
+ 
+ 
+Title	Download
+IMNCI 2011	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (592 KB)
+MTRG Letter IMNCI 2008	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.45 MB)
+D.O. Inj.Gentamicin	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (417 KB)
+DO - Pr. Secretaries & MDs .docx(reg. Newborn)	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (308 KB)
+DO letter AS&MD to States	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (369 KB)
+secy HFW letter p.2	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (422 KB)
+secy HFW letter p.1	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.00 MB)
+As md letter on MNCU	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.9 MB)
+Letter on KMC_MDs	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (387 KB)
+ASMD letter to States for HBYC Implemn_3rd May 2018	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (403 KB)
+Addendum	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (424 KB)
+ 
+MATERNAL HEALTH
+ 
+ 
+Title	Download
+Payment to beneficiaries and ASHA through account payee cheques	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.49 KB)
+Relaxation of Criteria in LPS States	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.35 KB)
+Hon'ble HFM letter to CM of all states	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (840 KB)
+Recording of beneficiaries phone no.	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (802 KB)
+Composite & uniform incentives to ASHAs under JSY	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (619 KB)
+Removal of conditionalities under JSY 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (945 KB)
+ 
+FAMILY PLANNING
+ 
+ 
+ 
+IMMUNIZATION
+ 
+ 
+ 
+ASPIRATIONAL DISTRICT PROGRAM
+
+ei rokom kichu asche r kota video ache konta bujhte parchi na
+
+IMNCI Participants Module
+
+SECTION 1
+ 1. Introduction 19
+ 
+SECTION 2
+ 2. Assess and classify the sick young infant 23
+  2.1 Assess young infant for possible serious bacterial infection/jaundice 24
+  2.2 Classify the young infant for possible serious bacterial infection/jaundice 28
+  2.3 Assess young infant for diarrhoea 34
+  2.4 Classify diarrhoea in young infant for dehydration 35
+  2.5 Check for feeding problems or low weight for age 38
+  2.6 Classify for feeding problems and low weight for age 43
+  2.7 Check immunization status 44
+  2.8 Assess any other problems 45
+  2.9 Assess the mother/caregiver’s development supportive practices  45
+SECTION 3
+ 3. Identify treatment 49
+SECTION 4
+ 4. Treat the young infant 53
+  4.1 Refer the infant 53
+  4.2 Treatment of diarrhoea 59
+  4.3	Counsel	the	mother	of	a	young	infant	with	the	classification	'feeding	problem'	59
+  4.4 Counsel the mother about her own health 65
+  4.5 Assess and Counsel the mother/caregiver for development supportive practices  65 
+  4.6 Follow-up care 67
+SECTION 5
+ 5. Assess and classify the sick child 71
+  5.1 Check for general danger signs 71
+  5.2	Assess	and	classify	cough	or	difficult	breathing	73
+  5.3 Assess and classify diarrhoea 78
+  5.4 Assess and classify fever 82
+  5.5 Check for malnutrition 85
+  5.6 Classify malnutrition 94
+  5.7 Check for anemia 95
+  5.8 Classify anemia 96
+  5.9 Assess other problems 98
+  5.10 Assess the mother/caregiver development supportive practices  99
+  5.11 Counsel the mother about her own health 99
+CONTENTS
+SECTION 6
+ 6. Identify treatment and treat the child 103
+  6.1   Give an appropriate antibiotic 
+  6.2 Treat diarrhoea with dehydration with Oral Rehydration Salt (ORS)  
+    Solution (Plan B) 104
+  6.3 Treat high fever with paracetamol 106
+  6.4 Treat anemia with iron folic acid 106
+  6.5 Give antimalarial as per national guidelines              107
+  6.6 Teach the mother to treat local infections at home 109
+  6.7 Assess the child’s feeding 113
+  6.8	Assess	the	mother/caregiver's	to	support	child's	development			119
+  6.9 Play and communicate       121
+  6.10 Follow-up care 128
+    7.   Recording forms                                                                                                                 132
+
+eta ki thik jayga?
+
+2️⃣ HBNC — VERY IMPORTANT ========================= Home Based Newborn Care. Use for: * newborn visits * breastfeeding * jaundice * cord infection * danger signs * ASHA workflow * * * 3️⃣ HBYC ========
+
+HBNC & HBYC Resource Material
+Go Back
+Title	Download
+HBYC-Operational Guidelines	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (29.5 MB)
+Revised-HBNC-Operational Guidelines	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (4.00 MB)
+Handbook for ASHA on Home Based Care for Young Child-English	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (8.80 MB)
+HBNC & HBYC Jobaid for ASHA	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (3.60 MB)
+HBYC - Handbook for Asha Facilator Book	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.30 MB)
+HBYC ECD Kit & FMR DO Letter	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.15 MB)
+HBYC ECD Kit	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (290 KB)
+HBYC Brochure_-Prepress-English	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (4.00 MB)
+HBYC-Handbook for Print	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (56.0 MB)
+HBYC -Letter to States	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (315 KB)
+HBYC-Poster-Hindi	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (5.80 MB)
+HBYC-Posters-English	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (13.0 MB)
+Revised India MCP Card-English-(28-05-2018)	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.95 MB)
+
+ei gulo sob download kore nebo?
+
+4️⃣ ANC / PNC GUIDELINES ======================== Need for: * pregnancy * postpartum * * * Search these EXACTLY: ===================== ANC operational guideline PDFPNC guideline India PDF * * * 5️⃣ National Immunization Schedule ==================================
+
+ei gulor jonno ki search korbo?
+
+✅ PREGNANCY (ANC) MODULE ======================== 🔍 Search Exactly: ------------------ ANC Operational Guidelines India PDF
+
+
+Title	Download
+Life Saving Anaesthesia Skills Revised Curriculum-2024  New	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (10.1 MB)
+Revised CEmONC curriculum 2024 - Part 1  New	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (54.3 MB)
+Revised CEmONC curriculum 2024 - Part 2  New	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (50 MB)
+Guidance Note on Optimizing Postnatal Care  New	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (471 KB)
+Mentoring Guidelines for Midwifery Educators and Nurse Practitioner Midwives  New	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (10.2 MB)
+Guidelines on Operationalization of Midwifery Units  New	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (38.6 MB)
+CAC Operational Guidelines 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (6.10 MB)
+CAC Providers Manual 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (9.90 MB)
+CAC Trainers Manual 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (10.0 MB)
+CAC Training & Service Guidelines-2023	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (14.5 MB)
+Maternal Health-Guidance Booklet for CHOs-English	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (6.00 MB)
+
+Maternal Health-Guidance Booklet for CHOs-HIndi	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (6.05 MB)
+
+Training Manual for Medical Methods of Abortion (MMA) in Early Gestation 	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (4.30 MB)
+
+Guidance Note on MMA trainings 	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (245 KB)
+
+Guidance Note for “Extended PMSMA for tracking High Risk Pregnancies (HRPs)”	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.25 MB)
+
+Guidelines on Operationalization of Maternal Health Services during the Covid-19 Pandemic 	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.5 MB)
+
+Scope of Practice for Midwifery Educators and Nurse Practitioner Midwife	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (13 MB)
+
+Standard Operating Procedures for HIV & Syphilis Screening of Pregnant Women at VHNSD site	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.55 MB)
+
+SUMAN - Surakshit Matritva Aashwasan 	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (12.5 MB)
+
+ASHA handbook for abortion 	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.25 MB)
+
+JSSK Dietary Guidelines (English) 	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (6 MB)
+
+JSSK Dietary Guidelines (Hindi) 	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (10 MB)
+
+Guidelines on Midwifery Services in India  	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (4.4 MB)
+
+CAC Training and Services Delivery Guidelines-2018 	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (43.8 MB)
+
+LaQshya Quality Improvement Cycles Resource Material 	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (9.6 MB)
+
+LaQshya Standard Operating Procedure for District Hospitals  	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (9.6 MB)
+
+LaQshya-Guidance note  	
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (0.86 MB)                             
+PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.26 MB)
+
+Technical and Operational Guidelines: Gestational Diabetes Mellitus 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.31 MB)
+Guidance Note on Operationalization of Dakshata in New States	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.14 MB)
+Revised Operational guidelines for Strengthening of Pre-Service Education for Nursing Midwifery cadre in India  	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (7.00 MB)
+Operational Guidelines for Obstetric HDU and ICU  	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.30 MB)
+LaQshya-Labour Room Quality Improvement Initiative 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (3.57 MB)
+Safe Delivery Application (For Google Play Store go to) 	 
+Safe Delivery Application (For iTunes go to) 	 
+Guidelines for Maternal Death Surveillance & Response 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (6.70 MB)
+User Manual -Mannequins and Models 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (4.75 MB)
+Operational Framework- Pradhan Mantri Surakshit Matritva Abhiyan 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (14.5 MB)
+Pradhan Mantri Surakshit Matritva Abhiyan 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (9.45 MB)
+Labor Room Guideline 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (8.60 MB)
+Guidelines for Obstetric HDU and ICU 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (8.45 MB)
+E Module on Medical Methods of Abortion 	 
+Daksh Skills Lab for RMNCH+A Services - Training Manual for Facilitators 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (933 KB)
+Daksh Skills Lab for RMNCH+A Services - Training Manual for Participants 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.75 MB)
+DAKSHATA - Empowering Providers for Improved MNH Care during Institutional Deliveries – Operational Guideline 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.80 MB)
+DAKSHATA - Empowering Providers for Improved MNH Care during Institutional Deliveries - Facilitator’s Guide 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (12.0 MB)
+Guidance Note on Use of Uterotonics during labour 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.95 MB)
+Guidance Note on Prevention and Management of Postpartum Haemorrhage 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (22.5 KB)
+Guidance on Ensuring Access to safe Abortion and Addressing Gender Biased Sex Selection 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (450 KB)
+Training of Surgeons for  C-section 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (990 KB)
+Maternal Near Miss Operational Guidelines 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.03 MB)
+National Guidelines for Calcium Supplementation During Pregnancy and Lactation 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.12 MB)
+National Guidelines for Diagnosis & Management of Gestational Diabetes Mellitus 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.83 MB)
+National Guidelines for Screening of Hypothyroidism during Pregnancy 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.27 MB)
+National Guidelines for Deworming in Pregnancy 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (6.46 MB)
+Screening for Syphilis during Pregnancy 	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (702 KB)
+MMR Bulletin 2011-13 (RGI-SRS)	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (20.8 KB)
+RMNCH+A 5x5 matrix	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (952 KB)
+Maternal death Review User Manual	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (3.32 MB)
+Operational Guideline- pre-service education (PSE)-Nursing	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (8.55 MB)
+Maternal and Newborn Health Toolkit	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (6.18 MB)
+Skills lab Operational guidelines	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (775 KB)
+Operational Guidelines & Reference Manual on Prevention of Postpartum Haemorrhage through Community Based Distribution of Misoprostol	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (3.16 MB)
+Operational Guidelines for Quality Assurance in Public Health Facilities and checklists -3 books	7-Zip file that opens in new window. To know how to open 7-Zip file refer Help section located at bottom of the site. (17.2 MB)
+Comprehensive Abortion Care Training & Service Delivery Guidelines	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (5.05 MB)
+Guidelines for Accreditation of PHFs for conducting SBA Training	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.05 MB)
+Guidelines for Accreditation of PHFs for RCH Services.	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (6.41 MB)
+Guidelines for JSSK	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (6.03 MB)
+Maternal Death Review Guidebook.	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.97 MB)
+MCP Card	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.97 MB)
+SBA Guidelines for Skilled Attendance at Birth.	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (14.4 MB)
+SBA Handbook for ANM LHV and SN.	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (3.19 MB)
+SBA Quality Protocol Posters for Sub-district level health facilities (below DH level)	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.55 MB)
+Protocol posters from FRU to MC	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (3.25 MB)
+SBA Trainers Guide for ANMs LHVs and SNs.	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (2.03 MB)
+Trainees Handbook for Training of MOs in preg care.	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.63 MB)
+Trainers Guide for Training of MOs in preg. Care.	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.55 MB)
+My Safe Motherhood Booklet- English	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (625 KB)
+My Safe Motherhood Booklet- Hindi	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (603 KB)
+Village Health & Nutrition Days	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (640 KB)
+JSY Guidelines	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (457 KB)
+24 hrs PHCs Guidelines	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (126 KB)
+Anesthesia Guidelines	7-Zip file that opens in new window. To know how to open 7-Zip file refer Help section located at bottom of the site. (3.49 MB)
+Guidelines on Blood Storage Unit	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (298 KB)
+Guidelines on Operationalizing FRU	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (202 KB)
+Guidelines for Operationalizing SBA Training in RCH ll	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (1.90 MB)
+Midwifery Guidelines	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (5 MB)
+Guidelines on RTI/STI
+Title	Download
+Operational Guidelines for RTI/STIs Services	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (10.9 MB)
+Handout for Medical Officers	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (20.3 MB)
+Facilitator's Guide for Medical Officers	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (160 MB)
+Handout for Nursing Personnel	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (8.66 MB)
+Facilitator's Guide for Nursing Personnel	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (11.0 MB)
+Handout for Laboratory Technicians	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (5.29 MB)
+Facilitator's Guide for for Laboratory Technicians	PDF file that opens in new window. To know how to open PDF file refer Help section located at bottom of the site. (4.47 MB)
+
+kon gulo download korbo?
+
+IMMUNIZATION MODULE =================== 🔍 Search Exactly: ------------------ National Immunization Schedule India PDF
+
+National Immunization Schedule 
+Age 
+Vaccines given  
+Birth 
+Bacillus Calmette Guerin (BCG), Oral Polio Vaccine (OPV)-0 dose, 
+Hepatitis B birth dose 
+6 Weeks 
+OPV-1, Pentavalent-1, Rotavirus Vaccine (RVV)-1, Fractional dose of 
+Inactivated Polio Vaccine (fIPV)-1, Pneumococcal Conjugate Vaccine 
+(PCV) -1* 
+10 weeks 
+OPV-2, Pentavalent-2, RVV-2 
+14 weeks 
+OPV-3, Pentavalent-3, fIPV-2, RVV-3, PCV-2* 
+9-12 months Measles & Rubella (MR)-1, JE-1** , PCV-Booster* 
+16-24 
+months 
+5-6 years 
+MR-2, JE-2**, Diphtheria, Pertussis & Tetanus (DPT)-Booster-1, OPV 
+Booster 
+DPT-Booster-2 
+10 years 
+Tetanus & adult Diphtheria (Td) 
+16 years 
+Td 
+Pregnant 
+Mother  
+Td-1, Td-2 or Td-Booster*** 
+* PCV in selected states/districts: Bihar, Himachal Pradesh, Madhya Pradesh, Uttar Pradesh 
+(selected districts) and Rajasthan; in Haryana as state initiative 
+** JE in endemic districts only 
+*** One dose if previously vaccinated within 3 years 
+
+eta download kore nilei hobe to?
+
+POSTPARTUM (PNC) MODULE ======================= 🔍 Search Exactly: ------------------ Postnatal Care Guidelines India PDF
+
+etar jonno kichu download korte hobe ami ANC tei onek gulo download korlam
+ei 4te to download korlam ebar r ki ki download korbo?
+ami son miliye 19 ta pdf download korechi r kichu download korte hobe?
+
+🔥 VERY IMPORTANT TRUTH ======================= 👉 তোমার success PDF count-এর উপর depend করে না 👉 তোমার success depends করে “how structured your logic is”
+
+ei step gulo ami amazon q k diye korabo to tar jonno prompt dao
+acha ami cluad diye korbo tar jonno prompt dao
+"C:\Users\user\Desktop\tanmoy\ashamitra\CHO_Booklet_ Maternal_Health-English.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Guidance_Note_on_optimizing_post_natal_care.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Guidance_Note_on_Prevention_&Management_of_Postpartum_Haemorrhage.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Guidance_Note-Extended_PMSMA_for_tracking_HRPs.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Guideline_for_MDSR.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Handbook_for_ASHA_on_HBYC-English.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\HBNC&HBYC_Jobaid_for_ASHA.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\HBYC-Operational-Guidelines.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\IMNCI-Participants-Module-Health-Workers-2023.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\mcp_card1.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\my_safe_motherhood_booklet_english.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\National Immunization_Schedule.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\National_Guidelines_for_Calcium_Supplementation_During_Pregnancy_and_Lactation.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\National_Guidelines_for_Deworming_in_Pregnancy.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\National_Guidelines_for_Diagnosis_&_Management_of_Gestational_Diabetes_Mellitus.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\National_Guidelines_for_Screening_of_Hypothyroidism_during_Pregnancy.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Revised_HBNC-OG-2014-English.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Revised-India-MCP-Card-English-(28-05-2018).pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\sba_guidelines_for_skilled_attendance_at_birth.pdf"
+
+ei gulor modhe top 13 gulo bolo
+"C:\Users\user\Desktop\tanmoy\ashamitra\CHO_Booklet_ Maternal_Health-English.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Guidance_Note_on_optimizing_post_natal_care.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Guidance_Note_on_Prevention_&Management_of_Postpartum_Haemorrhage.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Guidance_Note-Extended_PMSMA_for_tracking_HRPs.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Guideline_for_MDSR.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Handbook_for_ASHA_on_HBYC-English.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\HBNC&HBYC_Jobaid_for_ASHA.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\HBYC-Operational-Guidelines.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\IMNCI-Participants-Module-Health-Workers-2023.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\mcp_card1.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\my_safe_motherhood_booklet_english.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\National Immunization_Schedule.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\National_Guidelines_for_Calcium_Supplementation_During_Pregnancy_and_Lactation.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\National_Guidelines_for_Deworming_in_Pregnancy.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\National_Guidelines_for_Diagnosis_&_Management_of_Gestational_Diabetes_Mellitus.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\National_Guidelines_for_Screening_of_Hypothyroidism_during_Pregnancy.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Revised_HBNC-OG-2014-English.pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\Revised-India-MCP-Card-English-(28-05-2018).pdf"
+"C:\Users\user\Desktop\tanmoy\ashamitra\sba_guidelines_for_skilled_attendance_at_birth.pdf"
+
+ei gulor modhe top 15 gulo bolo
+
+
+We use cookies
+
+Cookies help this site function, measure usage, and support marketing. Manage your cookie preferences anytime. Learn more about our cookie policy.

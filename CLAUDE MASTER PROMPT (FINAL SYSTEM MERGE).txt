@@ -1,0 +1,112 @@
+You are a senior healthcare AI systems architect specializing in IMNCI, RMNCH+A, HBNC, HBYC, and maternal-child health systems.
+
+I am building an ASHA worker voice-based clinical decision support system for rural India.
+
+I already have multiple official PDFs covering:
+- IMNCI (child + newborn care)
+- HBNC (newborn care)
+- HBYC (child development)
+- MCP Card (pregnancy tracking)
+- PMSMA (high-risk pregnancy)
+- SBA guidelines (delivery)
+- Postpartum haemorrhage guidelines
+- MDSR guidelines
+- Immunization schedule
+
+NOW YOUR TASK:
+
+I want to MERGE ALL THESE INTO ONE UNIFIED CLINICAL DECISION SYSTEM.
+
+---
+
+SYSTEM GOAL:
+A deterministic, offline-first AI system that converts ASHA worker voice input into:
+- symptoms
+- structured questions
+- risk classification
+- referral decision
+
+Output must be:
+Green (Safe)
+Yellow (Refer)
+Red (Emergency)
+
+---
+
+REQUIREMENTS:
+
+1. Create a SINGLE unified architecture that merges:
+   - Newborn module (HBNC + IMNCI)
+   - Child module (IMNCI + HBYC)
+   - Pregnancy module (MCP + PMSMA)
+   - Delivery & emergency module (SBA + PPH + MDSR)
+   - Immunization module (UIP schedule)
+
+2. Normalize all knowledge into ONE consistent format:
+
+Each module must follow:
+
+{
+  "symptoms": [],
+  "questions": [],
+  "decision_rules": [],
+  "classification": {
+    "green": "",
+    "yellow": "",
+    "red": ""
+  }
+}
+
+3. Build a GLOBAL RULE ENGINE:
+- Must combine all modules
+- Must avoid contradictions
+- Must prioritize RED (life-threatening conditions)
+
+4. Create a FLOW ENGINE:
+Voice input →
+Symptom extraction →
+Module detection →
+Dynamic questions →
+Rule evaluation →
+Final classification →
+Referral output
+
+5. Build EMERGENCY HARD STOP RULES:
+If RED condition is detected:
+- stop all questions immediately
+- output referral instruction
+
+6. Ensure system is:
+- offline-first
+- explainable
+- deterministic (no hallucination)
+- ASHA-worker friendly
+- aligned with IMNCI logic
+
+---
+
+OUTPUT REQUIRED:
+
+A) Full system architecture diagram (text-based)
+
+B) Unified JSON schema for entire system
+
+C) Rule engine examples (at least 10 real cases)
+
+D) Sample end-to-end flow:
+Example:
+- user speech input (Bengali/Hindi)
+- extracted symptoms
+- questions asked
+- final classification
+- referral decision
+
+E) Data structure for mobile app storage
+
+---
+
+IMPORTANT RULES:
+- Do NOT provide medical treatment advice
+- Do NOT use free-text AI diagnosis
+- This must be a strict rule-based clinical decision system
+- Must be auditable and explainable
