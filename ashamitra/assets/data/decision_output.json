@@ -1,0 +1,73 @@
+{
+  "case_id": "CASE-1001",
+  "engine_version": "2.0.0",
+  "evaluated_at": "2026-05-12T10:01:10",
+
+  "engine_result": {
+    "final_band": "RED",
+    "red_lock": true,
+    "triggered_rules": [
+      "NB-001",
+      "NB-002",
+      "NB-003",
+      "NB-COMB-001",
+      "NB-VITAL-001",
+      "NB-VITAL-002",
+      "NB-VITAL-003"
+    ],
+    "risk_score": 8,
+    "risk_level": "CRITICAL"
+  },
+
+  "clinical_summary": {
+    "suspected_conditions": [
+      "Possible neonatal sepsis",
+      "Respiratory distress",
+      "Severe PSBI"
+    ],
+    "danger_signs": [
+      "Poor feeding",
+      "Fever",
+      "Breathing difficulty",
+      "Low SpO2",
+      "Fast breathing"
+    ]
+  },
+
+  "recommended_actions": [
+    "Call 108 immediately",
+    "Refer SNCU / FRU immediately (≤ 30 min)",
+    "Keep baby warm",
+    "Do not delay transport for any reason",
+    "Continue breastfeeding only if baby can suck"
+  ],
+
+  "referral": {
+    "facility_type": "SNCU / FRU",
+    "urgency": "Immediate",
+    "max_delay_minutes": 30
+  },
+
+  "followup": {
+    "required": true,
+    "recheck_after_hours": 4,
+    "trigger": "RED_REFUSED"
+  },
+
+  "transport_advisory": {
+    "ambulance_called": false,
+    "action_required": "Call 108 now — ambulance not yet called",
+    "distance_to_fru_km": 18
+  },
+
+  "audit_log": {
+    "asha_id": "ASHA-22",
+    "village": "Rampur",
+    "district": "Murshidabad",
+    "module": "newborn",
+    "patient_id": "P001",
+    "evaluated_at": "2026-05-12T10:01:10",
+    "engine_version": "2.0.0",
+    "protocol_hash": "{{SHA256_OF_ASHA_ENGINE_JSON}}"
+  }
+}

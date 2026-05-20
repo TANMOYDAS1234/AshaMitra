@@ -1,0 +1,47 @@
+{
+  "case_id": "CASE-1001",
+
+  "patient": {
+    "patient_id": "P001",
+    "name": "Baby A",
+    "age_days": 6,
+    "age_months": null,
+    "age_years": null,
+    "sex": "female",
+    "weight_kg": 2.5
+  },
+
+  "module": "newborn",
+
+  "answers": {
+    "n1": true,
+    "n2": true,
+    "n3": true,
+    "n4": false,
+    "n5": false,
+    "n6": false
+  },
+
+  "vitals": {
+    "temperature_c": 38.5,
+    "respiratory_rate": 68,
+    "spo2": 87,
+    "systolic_bp": null,
+    "diastolic_bp": null,
+    "haemoglobin": null,
+    "weight_kg": 2.5,
+    "muac_cm": null
+  },
+
+  "transport": {
+    "ambulance_called": false,
+    "distance_to_fru_km": 18
+  },
+
+  "meta": {
+    "asha_id": "ASHA-22",
+    "village": "Rampur",
+    "district": "Murshidabad",
+    "timestamp": "2026-05-12T10:00:00"
+  }
+}

@@ -1,0 +1,151 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../app/routes.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_gradients.dart';
+import '../../../../shared/widgets/emergency_button.dart';
+
+class EmergencyScreen extends StatelessWidget {
+  const EmergencyScreen({super.key});
+
+  Future<void> _call(String number) async {
+    final uri = Uri.parse('tel:$number');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      Get.snackbar('Error', 'Cannot open dialer', snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
+  Future<void> _openMaps(String query) async {
+    final uri = Uri.parse('geo:0,0?q=${Uri.encodeComponent(query)}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      Get.snackbar('Error', 'Cannot open maps', snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppGradients.emergency),
+        child: Column(
+          children: [
+            SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Get.back(),
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.arrow_back_ios_new_rounded,
+                                size: 18, color: Colors.white),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text('emergency_title'.tr,
+                            style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    const Icon(Icons.emergency_rounded, size: 56, color: Colors.white),
+                    const SizedBox(height: 8),
+                    Text('emergency_subtitle'.tr,
+                        style: const TextStyle(fontSize: 15, color: Colors.white70)),
+                    const SizedBox(height: 4),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Text(
+                        'emergency_conditions'.tr,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 12, color: Colors.white60),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                child: Container(
+                  color: const Color(0xFFF7F8FF),
+                  child: SafeArea(
+                    top: false,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                      child: Column(
+                        children: [
+                          EmergencyButton(
+                            icon: Icons.emergency_rounded,
+                            label: 'call_ambulance'.tr,
+                            subtitle: 'call_ambulance_desc'.tr,
+                            onTap: () => _call('102'),
+                          ),
+                          const SizedBox(height: 12),
+                          EmergencyButton(
+                            icon: Icons.person_outline_rounded,
+                            label: 'call_anm'.tr,
+                            subtitle: 'call_anm_desc'.tr,
+                            color: AppColors.purple,
+                            onTap: () => _call('18001801104'),
+                          ),
+                          const SizedBox(height: 12),
+                          EmergencyButton(
+                            icon: Icons.local_hospital_rounded,
+                            label: 'call_health'.tr,
+                            subtitle: 'call_health_desc'.tr,
+                            color: AppColors.sky,
+                            onTap: () => _call('104'),
+                          ),
+                          const SizedBox(height: 12),
+                          EmergencyButton(
+                            icon: Icons.navigation_rounded,
+                            label: 'navigate_chc'.tr,
+                            subtitle: 'navigate_chc_desc'.tr,
+                            color: AppColors.safeGreen,
+                            onTap: () => _openMaps('Community Health Centre near me'),
+                          ),
+                          const SizedBox(height: 24),
+                          GestureDetector(
+                            onTap: () => Get.offAllNamed(AppRoutes.home),
+                            child: Text(
+                              'back_to_home'.tr,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,292 @@
+{
+  "engine_id": "asha_cdss_engine_v2",
+  "version": "2.0.0",
+  "deterministic": true,
+  "offline_capable": true,
+
+  "engine_rules": {
+    "red_lock_enabled": true,
+    "evaluation_order": ["hard_stop", "combination_rules", "numeric_rules", "risk_score"],
+    "fallback_band": "GREEN"
+  },
+
+  "bands": {
+    "GREEN":  { "action_bn": "বাড়িতে যত্ন নিন। রুটিন ফলো-আপ করুন।",                                    "action_en": "Home care. Routine follow-up.",              "referral": "None" },
+    "YELLOW": { "action_bn": "২৪ ঘণ্টার মধ্যে নিকটতম PHC-তে রেফার করুন।",                              "action_en": "Refer to PHC within 24 h.",                  "referral": "PHC within 24 h" },
+    "RED":    { "action_bn": "এখনই অ্যাম্বুলেন্স কল করুন (108)। FRU/SNCU-তে রেফার করুন।",             "action_en": "Call 108. Refer FRU/SNCU/DH immediately.",   "referral": "FRU / SNCU / DH immediately" }
+  },
+
+  "followup_rules": {
+    "YELLOW":      { "hours": 24 },
+    "RED_REFUSED": { "hours": 4  }
+  },
+
+  "modules": [
+    {
+      "module_id": "newborn",
+      "title_bn": "নবজাতক চেকআপ (০-২৮ দিন)",
+      "title_en": "Newborn Checkup (0–28 days)",
+
+      "questions": [
+        { "id": "n1", "text_bn": "শিশু বুকের দুধ খেতে পারছে না?",    "text_en": "Is the baby unable to breastfeed?",       "options": ["হ্যাঁ", "না"] },
+        { "id": "n2", "text_bn": "শিশুর শরীরে জ্বর আছে?",            "text_en": "Does the baby have fever?",              "options": ["হ্যাঁ", "না"] },
+        { "id": "n3", "text_bn": "শ্বাস-প্রশ্বাস দ্রুত বা কষ্টকর?", "text_en": "Is breathing fast or difficult?",        "options": ["হ্যাঁ", "না"] },
+        { "id": "n4", "text_bn": "নাভি লাল, ফোলা বা পুঁজ আছে?",     "text_en": "Is the navel red, swollen, or has pus?", "options": ["হ্যাঁ", "না"] },
+        { "id": "n5", "text_bn": "শিশু অনেক কম নড়ছে বা নিস্তেজ?",  "text_en": "Is the baby lethargic or not moving?",   "options": ["হ্যাঁ", "না"] },
+        { "id": "n6", "text_bn": "ত্বক হলুদ বা নীলাভ দেখাচ্ছে?",    "text_en": "Does the skin look yellow or bluish?",   "options": ["হ্যাঁ", "না"] }
+      ],
+
+      "hard_stop_rules": [
+        { "ruleId": "NB-001", "priority": 1, "condition_set": [{ "question_id": "n1", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "SNCU / FRU immediately", "action_bn": "PSBI হার্ড-স্টপ। এখনই SNCU/FRU-তে রেফার করুন।",                        "action_en": "PSBI hard-stop. Refer SNCU/FRU immediately.",              "suspected_conditions": ["Possible neonatal sepsis"],          "danger_signs": ["Poor feeding"] },
+        { "ruleId": "NB-002", "priority": 2, "condition_set": [{ "question_id": "n2", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "SNCU / FRU immediately", "action_bn": "PSBI হার্ড-স্টপ। যেকোনো জ্বর নবজাতকের জন্য বিপদচিহ্ন।",             "action_en": "PSBI hard-stop. Any fever in newborn is a danger sign.",   "suspected_conditions": ["Neonatal fever / sepsis"],           "danger_signs": ["Fever"] },
+        { "ruleId": "NB-003", "priority": 3, "condition_set": [{ "question_id": "n3", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "SNCU / FRU immediately", "action_bn": "PSBI হার্ড-স্টপ। শ্বাসের হার গণনা করুন — ≥ ৬০/মিনিট = গুরুতর।",  "action_en": "PSBI hard-stop. Count RR — ≥ 60/min = severe.",           "suspected_conditions": ["Respiratory distress"],              "danger_signs": ["Breathing difficulty"] },
+        { "ruleId": "NB-004", "priority": 4, "condition_set": [{ "question_id": "n4", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU / DH immediately",   "action_bn": "ওম্ফালাইটিস কয়েক ঘণ্টায় সেপসিসে পরিণত হতে পারে।",              "action_en": "Omphalitis can progress to sepsis within hours.",          "suspected_conditions": ["Omphalitis"],                        "danger_signs": ["Umbilical infection"] },
+        { "ruleId": "NB-005", "priority": 5, "condition_set": [{ "question_id": "n5", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "SNCU / FRU immediately", "action_bn": "PSBI হার্ড-স্টপ। নিস্তেজতা = গুরুতর সিস্টেমিক অসুস্থতা।",         "action_en": "PSBI hard-stop. Lethargy = severe systemic illness.",      "suspected_conditions": ["Possible neonatal sepsis"],          "danger_signs": ["Lethargy"] },
+        { "ruleId": "NB-006", "priority": 6, "condition_set": [{ "question_id": "n6", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "SNCU / FRU immediately", "action_bn": "সায়ানোসিস বা ২৪ ঘণ্টার মধ্যে জন্ডিস = এখনই SNCU-তে রেফার করুন।", "action_en": "Cyanosis or jaundice within 24 h = refer SNCU immediately.", "suspected_conditions": ["Jaundice / Cyanosis"],               "danger_signs": ["Skin colour change"] }
+      ],
+
+      "combination_rules": [
+        { "ruleId": "NB-COMB-001", "condition_set": [{ "question_id": "n2", "operator": "EQUALS", "value": true }, { "question_id": "n3", "operator": "EQUALS", "value": true }], "band": "RED", "action_bn": "জ্বর + শ্বাসকষ্ট = গুরুতর PSBI। এখনই রেফার করুন।", "action_en": "Fever + breathing difficulty = severe PSBI. Refer immediately.", "suspected_conditions": ["Severe PSBI"], "danger_signs": ["Fever", "Breathing difficulty"] }
+      ],
+
+      "numeric_rules": [
+        { "ruleId": "NB-VITAL-001", "condition_set": [{ "vital": "spo2",             "operator": "LESS_THAN",    "value": 90   }], "band": "RED",    "action_bn": "SpO2 < 90% — অক্সিজেন স্যাচুরেশন বিপজ্জনক।",         "action_en": "SpO2 < 90% — critical hypoxia.",          "danger_signs": ["Low SpO2"] },
+        { "ruleId": "NB-VITAL-002", "condition_set": [{ "vital": "respiratory_rate", "operator": "GREATER_THAN", "value": 60   }], "band": "RED",    "action_bn": "শ্বাসের হার > ৬০/মিনিট — গুরুতর।",                    "action_en": "RR > 60/min — severe tachypnoea.",         "danger_signs": ["Fast breathing"] },
+        { "ruleId": "NB-VITAL-003", "condition_set": [{ "vital": "temperature_c",    "operator": "GREATER_THAN", "value": 37.5 }], "band": "RED",    "action_bn": "জ্বর > ৩৭.৫°C — নবজাতকের জন্য বিপদচিহ্ন।",           "action_en": "Temp > 37.5°C — danger sign in newborn.",  "danger_signs": ["Fever"] },
+        { "ruleId": "NB-VITAL-004", "condition_set": [{ "vital": "weight_kg",        "operator": "LESS_THAN",    "value": 1.5  }], "band": "YELLOW", "action_bn": "ওজন < ১.৫ কেজি — LBW। SNCU-তে রেফার করুন।",          "action_en": "Weight < 1.5 kg — LBW. Refer SNCU.",      "danger_signs": ["Low birth weight"] }
+      ],
+
+      "risk_engine": {
+        "score_rules": [
+          { "condition": "n1", "score": 3 },
+          { "condition": "n2", "score": 2 },
+          { "condition": "n3", "score": 3 },
+          { "condition": "n4", "score": 2 },
+          { "condition": "n5", "score": 3 },
+          { "condition": "n6", "score": 2 }
+        ],
+        "thresholds": { "GREEN": [0, 2], "YELLOW": [3, 5], "RED": [6, 100] }
+      }
+    },
+
+    {
+      "module_id": "child",
+      "title_bn": "শিশু স্বাস্থ্য যাচাই (২ মাস–৫ বছর)",
+      "title_en": "Child Health Check (2 months–5 years)",
+
+      "questions": [
+        { "id": "c1", "text_bn": "পাঁচ দিনের বেশি জ্বর চলছে?",                    "text_en": "Has fever lasted more than 5 days?",              "options": ["হ্যাঁ", "না"] },
+        { "id": "c2", "text_bn": "কাশি বা শ্বাসকষ্ট আছে?",                        "text_en": "Is there cough or breathing difficulty?",        "options": ["হ্যাঁ", "না"] },
+        { "id": "c3", "text_bn": "ডায়রিয়া বা বারবার বমি হচ্ছে?",                 "text_en": "Is there diarrhoea or repeated vomiting?",       "options": ["হ্যাঁ", "না"] },
+        { "id": "c4", "text_bn": "শিশু খেতে একদম অস্বীকার করছে?",                 "text_en": "Is the child completely refusing to eat?",       "options": ["হ্যাঁ", "না"] },
+        { "id": "c5", "text_bn": "পানিশূন্যতার লক্ষণ (চোখ গর্তে, ঠোঁট শুকনো)?", "text_en": "Signs of dehydration — sunken eyes, dry lips?", "options": ["হ্যাঁ", "না"] },
+        { "id": "c6", "text_bn": "ওজন বয়সের তুলনায় অনেক কম?",                    "text_en": "Is weight much less than expected for age?",     "options": ["হ্যাঁ", "না"] }
+      ],
+
+      "hard_stop_rules": [
+        { "ruleId": "CH-001", "priority": 1, "condition_set": [{ "question_id": "c1", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "PHC / DH same day", "action_bn": "একই দিনে PHC/DH-তে রেফার করুন। ম্যালেরিয়া, টাইফয়েড, ডেঙ্গু বাদ দিন।", "action_en": "Refer PHC/DH same day. Rule out malaria, typhoid, dengue.", "suspected_conditions": ["Prolonged fever — malaria / typhoid / dengue"], "danger_signs": ["Fever > 5 days"] },
+        { "ruleId": "CH-005", "priority": 2, "condition_set": [{ "question_id": "c5", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU immediately",   "action_bn": "গুরুতর পানিশূন্যতা = RED। এখনই ORS শুরু করুন। IV তরলের জন্য FRU-তে রেফার করুন।", "action_en": "Severe dehydration. Start ORS. Refer FRU for IV fluids.", "suspected_conditions": ["Severe dehydration"], "danger_signs": ["Sunken eyes", "Dry lips"] }
+      ],
+
+      "combination_rules": [
+        { "ruleId": "CH-COMB-001", "condition_set": [{ "question_id": "c2", "operator": "EQUALS", "value": true }, { "question_id": "c5", "operator": "EQUALS", "value": true }], "band": "RED", "action_bn": "শ্বাসকষ্ট + পানিশূন্যতা = গুরুতর। এখনই FRU-তে রেফার করুন।", "action_en": "Breathing difficulty + dehydration = critical. Refer FRU immediately.", "suspected_conditions": ["Severe pneumonia with dehydration"], "danger_signs": ["Breathing difficulty", "Dehydration"] }
+      ],
+
+      "yellow_rules": [
+        { "ruleId": "CH-002", "priority": 1, "condition_set": [{ "question_id": "c2", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "PHC within 24 h",  "action_bn": "শ্বাসের হার গণনা করুন। বুকে ইনড্রয়িং = RED।",          "action_en": "Count RR. Chest indrawing = RED. Refer PHC within 24 h.", "suspected_conditions": ["Pneumonia"],          "danger_signs": ["Cough / breathing difficulty"] },
+        { "ruleId": "CH-003", "priority": 2, "condition_set": [{ "question_id": "c3", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "PHC within 24 h",  "action_bn": "পানিশূন্যতা মূল্যায়ন করুন। ORS শুরু করুন।",              "action_en": "Assess dehydration. Start ORS. Refer PHC within 24 h.",  "suspected_conditions": ["Diarrhoea / vomiting"], "danger_signs": ["Diarrhoea", "Vomiting"] },
+        { "ruleId": "CH-004", "priority": 3, "condition_set": [{ "question_id": "c4", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "PHC within 24 h",  "action_bn": "অসুস্থতার কারণ মূল্যায়ন করুন। ২৪ ঘণ্টার মধ্যে PHC।",  "action_en": "Assess illness cause. Refer PHC within 24 h.",           "suspected_conditions": ["Feeding refusal"],    "danger_signs": ["Not eating"] },
+        { "ruleId": "CH-006", "priority": 4, "condition_set": [{ "question_id": "c6", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "ICDS / NRC if SAM", "action_bn": "MUAC পরিমাপ করুন। < ১১.৫ সেমি = SAM → RED।",             "action_en": "Measure MUAC. < 11.5 cm = SAM → RED, refer NRC.",        "suspected_conditions": ["Malnutrition"],        "danger_signs": ["Low weight for age"] }
+      ],
+
+      "numeric_rules": [
+        { "ruleId": "CH-VITAL-001", "condition_set": [{ "vital": "spo2",    "operator": "LESS_THAN", "value": 90              }], "band": "RED",    "action_bn": "SpO2 < 90% — গুরুতর হাইপক্সিয়া।",          "action_en": "SpO2 < 90% — critical hypoxia.",       "danger_signs": ["Low SpO2"] },
+        { "ruleId": "CH-VITAL-002", "condition_set": [{ "vital": "muac_cm", "operator": "LESS_THAN", "value": 11.5            }], "band": "RED",    "action_bn": "MUAC < ১১.৫ সেমি = SAM। NRC-তে রেফার করুন।", "action_en": "MUAC < 11.5 cm = SAM. Refer NRC.",     "danger_signs": ["Severe wasting"] },
+        { "ruleId": "CH-VITAL-003", "condition_set": [{ "vital": "muac_cm", "operator": "BETWEEN",   "value": [11.5, 12.5]    }], "band": "YELLOW", "action_bn": "MUAC ১১.৫–১২.৫ সেমি = MAM। ICDS-তে রেফার করুন।", "action_en": "MUAC 11.5–12.5 cm = MAM. Refer ICDS.", "danger_signs": ["Moderate wasting"] }
+      ],
+
+      "risk_engine": {
+        "score_rules": [
+          { "condition": "c1", "score": 3 },
+          { "condition": "c2", "score": 2 },
+          { "condition": "c3", "score": 2 },
+          { "condition": "c4", "score": 1 },
+          { "condition": "c5", "score": 3 },
+          { "condition": "c6", "score": 2 }
+        ],
+        "thresholds": { "GREEN": [0, 2], "YELLOW": [3, 5], "RED": [6, 100] }
+      }
+    },
+
+    {
+      "module_id": "pregnancy",
+      "title_bn": "গর্ভবতী মায়ের চেকআপ",
+      "title_en": "Pregnant Mother Checkup (ANC)",
+
+      "questions": [
+        { "id": "p1", "text_bn": "রক্তচাপ বেশি বা মাথা ব্যথা হচ্ছে?",   "text_en": "Is blood pressure high or is there headache?", "options": ["হ্যাঁ", "না"] },
+        { "id": "p2", "text_bn": "পা বা মুখ ফুলে যাচ্ছে?",               "text_en": "Is there swelling of legs or face?",          "options": ["হ্যাঁ", "না"] },
+        { "id": "p3", "text_bn": "রক্তপাত বা তীব্র পেট ব্যথা?",          "text_en": "Is there bleeding or severe abdominal pain?", "options": ["হ্যাঁ", "না"] },
+        { "id": "p4", "text_bn": "শিশুর নড়াচড়া কমে গেছে?",             "text_en": "Has the baby's movement reduced?",             "options": ["হ্যাঁ", "না"] },
+        { "id": "p5", "text_bn": "তিন মাসের বেশি ANC চেকআপ বাদ গেছে?", "text_en": "Has ANC checkup been missed for 3+ months?",  "options": ["হ্যাঁ", "না"] },
+        { "id": "p6", "text_bn": "চোখে ঝাপসা বা মাথা ঘোরা হচ্ছে?",      "text_en": "Is there blurred vision or dizziness?",      "options": ["হ্যাঁ", "না"] }
+      ],
+
+      "hard_stop_rules": [
+        { "ruleId": "ANC-001", "priority": 1, "condition_set": [{ "question_id": "p1", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU / DH immediately", "action_bn": "প্রি-এক্লাম্পসিয়া হার্ড-স্টপ। বাম কাতে শোয়ান।",                    "action_en": "Pre-eclampsia hard-stop. Lay on left side. Refer FRU/DH immediately.", "suspected_conditions": ["Pre-eclampsia / Eclampsia"],  "danger_signs": ["High BP", "Headache"] },
+        { "ruleId": "ANC-003", "priority": 2, "condition_set": [{ "question_id": "p3", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU / DH immediately", "action_bn": "APH হার্ড-স্টপ। যোনি পরীক্ষা করবেন না।",                          "action_en": "APH hard-stop. Do not do vaginal examination. Refer FRU/DH immediately.", "suspected_conditions": ["Antepartum haemorrhage"],     "danger_signs": ["Vaginal bleeding", "Severe abdominal pain"] },
+        { "ruleId": "ANC-004", "priority": 3, "condition_set": [{ "question_id": "p4", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU / DH same day",   "action_bn": "ভ্রূণের নড়াচড়া পর্যবেক্ষণের জন্য একই দিনে FRU/DH-তে রেফার করুন।", "action_en": "Refer FRU/DH same day for fetal monitoring.",                        "suspected_conditions": ["Reduced fetal movement"],     "danger_signs": ["Baby not moving"] },
+        { "ruleId": "ANC-006", "priority": 4, "condition_set": [{ "question_id": "p6", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU / DH immediately", "action_bn": "এক্লাম্পসিয়া প্রোড্রোম হার্ড-স্টপ।",                              "action_en": "Eclampsia prodrome hard-stop. Refer FRU/DH immediately.",             "suspected_conditions": ["Imminent eclampsia"],         "danger_signs": ["Blurred vision", "Dizziness"] }
+      ],
+
+      "combination_rules": [
+        { "ruleId": "ANC-COMB-001", "condition_set": [{ "question_id": "p1", "operator": "EQUALS", "value": true }, { "question_id": "p2", "operator": "EQUALS", "value": true }], "band": "RED", "action_bn": "উচ্চ BP + ফোলা = প্রি-এক্লাম্পসিয়া। এখনই FRU-তে রেফার করুন।", "action_en": "High BP + oedema = pre-eclampsia. Refer FRU immediately.",  "suspected_conditions": ["Pre-eclampsia"],       "danger_signs": ["High BP", "Oedema"] },
+        { "ruleId": "ANC-COMB-002", "condition_set": [{ "question_id": "p6", "operator": "EQUALS", "value": true }, { "question_id": "p2", "operator": "EQUALS", "value": true }], "band": "RED", "action_bn": "ঝাপসা দৃষ্টি + ফোলা = আসন্ন এক্লাম্পসিয়া।",                  "action_en": "Blurred vision + oedema = imminent eclampsia.",             "suspected_conditions": ["Imminent eclampsia"],  "danger_signs": ["Blurred vision", "Oedema"] }
+      ],
+
+      "yellow_rules": [
+        { "ruleId": "ANC-002", "priority": 1, "condition_set": [{ "question_id": "p2", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "PHC within 24 h",  "action_bn": "বিচ্ছিন্ন পা ফোলা = YELLOW। ২৪ ঘণ্টার মধ্যে PHC।",      "action_en": "Isolated leg oedema. Refer PHC within 24 h for BP and urine protein.", "suspected_conditions": ["Oedema"],      "danger_signs": ["Leg swelling"] },
+        { "ruleId": "ANC-005", "priority": 2, "condition_set": [{ "question_id": "p5", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "PHC within 7 days", "action_bn": "৭ দিনের মধ্যে PHC-তে ANC ভিজিট নির্ধারণ করুন।",          "action_en": "Schedule ANC visit at PHC within 7 days. Check MCP card.",             "suspected_conditions": ["Missed ANC"],  "danger_signs": ["No ANC visit in 3+ months"] }
+      ],
+
+      "numeric_rules": [
+        { "ruleId": "ANC-VITAL-001", "condition_set": [{ "vital": "systolic_bp",  "operator": "GREATER_THAN_OR_EQUAL", "value": 140     }], "band": "RED",    "action_bn": "সিস্টোলিক BP ≥ ১৪০ mmHg — প্রি-এক্লাম্পসিয়া।",    "action_en": "Systolic BP ≥ 140 mmHg — pre-eclampsia.",    "danger_signs": ["High BP"] },
+        { "ruleId": "ANC-VITAL-002", "condition_set": [{ "vital": "diastolic_bp", "operator": "GREATER_THAN_OR_EQUAL", "value": 90      }], "band": "RED",    "action_bn": "ডায়াস্টোলিক BP ≥ ৯০ mmHg — প্রি-এক্লাম্পসিয়া।",  "action_en": "Diastolic BP ≥ 90 mmHg — pre-eclampsia.",    "danger_signs": ["High BP"] },
+        { "ruleId": "ANC-VITAL-003", "condition_set": [{ "vital": "haemoglobin",  "operator": "LESS_THAN",             "value": 7       }], "band": "RED",    "action_bn": "Hb < ৭ g/dL — গুরুতর রক্তাল্পতা।",               "action_en": "Hb < 7 g/dL — severe anaemia.",              "danger_signs": ["Severe anaemia"] },
+        { "ruleId": "ANC-VITAL-004", "condition_set": [{ "vital": "haemoglobin",  "operator": "BETWEEN",               "value": [7, 10] }], "band": "YELLOW", "action_bn": "Hb ৭–১০ g/dL — মাঝারি রক্তাল্পতা। IFA বাড়ান।",  "action_en": "Hb 7–10 g/dL — moderate anaemia. Increase IFA.", "danger_signs": ["Moderate anaemia"] }
+      ],
+
+      "risk_engine": {
+        "score_rules": [
+          { "condition": "p1", "score": 4 },
+          { "condition": "p2", "score": 2 },
+          { "condition": "p3", "score": 4 },
+          { "condition": "p4", "score": 3 },
+          { "condition": "p5", "score": 1 },
+          { "condition": "p6", "score": 3 }
+        ],
+        "thresholds": { "GREEN": [0, 2], "YELLOW": [3, 5], "RED": [6, 100] }
+      }
+    },
+
+     {
+      "module_id": "delivery_pnc",
+      "title_bn": "প্রসব-পরবর্তী চেকআপ (০-৪২ দিন)",
+      "title_en": "Postpartum Checkup (0–42 days)",
+
+      "questions": [
+        { "id": "pp1", "text_bn": "অতিরিক্ত রক্তপাত বা দুর্গন্ধযুক্ত স্রাব?", "text_en": "Is there excessive bleeding or foul-smelling discharge?", "options": ["হ্যাঁ", "না"] },
+        { "id": "pp2", "text_bn": "জ্বর বা ঠান্ডা লাগছে?",                      "text_en": "Is there fever or chills?",                              "options": ["হ্যাঁ", "না"] },
+        { "id": "pp3", "text_bn": "স্তনে ব্যথা, ফোলা বা লাল দাগ?",             "text_en": "Is there breast pain, swelling, or red marks?",         "options": ["হ্যাঁ", "না"] },
+        { "id": "pp4", "text_bn": "পেটে তীব্র ব্যথা বা সেলাইয়ে সমস্যা?",     "text_en": "Is there severe abdominal pain or suture problem?",     "options": ["হ্যাঁ", "না"] },
+        { "id": "pp5", "text_bn": "প্রস্রাবে জ্বালা বা কষ্ট হচ্ছে?",           "text_en": "Is there burning or difficulty urinating?",             "options": ["হ্যাঁ", "না"] },
+        { "id": "pp6", "text_bn": "খুব দুর্বল বা মাথা ঘোরা হচ্ছে?",            "text_en": "Is there extreme weakness or dizziness?",               "options": ["হ্যাঁ", "না"] }
+      ],
+
+      "hard_stop_rules": [
+        { "ruleId": "PNC-001", "priority": 1, "clinical_sign_off_pending": true, "condition_set": [{ "question_id": "pp1", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU / DH immediately", "action_bn": "PPH হার্ড-স্টপ। এখনই FRU/DH-তে রেফার করুন। বাইম্যানুয়াল জরায়ু সংকোচন প্রয়োগ করুন।", "action_en": "PPH hard-stop. Refer FRU/DH immediately. Bimanual uterine compression if trained.", "suspected_conditions": ["Postpartum haemorrhage", "Puerperal sepsis"], "danger_signs": ["Excessive bleeding", "Foul discharge"] }
+      ],
+
+      "combination_rules": [
+        { "ruleId": "PNC-COMB-001", "condition_set": [{ "question_id": "pp1", "operator": "EQUALS", "value": true }, { "question_id": "pp2", "operator": "EQUALS", "value": true }], "band": "RED", "action_bn": "রক্তপাত + জ্বর = পিউরপেরাল সেপসিস। এখনই FRU-তে রেফার করুন।", "action_en": "Bleeding + fever = puerperal sepsis. Refer FRU immediately.", "suspected_conditions": ["Puerperal sepsis"], "danger_signs": ["Bleeding", "Fever"] },
+        { "ruleId": "PNC-COMB-002", "condition_set": [{ "question_id": "pp4", "operator": "EQUALS", "value": true }, { "question_id": "pp2", "operator": "EQUALS", "value": true }], "band": "RED", "action_bn": "পেট ব্যথা + জ্বর = পেরিটোনাইটিস। এখনই FRU-তে রেফার করুন।",  "action_en": "Abdominal pain + fever = peritonitis. Refer FRU immediately.", "suspected_conditions": ["Peritonitis"], "danger_signs": ["Abdominal pain", "Fever"] }
+      ],
+
+      "yellow_rules": [
+        { "ruleId": "PNC-002", "priority": 1, "condition_set": [{ "question_id": "pp2", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "PHC within 24 h",  "action_bn": "পিউরপেরাল সেপসিস ঝুঁকি। বিচ্ছিন্ন জ্বর দিন ১-২ = YELLOW।",                                    "action_en": "Puerperal sepsis risk. Isolated fever day 1–2 = YELLOW. Refer PHC within 24 h.", "suspected_conditions": ["Puerperal fever"],  "danger_signs": ["Fever", "Chills"] },
+        { "ruleId": "PNC-003", "priority": 2, "condition_set": [{ "question_id": "pp3", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "PHC within 24 h",  "action_bn": "ম্যাস্টাইটিস: বুকের দুধ চালিয়ে যান, গরম সেঁক দিন, অ্যান্টিবায়োটিকের জন্য PHC।", "action_en": "Mastitis: continue breastfeeding, warm compress, refer PHC within 24 h for antibiotics.", "suspected_conditions": ["Mastitis"],         "danger_signs": ["Breast pain", "Swelling"] },
+        { "ruleId": "PNC-004", "priority": 3, "condition_set": [{ "question_id": "pp4", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "PHC within 24 h",  "action_bn": "ক্ষত সংক্রমণ = YELLOW। ২৪ ঘণ্টার মধ্যে PHC।",                                              "action_en": "Wound infection = YELLOW. Refer PHC within 24 h.", "suspected_conditions": ["Wound infection"],  "danger_signs": ["Abdominal pain", "Suture problem"] },
+        { "ruleId": "PNC-005", "priority": 4, "condition_set": [{ "question_id": "pp5", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "PHC within 24 h",  "action_bn": "UTI: প্রস্রাব কালচার ও অ্যান্টিবায়োটিকের জন্য ২৪ ঘণ্টার মধ্যে PHC।",                  "action_en": "UTI: refer PHC within 24 h for urine culture and antibiotics.", "suspected_conditions": ["UTI"],              "danger_signs": ["Burning urination"] },
+        { "ruleId": "PNC-006", "priority": 5, "condition_set": [{ "question_id": "pp6", "operator": "EQUALS", "value": true }], "band": "YELLOW", "referral": "PHC for Hb check", "action_bn": "ফ্যাকাশে ভাব মূল্যায়ন করুন। গুরুতর ফ্যাকাশে = রক্তাল্পতা → PHC-তে Hb পরীক্ষা।",        "action_en": "Assess pallor. Severe pallor = anaemia. Refer PHC for Hb check.", "suspected_conditions": ["Anaemia"],          "danger_signs": ["Weakness", "Dizziness"] }
+      ],
+
+      "numeric_rules": [
+        { "ruleId": "PNC-VITAL-001", "condition_set": [{ "vital": "temperature_c", "operator": "GREATER_THAN", "value": 38   }], "band": "RED",    "action_bn": "জ্বর > ৩৮°C প্রসবের পর = পিউরপেরাল সেপসিস।",          "action_en": "Temp > 38°C postpartum = puerperal sepsis. Refer FRU.", "danger_signs": ["High fever postpartum"] },
+        { "ruleId": "PNC-VITAL-002", "condition_set": [{ "vital": "haemoglobin",   "operator": "LESS_THAN",    "value": 7    }], "band": "RED",    "action_bn": "Hb < ৭ g/dL — রক্ত সঞ্চালনের জন্য FRU-তে রেফার করুন।", "action_en": "Hb < 7 g/dL — refer FRU for transfusion.",            "danger_signs": ["Severe anaemia postpartum"] },
+        { "ruleId": "PNC-VITAL-003", "condition_set": [{ "vital": "haemoglobin",   "operator": "BETWEEN",      "value": [7, 10] }], "band": "YELLOW", "action_bn": "Hb ৭–১০ g/dL — মাঝারি রক্তাল্পতা। IFA বাড়ান।",    "action_en": "Hb 7–10 g/dL — moderate anaemia. Increase IFA.",      "danger_signs": ["Moderate anaemia postpartum"] }
+      ],
+
+      "risk_engine": {
+        "score_rules": [
+          { "condition": "pp1", "score": 4 },
+          { "condition": "pp2", "score": 2 },
+          { "condition": "pp3", "score": 1 },
+          { "condition": "pp4", "score": 2 },
+          { "condition": "pp5", "score": 1 },
+          { "condition": "pp6", "score": 2 }
+        ],
+        "thresholds": { "GREEN": [0, 2], "YELLOW": [3, 5], "RED": [6, 100] }
+      }
+    },
+
+    {
+      "module_id": "immunisation",
+      "title_bn": "টিকা মিস / ইমিউনাইজেশন",
+      "title_en": "Immunization — UIP National Schedule",
+
+      "questions": [
+        { "id": "im1", "text_bn": "শিশুর বয়স কত মাস?",                             "text_en": "What is the child's age in months?",                        "options": ["০-৬ মাস", "৬-১২ মাস", "১-৫ বছর"] },
+        { "id": "im2", "text_bn": "কোন টিকা মিস হয়েছে?",                           "text_en": "Which vaccine was missed?",                                 "options": ["BCG/OPV", "DPT/Pentavalent", "Measles/MMR"] },
+        { "id": "im3", "text_bn": "কতদিন আগে টিকা দেওয়ার কথা ছিল?",               "text_en": "How many days ago was the vaccine due?",                    "options": ["১ সপ্তাহ", "১ মাস", "৩ মাসের বেশি"] },
+        { "id": "im4", "text_bn": "শিশুর কি কোনো অসুস্থতা আছে এখন?",              "text_en": "Does the child have any illness now?",                      "options": ["হ্যাঁ", "না"] },
+        { "id": "im5", "text_bn": "১-৫ বছর বয়সী শিশুর বুস্টার ডোজ মিস হয়েছে?",  "text_en": "Has the booster dose been missed for child aged 1–5 years?", "options": ["হ্যাঁ", "না"] }
+      ],
+
+      "hard_stop_rules": [],
+
+      "combination_rules": [],
+
+      "yellow_rules": [
+        { "ruleId": "IMM-001", "priority": 1, "condition_set": [{ "question_id": "im1", "operator": "IN",     "value": ["০-৬ মাস", "৬-১২ মাস"]              }], "band": "YELLOW", "referral": "Nearest immunisation session within 7 days", "action_bn": "৭ দিনের মধ্যে নিকটতম সেশন সাইটে ক্যাচ-আপ নির্ধারণ করুন। সিরিজ পুনরায় শুরু করবেন না।", "action_en": "Schedule catch-up within 7 days. Do not restart series.",                          "suspected_conditions": ["Missed primary vaccines"], "danger_signs": ["Unimmunised infant"] },
+        { "ruleId": "IMM-002", "priority": 2, "condition_set": [{ "question_id": "im2", "operator": "IN",     "value": ["BCG/OPV", "DPT/Pentavalent", "Measles/MMR"] }], "band": "YELLOW", "referral": "Nearest immunisation session within 7 days", "action_bn": "৭ দিনের মধ্যে ক্যাচ-আপ নির্ধারণ করুন।",                                                                                          "action_en": "Schedule catch-up within 7 days.",                                                  "suspected_conditions": ["Missed vaccine"],           "danger_signs": ["Vaccine gap"] },
+        { "ruleId": "IMM-003", "priority": 3, "condition_set": [{ "question_id": "im5", "operator": "EQUALS", "value": true                                  }], "band": "YELLOW", "referral": "Next immunisation session",                    "action_bn": "DPT বুস্টার ১৬-২৪ মাসে। OPV বুস্টার ১৬-২৪ মাসে। MMR ১৫-১৮ মাসে।",                                                                    "action_en": "DPT booster 16–24 m. OPV booster 16–24 m. MMR 15–18 m. Schedule catch-up.",        "suspected_conditions": ["Missed booster"],           "danger_signs": ["Booster overdue"] },
+        { "ruleId": "IMM-004", "priority": 4, "condition_set": [{ "question_id": "im4", "operator": "EQUALS", "value": true                                  }], "band": "YELLOW", "referral": "Reschedule within 7 days of recovery",        "action_bn": "হালকা অসুস্থতা = নির্ধারিত সময়ে টিকা দিন। মাঝারি/গুরুতর = সুস্থ হওয়া পর্যন্ত স্থগিত করুন।", "action_en": "Mild illness = vaccinate. Moderate/severe = defer until recovered.",                "suspected_conditions": ["Illness at vaccination"],  "danger_signs": ["Current illness"] },
+        { "ruleId": "IMM-005", "priority": 5, "condition_set": [{ "question_id": "im3", "operator": "EQUALS", "value": "৩ মাসের বেশি"                        }], "band": "YELLOW", "referral": "PHC catch-up session",                        "action_bn": "ক্যাচ-আপ ইমিউনাইজেশন। সিরিজ পুনরায় শুরু করবেন না। ANMOL-এ ফ্ল্যাগ করুন।",                "action_en": "Catch-up immunisation. Do not restart series. Flag on ANMOL.",                      "suspected_conditions": ["Long vaccine gap"],         "danger_signs": ["Vaccine overdue > 3 months"] }
+      ],
+
+      "numeric_rules": [],
+
+      "risk_engine": {
+        "score_rules": [
+          { "condition": "im4", "score": 1 },
+          { "condition": "im5", "score": 1 }
+        ],
+        "thresholds": { "GREEN": [0, 0], "YELLOW": [1, 100], "RED": [] }
+      }
+    },
+
+    {
+      "module_id": "emergency",
+      "title_bn": "জরুরি অবস্থা যাচাই",
+      "title_en": "Emergency — Global Hard-Stop Engine",
+
+      "questions": [
+        { "id": "e1", "text_bn": "অতিরিক্ত রক্তপাত হচ্ছে?",             "text_en": "Is there excessive bleeding?",                       "options": ["হ্যাঁ", "না"] },
+        { "id": "e2", "text_bn": "খিঁচুনি বা অজ্ঞান হয়েছে?",           "text_en": "Has there been convulsion or loss of consciousness?", "options": ["হ্যাঁ", "না"] },
+        { "id": "e3", "text_bn": "শ্বাস নিতে খুব কষ্ট হচ্ছে?",          "text_en": "Is there severe difficulty breathing?",             "options": ["হ্যাঁ", "না"] },
+        { "id": "e4", "text_bn": "রোগী সাড়া দিচ্ছে না বা জ্ঞান নেই?", "text_en": "Is the patient unresponsive or unconscious?",        "options": ["হ্যাঁ", "না"] }
+      ],
+
+      "hard_stop_rules": [
+        { "ruleId": "EM-001", "priority": 1, "condition_set": [{ "question_id": "e1", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU / DH ≤ 30 min",   "action_bn": "হার্ড-স্টপ। এখনই ১০৮ কল করুন। FRU/DH-তে ≤ ৩০ মিনিটে রেফার করুন। প্রসব-পরবর্তী হলে জরায়ু সংকোচন প্রয়োগ করুন।", "action_en": "Hard-stop. Call 108. Refer FRU/DH ≤ 30 min. Uterine compression if postpartum.", "suspected_conditions": ["Haemorrhage"],          "danger_signs": ["Excessive bleeding"] },
+        { "ruleId": "EM-002", "priority": 2, "condition_set": [{ "question_id": "e2", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU / DH immediately", "action_bn": "হার্ড-স্টপ। বাম কাতে শোয়ান, শ্বাসনালী রক্ষা করুন। ১০৮ কল করুন। এখনই FRU/DH-তে রেফার করুন।",                        "action_en": "Hard-stop. Lay on left side, protect airway. Call 108. Refer FRU/DH immediately.", "suspected_conditions": ["Eclampsia / Seizure"], "danger_signs": ["Convulsion", "Unconscious"] },
+        { "ruleId": "EM-003", "priority": 3, "condition_set": [{ "question_id": "e3", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU / DH ≤ 30 min",   "action_bn": "হার্ড-স্টপ। ১০৮ কল করুন। শ্বাসনালী পরিষ্কার রাখুন। নবজাতক হলে: উদ্দীপনা দিন।",                                    "action_en": "Hard-stop. Call 108. Keep airway clear. If newborn: stimulate, clear airway.",    "suspected_conditions": ["Respiratory failure"], "danger_signs": ["Severe breathing difficulty"] },
+        { "ruleId": "EM-004", "priority": 4, "condition_set": [{ "question_id": "e4", "operator": "EQUALS", "value": true }], "band": "RED", "referral": "FRU / DH ≤ 30 min",   "action_bn": "হার্ড-স্টপ। এখনই ১০৮ কল করুন। শ্বাসনালী, শ্বাস, সঞ্চালন পরীক্ষা করুন। রিকভারি পজিশনে রাখুন।",                  "action_en": "Hard-stop. Call 108. Check airway, breathing, circulation. Recovery position.",   "suspected_conditions": ["Unconsciousness"],     "danger_signs": ["Unresponsive"] }
+      ],
+
+      "combination_rules": [],
+      "yellow_rules": [],
+      "numeric_rules": [],
+
+      "risk_engine": {
+        "score_rules": [
+          { "condition": "e1", "score": 4 },
+          { "condition": "e2", "score": 4 },
+          { "condition": "e3", "score": 4 },
+          { "condition": "e4", "score": 4 }
+        ],
+        "thresholds": { "GREEN": [0, 0], "YELLOW": [], "RED": [1, 100] }
+      }
+    }
+  ]
+}

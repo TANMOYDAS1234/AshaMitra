@@ -1,0 +1,54 @@
+name: asha_mitra
+description: ASHA Mitra - Voice AI for Safer Care
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  get: ^4.6.6
+  shared_preferences: ^2.2.2
+  http: ^1.1.0
+  intl: ^0.20.2
+  dio: ^5.4.0
+  connectivity_plus: ^7.1.1
+  permission_handler: ^12.0.1
+  url_launcher: ^6.3.0
+  image_picker: ^1.1.2
+  pdf: ^3.11.1
+  path_provider: ^2.1.4
+  open_file: ^3.3.2
+  speech_to_text: ^7.0.0
+  flutter_tts: ^4.2.0
+  crypto: ^3.0.3
+  sqflite: ^2.3.3
+  uuid: ^4.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/images/ashalogo.png"
+  min_sdk_android: 23
+  adaptive_icon_background: "#4F46E5"
+  adaptive_icon_foreground: "assets/images/ashalogo.png"
+  web:
+    generate: true
+    image_path: "assets/images/ashalogo.png"
+    background_color: "#4F46E5"
+    theme_color: "#4F46E5"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/data/
+    - assets/guidelines/
