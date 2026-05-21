@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/routes.dart';
@@ -25,6 +27,87 @@ class EmergencyScreen extends StatelessWidget {
     } else {
       Get.snackbar('Error', 'Cannot open maps', snackPosition: SnackPosition.BOTTOM);
     }
+  }
+
+  // ── Capture and share the patient's GPS so the ambulance can find them ────
+  Future<void> _sharePatientLocation() async {
+    if (!await Geolocator.isLocationServiceEnabled()) {
+      Get.snackbar('লোকেশন বন্ধ', 'ফোনের GPS / লোকেশন চালু করুন',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    var perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+    }
+    if (perm == LocationPermission.denied ||
+        perm == LocationPermission.deniedForever) {
+      Get.snackbar('অনুমতি দরকার', 'অ্যাপকে লোকেশন অনুমতি দিন',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    Get.dialog(
+      const Center(child: CircularProgressIndicator(color: Colors.white)),
+      barrierDismissible: false,
+    );
+    try {
+      final pos = await Geolocator.getCurrentPosition()
+          .timeout(const Duration(seconds: 20));
+      if (Get.isDialogOpen ?? false) Get.back();
+      Get.dialog(_locationDialog(pos.latitude, pos.longitude));
+    } catch (_) {
+      if (Get.isDialogOpen ?? false) Get.back();
+      Get.snackbar('ব্যর্থ', 'অবস্থান পাওয়া যায়নি — আবার চেষ্টা করুন',
+          snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
+  Widget _locationDialog(double lat, double lng) {
+    final coords = '${lat.toStringAsFixed(5)}, ${lng.toStringAsFixed(5)}';
+    final shareLink = 'https://maps.google.com/?q=$lat,$lng';
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('রোগীর অবস্থান',
+          style: TextStyle(fontWeight: FontWeight.bold)),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('এই অবস্থান অ্যাম্বুলেন্স বা সুপারভাইজারকে পাঠান:',
+              style: TextStyle(fontSize: 13)),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(coords,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: shareLink));
+            Get.back();
+            Get.snackbar('কপি হয়েছে', 'লোকেশন লিঙ্ক কপি হয়েছে',
+                snackPosition: SnackPosition.BOTTOM);
+          },
+          child: const Text('লিঙ্ক কপি করুন'),
+        ),
+        TextButton(
+          onPressed: () {
+            Get.back();
+            _openMaps('$lat,$lng');
+          },
+          child: const Text('ম্যাপে দেখুন'),
+        ),
+      ],
+    );
   }
 
   @override
@@ -98,6 +181,14 @@ class EmergencyScreen extends StatelessWidget {
                             label: 'call_ambulance'.tr,
                             subtitle: 'call_ambulance_desc'.tr,
                             onTap: () => _call('102'),
+                          ),
+                          const SizedBox(height: 12),
+                          EmergencyButton(
+                            icon: Icons.share_location_rounded,
+                            label: 'share_location'.tr,
+                            subtitle: 'share_location_desc'.tr,
+                            color: AppColors.primary,
+                            onTap: _sharePatientLocation,
                           ),
                           const SizedBox(height: 12),
                           EmergencyButton(

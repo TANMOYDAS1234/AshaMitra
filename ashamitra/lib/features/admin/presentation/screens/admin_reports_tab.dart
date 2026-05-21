@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/utils/pdf_helper.dart';
 import '../../../admin/controller/admin_controller.dart';
+import 'admin_report_detail.dart';
 
 class AdminReportsTab extends StatefulWidget {
   const AdminReportsTab({super.key});
@@ -170,7 +171,7 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                       final r = ctrl.filteredReports[i];
                       return _ReportCard(
                         r: r,
-                        onTap: () => _showDetail(context, r),
+                        onTap: () => showAdminReportDetail(context, r),
                       );
                     },
                   ),
@@ -198,117 +199,6 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
               : 'Select Year',
     );
     if (picked != null) ctrl.setFilter(mode, date: picked);
-  }
-
-  void _showDetail(BuildContext context, Map<String, dynamic> r) {
-    final band = r['finalBand']?.toString().toUpperCase() ?? '';
-    final color = band == 'RED'
-        ? AppColors.emergencyRed
-        : band == 'YELLOW'
-            ? AppColors.warningYellow
-            : AppColors.safeGreen;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.92,
-        minChildSize: 0.4,
-        builder: (_, scrollCtrl) => Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: ListView(
-            controller: scrollCtrl,
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Band badge + case label
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10)),
-                    child: Text(band,
-                        style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: color)),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(r['caseLabel']?.toString() ?? '',
-                        style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.onBackground)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _DetailRow('Patient', r['patientName']?.toString() ?? '-'),
-              _DetailRow('Risk Score', '${r['riskScore'] ?? 0}'),
-              _DetailRow('Risk Level', r['riskLevel']?.toString() ?? '-'),
-              _DetailRow('Facility', r['facilityType']?.toString() ?? '-'),
-              _DetailRow('Recheck After',
-                  '${r['recheckAfterHours'] ?? 0} hrs'),
-              if ((r['reason']?.toString() ?? '').isNotEmpty)
-                _DetailRow('Reason', r['reason'].toString()),
-              if ((r['nextStep']?.toString() ?? '').isNotEmpty)
-                _DetailRow('Next Step', r['nextStep'].toString()),
-              if ((r['dangerSigns'] as List?)?.isNotEmpty == true) ...[
-                const SizedBox(height: 8),
-                const Text('Danger Signs',
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textSecondary)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: (r['dangerSigns'] as List)
-                      .map((s) => Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                                color: AppColors.emergencyRed
-                                    .withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(8)),
-                            child: Text(s.toString(),
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.emergencyRed)),
-                          ))
-                      .toList(),
-                ),
-              ],
-              const SizedBox(height: 8),
-              Text(
-                _fmtDate(r['createdAt']?.toString() ?? ''),
-                style: const TextStyle(
-                    fontSize: 11, color: AppColors.textSecondary),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Future<void> _downloadPdf(List<dynamic> reports) async {
@@ -507,6 +397,12 @@ class _ReportCard extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 11,
                             color: AppColors.textSecondary)),
+                  if ((r['ashaName']?.toString() ?? '').isNotEmpty)
+                    Text('ASHA: ${r['ashaName']}',
+                        style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600)),
                   Text(fmtDate,
                       style: const TextStyle(
                           fontSize: 10, color: AppColors.textSecondary)),
@@ -533,37 +429,4 @@ class _ReportCard extends StatelessWidget {
   }
 }
 
-// ── Detail row ─────────────────────────────────────────────────────────────────
-class _DetailRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _DetailRow(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    if (value.isEmpty || value == '-') return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(label,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary)),
-          ),
-          Expanded(
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.onBackground)),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ── (report detail moved to admin_report_detail.dart) ───────────────────────

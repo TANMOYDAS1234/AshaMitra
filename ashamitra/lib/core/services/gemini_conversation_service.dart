@@ -237,7 +237,7 @@ extracted_answers শুধু সেই প্রশ্নগুলো যা �
       Uri.parse('${ApiConstants.baseUrl}/chat'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'prompt': prompt}),
-    ).timeout(const Duration(seconds: 45));
+    ).timeout(const Duration(seconds: 20));
 
     if (response.statusCode != 200) {
       // ignore: avoid_print

@@ -49,6 +49,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       type: _caseType,
       village: _villageCtrl.text.trim().isEmpty ? 'Unknown' : _villageCtrl.text.trim(),
       mobile: _mobileCtrl.text.trim(),
+      age: _ageCtrl.text.trim(),
+      gender: _gender,
     );
     Get.back();
     Get.snackbar(
@@ -65,13 +67,18 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
 
   void _saveAndCheckup() {
     if (!_formKey.currentState!.validate()) return;
-    _ctrl.addPatient(
+    final patient = _ctrl.addPatient(
       name: _nameCtrl.text.trim(),
       type: _caseType,
       village: _villageCtrl.text.trim().isEmpty ? 'Unknown' : _villageCtrl.text.trim(),
       mobile: _mobileCtrl.text.trim(),
+      age: _ageCtrl.text.trim(),
+      gender: _gender,
     );
-    Get.toNamed(AppRoutes.selectCase);
+    Get.toNamed(AppRoutes.selectCase, arguments: {
+      'patientId': patient.id,
+      'patientName': patient.name,
+    });
   }
 
   @override

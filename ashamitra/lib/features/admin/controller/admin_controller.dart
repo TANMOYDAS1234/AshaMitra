@@ -13,6 +13,7 @@ class AdminController extends GetxController {
   final errorMsg        = ''.obs;
 
   final totalWorkers  = 0.obs;
+  final totalPatients = 0.obs;
   final totalReports  = 0.obs;
   final redReports    = 0.obs;
   final yellowReports = 0.obs;
@@ -43,6 +44,7 @@ class AdminController extends GetxController {
       if (res['success'] == true) {
         final d = res['data'] as Map<String, dynamic>;
         totalWorkers.value  = (d['totalWorkers']  as num?)?.toInt() ?? 0;
+        totalPatients.value = (d['totalPatients'] as num?)?.toInt() ?? 0;
         totalReports.value  = (d['totalReports']  as num?)?.toInt() ?? 0;
         redReports.value    = (d['redReports']    as num?)?.toInt() ?? 0;
         yellowReports.value = (d['yellowReports'] as num?)?.toInt() ?? 0;

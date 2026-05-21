@@ -498,7 +498,41 @@ class SituationExtractor {
         'weakness', 'dizziness', 'pallor', 'very weak', 'no energy',
       ], questionId: 'pp6', answer: true, label: 'দুর্বলতা'),
     ],
-    'immunisation': [],
+    'immunisation': [
+      _SymptomRule(triggers: [
+        // Standard Bengali
+        'টিকা মিস', 'টিকা হয়নি', 'টিকা বাদ', 'টিকা দেওয়া হয়নি',
+        'টিকা নেওয়া হয়নি', 'টিকা বাকি', 'টিকা মিস হয়েছে', 'ভ্যাকসিন মিস',
+        // Rarhi / Varendra
+        'টিকা মিস হইছে', 'টিকা দেয় নাই', 'টিকা দেওয়া হয় নাই',
+        'টিকা বাকি আছে', 'টিকা দেই নাই',
+        // Hindi / Bhojpuri
+        'tika nahi laga', 'tika miss', 'tika nahi', 'tika chhut gaya',
+        'vaccine miss',
+        // English
+        'missed vaccine', 'vaccine missed', 'immunization missed',
+        'missed immunization',
+      ], questionId: 'im2', answer: true, label: 'টিকা মিস'),
+      _SymptomRule(triggers: [
+        // Standard Bengali
+        'অসুস্থ', 'অসুখ', 'জ্বর', 'গা গরম', 'সর্দি', 'কাশি', 'এখন অসুস্থ',
+        // Rarhi / Varendra
+        'অসুস্থ আছে', 'অসুস্থ হইছে', 'শরীর খারাপ', 'গা গরম আছে',
+        // Hindi / Bhojpuri
+        'bimar', 'bimaar', 'tabiyat kharab', 'bukhar hai',
+        // English
+        'sick', 'unwell', 'not well', 'ill',
+      ], questionId: 'im4', answer: true, label: 'এখন অসুস্থ'),
+      _SymptomRule(triggers: [
+        // Standard Bengali
+        'বুস্টার', 'বুস্টার মিস', 'বুস্টার ডোজ', 'বুস্টার বাকি',
+        'বুস্টার হয়নি',
+        // Hindi
+        'booster nahi', 'booster miss',
+        // English
+        'booster missed', 'missed booster', 'booster dose',
+      ], questionId: 'im5', answer: true, label: 'বুস্টার ডোজ মিস'),
+    ],
     'emergency': [
       _SymptomRule(triggers: [
         // Standard Bengali

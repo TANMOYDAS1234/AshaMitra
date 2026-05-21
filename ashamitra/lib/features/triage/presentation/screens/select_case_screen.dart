@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/services/case_detection_service.dart';
+import '../../../../core/services/tts_service.dart';
 import '../../data/models/triage_case_model.dart';
 
 class SelectCaseScreen extends StatefulWidget {
@@ -18,26 +18,32 @@ class SelectCaseScreen extends StatefulWidget {
 class _SelectCaseScreenState extends State<SelectCaseScreen> {
   final _detectionService = CaseDetectionService();
   final _stt = SpeechToText();
-  final _tts = FlutterTts();
+  final _tts = TtsService();
   List<TriageCaseModel> _cases = [];
   bool _loading = true;
   bool _listening = false;
   String _transcript = '';
 
+  // Forwarded unchanged to the triage flow when triage is started from a
+  // patient, so the resulting report links back to that patient.
+  String? _patientId;
+  String? _patientName;
+
   @override
   void initState() {
     super.initState();
+    final args = Get.arguments;
+    if (args is Map) {
+      _patientId = args['patientId']?.toString();
+      _patientName = args['patientName']?.toString();
+    }
     _loadCases();
     _initSttTts();
   }
 
   Future<void> _initSttTts() async {
     await _stt.initialize();
-    await _tts.setLanguage('bn-IN');
-    await _tts.setSpeechRate(0.42);
-    await _tts.setPitch(1.1);
-    await _tts.setVolume(1.0);
-    // Greet the worker
+    await _tts.init();
     await Future.delayed(const Duration(milliseconds: 600));
     if (mounted) _tts.speak('পরিস্থিতি বলুন। মাইক বোতাম চাপুন।');
   }
@@ -110,6 +116,8 @@ class _SelectCaseScreenState extends State<SelectCaseScreen> {
       'confidence': result.confidence,
       'method': result.method,
       'situation': transcript,
+      if (_patientId != null) 'patientId': _patientId,
+      if (_patientName != null) 'patientName': _patientName,
     });
   }
 
@@ -117,6 +125,8 @@ class _SelectCaseScreenState extends State<SelectCaseScreen> {
     Get.toNamed(AppRoutes.voiceTriage, arguments: {
       'caseId': caseModel.id,
       'caseTitle': caseModel.title,
+      if (_patientId != null) 'patientId': _patientId,
+      if (_patientName != null) 'patientName': _patientName,
     });
   }
 

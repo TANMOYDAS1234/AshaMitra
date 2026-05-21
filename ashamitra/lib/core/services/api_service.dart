@@ -133,6 +133,23 @@ class ApiService {
     }
   }
 
+  /// Updates an existing patient document in place (PUT /patients/:id).
+  /// [id] must be a real server _id — never a local placeholder id.
+  static Future<bool> updatePatient(String id, Map<String, dynamic> patient) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/patients/$id'),
+        headers: _headers,
+        body: jsonEncode(patient),
+      ).timeout(const Duration(seconds: 15));
+      _guard(res.statusCode);
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['success'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ── Reports ────────────────────────────────────────────────────────────────
 
   static Future<bool> saveReport(Map<String, dynamic> report) async {

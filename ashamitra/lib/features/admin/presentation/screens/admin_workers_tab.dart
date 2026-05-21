@@ -5,6 +5,8 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../features/auth/data/models/user_model.dart';
 import '../../../../shared/widgets/user_avatar.dart';
 import '../../../admin/controller/admin_controller.dart';
+import '../../../../app/routes.dart';
+import 'admin_report_detail.dart';
 
 class AdminWorkersTab extends StatefulWidget {
   const AdminWorkersTab({super.key});
@@ -259,7 +261,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
         initialChildSize: 0.75,
         maxChildSize: 0.95,
         minChildSize: 0.4,
-        builder: (_, scrollCtrl) => Container(
+        builder: (sheetCtx, scrollCtrl) => Container(
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -368,7 +370,9 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                               fontWeight: FontWeight.w700,
                               color: AppColors.onBackground)),
                       const SizedBox(height: 8),
-                      ...patients.map((p) => _PatientRow(p)),
+                      ...patients.map((p) => _PatientRow(p,
+                          onTap: () => Get.toNamed(
+                              AppRoutes.patientProfile, arguments: p))),
                       const SizedBox(height: 16),
                     ],
                     if (reports.isNotEmpty) ...[
@@ -378,7 +382,8 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                               fontWeight: FontWeight.w700,
                               color: AppColors.onBackground)),
                       const SizedBox(height: 8),
-                      ...reports.map((r) => _ReportRow(r)),
+                      ...reports.map((r) => _ReportRow(r,
+                          onTap: () => showAdminReportDetail(sheetCtx, r))),
                     ],
                     if (patients.isEmpty && reports.isEmpty)
                       const Center(
@@ -619,7 +624,8 @@ class _StatChip extends StatelessWidget {
 // ── Patient row ────────────────────────────────────────────────────────────────
 class _PatientRow extends StatelessWidget {
   final Map<String, dynamic> p;
-  const _PatientRow(this.p);
+  final VoidCallback? onTap;
+  const _PatientRow(this.p, {this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -630,32 +636,39 @@ class _PatientRow extends StatelessWidget {
             ? AppColors.warningYellow
             : AppColors.safeGreen;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2))),
-      child: Row(
-        children: [
-          Container(
-              width: 8,
-              height: 8,
-              decoration:
-                  BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(p['name']?.toString() ?? '',
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.2))),
+        child: Row(
+          children: [
+            Container(
+                width: 8,
+                height: 8,
+                decoration:
+                    BoxDecoration(color: color, shape: BoxShape.circle)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(p['name']?.toString() ?? '',
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.onBackground)),
+            ),
+            Text(p['type']?.toString() ?? '',
                 style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.onBackground)),
-          ),
-          Text(p['type']?.toString() ?? '',
-              style: const TextStyle(
-                  fontSize: 11, color: AppColors.textSecondary)),
-        ],
+                    fontSize: 11, color: AppColors.textSecondary)),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right_rounded,
+                size: 16, color: AppColors.textSecondary),
+          ],
+        ),
       ),
     );
   }
@@ -664,7 +677,8 @@ class _PatientRow extends StatelessWidget {
 // ── Report row ─────────────────────────────────────────────────────────────────
 class _ReportRow extends StatelessWidget {
   final Map<String, dynamic> r;
-  const _ReportRow(this.r);
+  final VoidCallback? onTap;
+  const _ReportRow(this.r, {this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -675,38 +689,45 @@ class _ReportRow extends StatelessWidget {
             ? AppColors.warningYellow
             : AppColors.safeGreen;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-          color: const Color(0xFFF8FAFC),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.2))),
-      child: Row(
-        children: [
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(6)),
-            child: Text(band,
-                style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: color)),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(r['caseLabel']?.toString() ?? '',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.onBackground)),
-          ),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.2))),
+        child: Row(
+          children: [
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6)),
+              child: Text(band,
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: color)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(r['caseLabel']?.toString() ?? '',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.onBackground)),
+            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right_rounded,
+                size: 16, color: AppColors.textSecondary),
+          ],
+        ),
       ),
     );
   }

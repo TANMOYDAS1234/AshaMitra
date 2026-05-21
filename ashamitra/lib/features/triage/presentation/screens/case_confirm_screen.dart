@@ -62,11 +62,13 @@ class _CaseConfirmScreenState extends State<CaseConfirmScreen> {
 
   void _proceed(TriageCaseModel c) {
     _timer?.cancel();
-    final situation = (Get.arguments as Map<String, dynamic>)['situation'] as String? ?? '';
+    final args = Get.arguments as Map<String, dynamic>;
     Get.toNamed(AppRoutes.voiceTriage, arguments: {
       'caseId': c.id,
       'caseTitle': c.title,
-      'situation': situation,
+      'situation': args['situation'] as String? ?? '',
+      if (args['patientId'] != null) 'patientId': args['patientId'],
+      if (args['patientName'] != null) 'patientName': args['patientName'],
     });
   }
 

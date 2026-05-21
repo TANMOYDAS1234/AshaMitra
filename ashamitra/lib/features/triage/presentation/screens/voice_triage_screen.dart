@@ -1,10 +1,9 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
@@ -18,6 +17,7 @@ import '../../../../core/services/clup/clup_pipeline.dart';
 import '../../../../core/services/clup/situation_extractor.dart';
 import '../../../../features/auth/controller/auth_controller.dart';
 import '../../../../core/services/local_storage_service.dart';
+import '../../../../core/services/tts_service.dart';
 
 class VoiceTriageScreen extends StatefulWidget {
   const VoiceTriageScreen({super.key});
@@ -32,11 +32,17 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   final _clup = CLUPPipeline();
   final _situationExtractor = SituationExtractor();
   final _offlineBrain = OfflineBrain();
+  final _tts = TtsService();
 
   // ── Case info ─────────────────────────────────────────────────
   late String _caseType;
   late String _caseTitle;
   late String _moduleId;
+
+  // Set when triage is started from an existing patient — links the
+  // resulting report back to that patient instead of creating a duplicate.
+  String? _patientId;
+  String? _patientName;
 
   // ── Conversation state ────────────────────────────────────────
   final List<ConversationTurn> _history = [];
@@ -47,7 +53,6 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   int _turnCount = 0;
 
   // ── Voice state ───────────────────────────────────────────────
-  final FlutterTts _tts = FlutterTts();
   final SpeechToText _stt = SpeechToText();
   final SpeechToText _sttFallback = SpeechToText();
   bool _sttAvailable = false;
@@ -61,6 +66,9 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
 
   // ── Offline fallback questions ────────────────────────────────
   List<EngineQuestion> _offlineQuestions = [];
+  // The engine yes/no question OfflineBrain last asked — lets a terse
+  // "হ্যাঁ/না" reply be recorded against it.
+  EngineQuestion? _lastAskedQuestion;
 
 
   @override
@@ -71,6 +79,8 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     _caseType  = map['caseId']    as String? ?? 'pregnancy';
     _caseTitle = map['caseTitle'] as String? ?? '🤰 গর্ভবতী মায়ের চেকআপ';
     _moduleId  = _toModuleId(_caseType);
+    _patientId   = map['patientId']   as String?;
+    _patientName = map['patientName'] as String?;
     _statusText = 'মাইক ট্যাপ করুন কথা বলতে';
     _offlineBrain.init(Get.find<RuleExecutor>());
     _initTts();
@@ -97,49 +107,16 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
 
   // ── TTS init ──────────────────────────────────────────────────
   Future<void> _initTts() async {
-    await _tts.setEngine('com.google.android.tts');
-    await _tts.setLanguage('bn-IN');
-    await _tts.setSpeechRate(0.42);  // slower = more natural for Bengali
-    await _tts.setPitch(1.0);        // neutral pitch sounds most human
-    await _tts.setVolume(1.0);
-    await _tts.awaitSpeakCompletion(true);
-    _tts.setStartHandler(() {
-      if (mounted) setState(() => _orbState = OrbState.processing);
-    });
-    _tts.setCompletionHandler(() {
-      if (mounted) setState(() => _orbState = OrbState.idle);
-    });
-    _tts.setErrorHandler((_) {
-      if (mounted) setState(() => _orbState = OrbState.idle);
-    });
+    _tts.onStart    = () { if (mounted) setState(() => _orbState = OrbState.processing); };
+    _tts.onComplete = () { if (mounted) setState(() => _orbState = OrbState.idle); };
+    _tts.onError    = () { if (mounted) setState(() => _orbState = OrbState.idle); };
+    await _tts.init();
     await Future.delayed(const Duration(milliseconds: 600));
-    await _speakNatural('পরিস্থিতি বলুন বা প্রশ্ন করুন');
+    await _tts.speak('পরিস্থিতি বলুন বা প্রশ্ন করুন');
   }
 
-  // ── Natural speech: splits on punctuation for human-like pauses ──
-  Future<void> _speakNatural(String text) async {
-    if (text.isEmpty) return;
-    // Split on sentence-ending punctuation keeping the delimiter
-    final sentences = text
-        .split(RegExp(r'(?<=[।!?\.])\s*'))
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-
-    if (sentences.length <= 1) {
-      await _tts.speak(text);
-      return;
-    }
-
-    for (int i = 0; i < sentences.length; i++) {
-      if (!mounted) return;
-      await _tts.speak(sentences[i]);
-      // Natural pause between sentences (shorter for last)
-      if (i < sentences.length - 1) {
-        await Future.delayed(const Duration(milliseconds: 180));
-      }
-    }
-  }
+  // ── Natural speech helper (delegates to TtsService) ─────────────────────
+  Future<void> _speakNatural(String text) => _tts.speak(text);
 
   // ── STT init ──────────────────────────────────────────────────
   Future<void> _initStt() async {
@@ -300,12 +277,10 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
           : response.extractedAnswers;
       _extractedAnswers.addAll(toMerge);
       _extractedVitals.addAll(response.extractedVitals); // accumulate vitals
-      final localRisk = _computeLocalRiskLevel();
-      final geminiRisk = response.riskLevel;
-      const riskOrder = ['low', 'medium', 'high', 'emergency'];
-      _riskLevel = riskOrder.indexOf(localRisk) >= riskOrder.indexOf(geminiRisk)
-          ? localRisk
-          : geminiRisk;
+      // Live risk band — the SAME RuleExecutor that TriageResultScreen runs,
+      // so the badge always matches the final result. Gemini's risk_level is
+      // intentionally not used here (the result screen does not use it either).
+      _riskLevel = _computeLocalRiskLevel();
       // Add assistant turn to history
       _history.add(ConversationTurn(
           role: 'assistant', text: response.spokenResponse));
@@ -327,8 +302,21 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
         await Future.delayed(const Duration(milliseconds: 500));
         _submitAnswers();
       }
-    } on TimeoutException {
+    } catch (e) {
+      // Online path failed — server cold-start, AI quota (503), or a weak
+      // signal. Fall back to the offline engine instead of dead-ending on a
+      // "network issue" the worker cannot get past.
       if (!mounted) return;
+      _isOffline = true;
+      await _processOffline(input, uncertain: uncertain);
+    }
+  }
+
+  // Unreachable legacy error UI — superseded by the offline fallback in
+  // _processOnline above. This whole method is dead code; safe to delete.
+  // ignore: unused_element
+  void _legacyOnlineErrorUi() {
+    try {
       setState(() {
         _isProcessing = false;
         _orbState = OrbState.idle;
@@ -362,10 +350,30 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       _extractedAnswers.addAll(extraction.preAnswers);
     }
 
-    // Update risk level deterministically after every extraction
+    // Capture a terse yes/no reply to the question OfflineBrain just asked.
+    // The keyword extractor only catches symptom words, so a bare "হ্যাঁ/না"
+    // would otherwise be lost. Every engine yes/no question shares one
+    // polarity (verified against asha_engine.json): yes = danger present.
+    String? lastTurnId = extraction.preAnswers.keys.firstOrNull;
+    bool lastTurnYes = extraction.preAnswers.values.firstOrNull ?? false;
+    final lastQ = _lastAskedQuestion;
+    if (!uncertain &&
+        lastQ != null &&
+        extraction.preAnswers.isEmpty &&
+        _isYesNoQuestion(lastQ) &&
+        !_extractedAnswers.containsKey(lastQ.id)) {
+      final yn = _detectYesNo(input);
+      if (yn != null) {
+        _extractedAnswers[lastQ.id] = yn;
+        lastTurnId = lastQ.id;
+        lastTurnYes = yn;
+      }
+    }
+
+    // Update risk band deterministically after every extraction
     _riskLevel = _computeLocalRiskLevel();
 
-    // Auto-finish on emergency risk (2+ RED danger signs confirmed)
+    // Auto-finish when the engine returns a RED band
     if (_riskLevel == 'emergency') {
       final confirmedSigns = _extractedAnswers.entries
           .where((e) => e.value == true)
@@ -478,8 +486,8 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     final next = _offlineBrain.getNextQuestion(
       remaining: remaining,
       confirmedYes: confirmedYes,
-      lastAnsweredId: extraction.preAnswers.keys.firstOrNull,
-      lastAnswerWasYes: extraction.preAnswers.values.firstOrNull ?? false,
+      lastAnsweredId: lastTurnId,
+      lastAnswerWasYes: lastTurnYes,
     );
 
     // If a combination fired, speak the alert and finish immediately
@@ -501,10 +509,12 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     }
 
     final nextQ = next.question ?? remaining.first;
+    _lastAskedQuestion = nextQ;
 
     // Build natural response: acknowledge + combo alert OR immediate action + next question
     final ack = _buildAcknowledgement(input, extraction.extractedSymptoms);
-    final alert = next.combinationAlertBn ?? immediateAction;
+    final alert =
+        next.combinationAlertBn ?? immediateAction ?? next.immediateActionBn;
     responseText = alert != null
         ? '$ack $alert ${nextQ.textBn}'
         : '$ack ${nextQ.textBn}';
@@ -534,48 +544,24 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     return 'বুঝেছি।';
   }
 
-  // ── Deterministic local risk level ─────────────────────────
-  // Runs after every turn using extracted answers + engine rule weights.
-  // This is the ground truth — Gemini's risk_level is only used as a hint.
+  // ── Deterministic risk band ───────────────────────────────────────────
+  // Runs the SAME 11-layer RuleExecutor that TriageResultScreen uses, so the
+  // live badge always matches the final result. A hardcoded YES-count
+  // heuristic could not — it missed combination rules that escalate two
+  // YELLOW signs to a RED band.
   String _computeLocalRiskLevel() {
-    final yes = _extractedAnswers.entries
-        .where((e) => e.value == true)
-        .map((e) => e.key)
-        .toSet();
-
-    if (yes.isEmpty) return 'low';
-
-    // Hard-stop RED question IDs per module (from engine JSON)
-    const redIds = {
-      // Pregnancy
-      'p1', 'p3', 'p4', 'p6',
-      // Postpartum
-      'pp1',
-      // Newborn — ALL are RED
-      'n1', 'n2', 'n3', 'n4', 'n5', 'n6',
-      // Child
-      'c1', 'c5',
-      // Emergency — ALL are RED
-      'e1', 'e2', 'e3', 'e4',
+    if (_extractedAnswers.isEmpty) return 'low';
+    final result = Get.find<RuleExecutor>().execute(
+      moduleId: _moduleId,
+      answers: Map<String, dynamic>.from(_extractedAnswers),
+      vitals: Map<String, dynamic>.from(_extractedVitals),
+    );
+    final band = result.pipelineBlocked ? 'GREEN' : result.band;
+    return switch (band) {
+      'RED'    => 'emergency',
+      'YELLOW' => 'medium',
+      _        => 'low',
     };
-
-    // YELLOW question IDs
-    const yellowIds = {
-      'p2', 'p5',
-      'pp2', 'pp3', 'pp4', 'pp5', 'pp6',
-      'c2', 'c3', 'c4', 'c6',
-      'im1', 'im2', 'im4', 'im5',
-    };
-
-    // Any confirmed RED = emergency if 2+, else high
-    final redCount = yes.where((id) => redIds.contains(id)).length;
-    final yellowCount = yes.where((id) => yellowIds.contains(id)).length;
-
-    if (redCount >= 2) return 'emergency';
-    if (redCount == 1) return 'high';
-    if (yellowCount >= 2) return 'medium';
-    if (yellowCount == 1) return 'medium';
-    return 'low';
   }
 
   // ── Submit to rule engine — Gap 4 Fix ────────────────────────
@@ -592,6 +578,11 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       '_situation': _history.isNotEmpty ? _history.first.text : '',
       '_qaList': qaPairs.join(';;'),
       '_vitals': Map<String, dynamic>.from(_extractedVitals),
+      '_riskLevel': _riskLevel,
+      if (_patientId != null && _patientId!.isNotEmpty)
+        '_patientId': _patientId,
+      if (_patientName != null && _patientName!.isNotEmpty)
+        '_patientName': _patientName,
       ..._extractedAnswers,
     };
     Get.toNamed(AppRoutes.triageResult, arguments: args);
@@ -610,6 +601,39 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     final lower = text.toLowerCase();
     return _uncertaintyWords.any((w) => lower.contains(w));
   }
+
+  // ── Terse yes/no detection for offline answers ───────────────────────────
+  // Returns true (yes), false (no), or null when the reply is not a clear
+  // yes/no. Whole-word matching avoids false hits (e.g. "নাভি" contains "না").
+  static const _ynYes = {
+    'হ্যাঁ', 'হ্যা', 'হাঁ', 'হা', 'yes', 'haan', 'han', 'ji',
+  };
+  static const _ynNo = {
+    'না', 'নেই', 'নাই', 'হয়নি', 'নো', 'no', 'nahi', 'nahin', 'nai', 'nei',
+  };
+  static bool? _detectYesNo(String input) {
+    final words = input
+        .toLowerCase()
+        .trim()
+        .split(RegExp(r'[\s।,!?.]+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    if (words.isEmpty || words.length > 5) return null;
+    final yes = words.any(_ynYes.contains);
+    final no = words.any(_ynNo.contains);
+    if (yes != no) return yes;
+    // A bare one-word verb reply ("আছে" / "হয়েছে") is also a clear yes.
+    if (words.length == 1 &&
+        const {'আছে', 'হয়েছে', 'হইছে', 'achhe', 'ache'}.contains(words.first)) {
+      return true;
+    }
+    return null;
+  }
+
+  static bool _isYesNoQuestion(EngineQuestion q) =>
+      q.options.length == 2 &&
+      q.options.contains('হ্যাঁ') &&
+      q.options.contains('না');
 
   // ── Risk color ────────────────────────────────────────────────
   Color get _riskColor => switch (_riskLevel) {
@@ -939,3 +963,4 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     );
   }
 }
+

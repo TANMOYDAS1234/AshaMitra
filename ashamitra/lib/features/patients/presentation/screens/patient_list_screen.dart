@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
@@ -46,9 +47,24 @@ class _PatientListScreenState extends State<PatientListScreen> {
         final matchFilter = _filterIndex == 0 ||
             (_filterIndex == 4
                 ? risk == RiskLevel.high || risk == RiskLevel.emergency
-                : type.toLowerCase().contains(_filters[_filterIndex].toLowerCase()));
+                : _typeMatchesFilter(type, _filters[_filterIndex]));
         return matchSearch && matchFilter;
       }).toList();
+
+  // Matches a patient's type string against a filter chip. `type` is English
+  // for manually added patients but Bengali for triage-created ones
+  // (PatientController._caseLabel), so both spellings must be checked.
+  static bool _typeMatchesFilter(String type, String filter) {
+    final t = type.toLowerCase();
+    return switch (filter) {
+      'Pregnancy' => t.contains('pregnan') || type.contains('গর্ভ'),
+      'Newborn'   => t.contains('newborn') || type.contains('নবজাতক'),
+      'Child'     => t.contains('child') ||
+          t.contains('infant') ||
+          type.contains('শিশু'),
+      _           => true,
+    };
+  }
 
   Future<void> _downloadPdf() async {
     final list = _filtered;
@@ -202,27 +218,78 @@ class _PatientListScreenState extends State<PatientListScreen> {
               const SizedBox(height: 14),
               Expanded(
                 child: Obx(() {
-                  final list = _filtered;
-                  if (list.isEmpty) {
+                  if (_ctrl.isLoading.value && _ctrl.patients.isEmpty) {
                     return const Center(
-                      child: Text('No patients found',
-                          style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                      child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 3),
                     );
                   }
-                  return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    itemCount: list.length,
-                    itemBuilder: (_, i) {
-                      final p = list[i];
-                      return PatientCard(
-                        name: p.name,
-                        caseType: p.type,
-                        village: p.village,
-                        lastVisit: p.lastVisit,
-                        riskLevel: p.riskFromOutcome,
-                        onTap: () => Get.toNamed(AppRoutes.patientProfile, arguments: p.toJson()),
-                      );
-                    },
+                  final list = _filtered;
+                  if (list.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.people_outline_rounded, size: 56, color: AppColors.textLight),
+                          const SizedBox(height: 12),
+                          Text('patient_empty'.tr,
+                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+                        ],
+                      ),
+                    );
+                  }
+                  return RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: _ctrl.syncFromServer,
+                    child: ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      itemCount: list.length,
+                      itemBuilder: (_, i) {
+                        final p = list[i];
+                        return Dismissible(
+                          key: ValueKey(p.id),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.emergencyRed,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: 20),
+                            child: const Icon(Icons.delete_rounded, color: Colors.white, size: 24),
+                          ),
+                          confirmDismiss: (_) async {
+                            return await showDialog<bool>(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: const Text('রোগী মুছুন'),
+                                content: Text('"${p.name}" তালিকা থেকে মুছে ফেলবেন?'),
+                                actions: [
+                                  TextButton(onPressed: () => Get.back(result: false), child: const Text('বাতিল')),
+                                  TextButton(
+                                    onPressed: () => Get.back(result: true),
+                                    child: const Text('মুছুন', style: TextStyle(color: AppColors.emergencyRed)),
+                                  ),
+                                ],
+                              ),
+                            ) ?? false;
+                          },
+                          onDismissed: (_) => _ctrl.deletePatient(p.id),
+                          child: PatientCard(
+                            name: p.name,
+                            caseType: p.type,
+                            village: p.village,
+                            lastVisit: p.lastVisit,
+                            riskLevel: p.riskFromOutcome,
+                            onTap: () => Get.toNamed(AppRoutes.patientProfile, arguments: p.toJson()),
+                            onCallTap: p.mobile.isNotEmpty
+                                ? () => launchUrl(Uri.parse('tel:${p.mobile}'))
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
                   );
                 }),
               ),

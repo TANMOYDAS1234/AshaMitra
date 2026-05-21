@@ -23,7 +23,7 @@ class NextQuestionResult {
 class GeminiTriageService {
   // Key injected at build time: flutter run --dart-define=GEMINI_API_KEY=...
   // Falls back to offline mode gracefully when key is absent.
-  static String get _url => AppConfig.geminiUrlWithKey;
+  static String get _url => ''; // Gemini called via backend proxy now
 
   /// Online path: Gemini reads the situation and returns enriched engine
   /// questions — same IDs, same deterministic evaluation, but situation-aware

@@ -7,18 +7,27 @@ import '../../../../features/auth/controller/auth_controller.dart';
 import '../../../../shared/widgets/user_avatar.dart';
 import '../../../admin/controller/admin_controller.dart';
 
-class AdminOverviewTab extends StatelessWidget {
+class AdminOverviewTab extends StatefulWidget {
   const AdminOverviewTab({super.key});
+  @override
+  State<AdminOverviewTab> createState() => _AdminOverviewTabState();
+}
+
+class _AdminOverviewTabState extends State<AdminOverviewTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctrl = Get.find<AdminController>();
+      ctrl.loadStats();
+      ctrl.loadReports();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final ctrl = Get.find<AdminController>();
     final auth = Get.find<AuthController>();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ctrl.loadStats();
-      ctrl.loadReports();
-    });
 
     return Container(
       decoration: const BoxDecoration(gradient: AppGradients.background),
@@ -75,12 +84,16 @@ class AdminOverviewTab extends StatelessWidget {
                       children: [
                         _StatTile('admin_total_asha'.tr, '${ctrl.totalWorkers}',
                             Icons.people_alt_rounded, AppColors.primary),
+                        _StatTile('admin_total_patients'.tr, '${ctrl.totalPatients}',
+                            Icons.groups_rounded, AppColors.sky),
                         _StatTile('admin_total_reports'.tr, '${ctrl.totalReports}',
                             Icons.analytics_rounded, AppColors.purple),
                         _StatTile('admin_emergency_red'.tr, '${ctrl.redReports}',
                             Icons.gpp_bad_rounded, AppColors.emergencyRed),
                         _StatTile('admin_warning_yellow'.tr, '${ctrl.yellowReports}',
                             Icons.warning_amber_rounded, AppColors.warningYellow),
+                        _StatTile('admin_safe_green'.tr, '${ctrl.greenReports}',
+                            Icons.check_circle_rounded, AppColors.safeGreen),
                       ],
                     )),
                 const SizedBox(height: 28),

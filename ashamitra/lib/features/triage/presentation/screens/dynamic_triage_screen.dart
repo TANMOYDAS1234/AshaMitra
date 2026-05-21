@@ -3,11 +3,11 @@ import 'package:get/get.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/services/gemini_triage_service.dart';
+import '../../../../core/services/tts_service.dart';
 import '../../../../shared/widgets/voice_orb.dart';
 import '../../../../shared/widgets/glass_card.dart';
 
@@ -20,7 +20,7 @@ class DynamicTriageScreen extends StatefulWidget {
 
 class _DynamicTriageScreenState extends State<DynamicTriageScreen> {
   final _gemini = GeminiTriageService();
-  final _tts = FlutterTts();
+  final _tts = TtsService();
   final _stt = SpeechToText();
 
   late String _caseType;
@@ -66,12 +66,10 @@ class _DynamicTriageScreenState extends State<DynamicTriageScreen> {
   }
 
   Future<void> _initTts() async {
-    await _tts.setLanguage('bn-IN');
-    await _tts.setSpeechRate(0.42);
-    await _tts.setPitch(1.1);
-    await _tts.setVolume(1.0);
-    _tts.setStartHandler(() { if (mounted) setState(() => _isSpeaking = true); });
-    _tts.setCompletionHandler(() { if (mounted) setState(() => _isSpeaking = false); });
+    _tts.onStart    = () { if (mounted) setState(() => _isSpeaking = true); };
+    _tts.onComplete = () { if (mounted) setState(() => _isSpeaking = false); };
+    _tts.onError    = () { if (mounted) setState(() => _isSpeaking = false); };
+    await _tts.init();
   }
 
   Future<void> _initStt() async {

@@ -1,4 +1,4 @@
-import 'package:get/get.dart';
+﻿import 'package:get/get.dart';
 import '../data/models/patient_model.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/api_service.dart';
@@ -13,6 +13,7 @@ class PatientController extends GetxController {
   void onInit() {
     super.onInit();
     _load();
+    syncFromServer(); // always fetch fresh data from server on init
   }
 
   void _load() {
@@ -38,15 +39,27 @@ class PatientController extends GetxController {
         patients.value = list;
         await LocalStorageService.savePatients(list.map((p) => p.toJson()).toList());
       }
-      // Sync reports
-      final remote = await ApiService.getReports();
-      if (remote.isNotEmpty) {
-        final remoteReports = remote
-            .map((e) => _sanitizeReport(_remoteToLocal(e as Map<String, dynamic>)))
-            .toList();
-        reports.value = remoteReports;
-        LocalStorageService.saveReports(remoteReports);
+      // Reports — push any report that never reached the server, THEN pull the
+      // authoritative server list. A report whose upload failed (offline /
+      // server cold-start / error) would otherwise stay local-only forever and
+      // be invisible to the admin panel, which reads only from the server.
+      for (final r in reports.where(_isPendingReport).toList()) {
+        await _uploadReport(r);
       }
+      final remote = await ApiService.getReports();
+      final remoteReports = remote
+          .map((e) => _sanitizeReport(_remoteToLocal(e as Map<String, dynamic>)))
+          .toList();
+      // Keep only reports that STILL failed to upload (genuinely offline).
+      final stillPending = reports.where(_isPendingReport).toList();
+      final merged = [...remoteReports, ...stillPending]
+        ..sort((a, b) {
+          final da = DateTime.tryParse(a['createdAt']?.toString() ?? '') ?? DateTime(0);
+          final db = DateTime.tryParse(b['createdAt']?.toString() ?? '') ?? DateTime(0);
+          return db.compareTo(da);
+        });
+      reports.value = merged;
+      LocalStorageService.saveReports(merged);
     } on UnauthorizedException {
       // Token invalid
     } catch (_) {
@@ -79,6 +92,7 @@ class PatientController extends GetxController {
     'recheckAfterHours':   r['recheckAfterHours'] ?? 0,
     'transportAction':     '',
     'createdAt':           r['createdAt'] ?? DateTime.now().toIso8601String(),
+    'synced':              true,
   };
 
   String _bandToOutcome(String? band) => switch (band?.toUpperCase()) {
@@ -139,11 +153,13 @@ class PatientController extends GetxController {
     return [];
   }
 
-  void addPatient({
+  PatientModel addPatient({
     required String name,
     required String type,
     required String village,
     required String mobile,
+    String age = "",
+    String gender = "",
     String? situation,
     String? outcome,
     String? reason,
@@ -156,6 +172,8 @@ class PatientController extends GetxController {
       type:      type,
       village:   village,
       mobile:    mobile,
+      age:       age,
+      gender:    gender,
       lastVisit: 'এইমাত্র',
       risk:      _riskFromOutcome(outcome),
       situation: situation,
@@ -169,6 +187,7 @@ class PatientController extends GetxController {
     // Sync to backend — exclude local id field
     final data = patient.toJson()..remove('id');
     ApiService.savePatient(data).catchError((_) {});
+    return patient;
   }
 
   /// Auto-called from TriageResultScreen — saves full DecisionOutput to reports.
@@ -212,12 +231,27 @@ class PatientController extends GetxController {
       'recheckAfterHours':   recheckAfterHours,
       'transportAction':     transportAction,
       'createdAt':           DateTime.now().toIso8601String(),
+      'synced':              false,
     };
     reports.insert(0, report);
     LocalStorageService.saveReports(reports.toList());
-    // Sync to backend — exclude local id
-    final data = Map<String, dynamic>.from(report)..remove('id');
-    ApiService.saveReport(data).catchError((_) {});
+    _uploadReport(report);
+  }
+
+  /// Uploads one local report to the backend. On success marks it 'synced'
+  /// so [syncFromServer] does not upload it again. On failure it stays
+  /// pending and is retried on the next sync.
+  Future<void> _uploadReport(Map<String, dynamic> report) async {
+    final data = Map<String, dynamic>.from(report)
+      ..remove('id')
+      ..remove('synced');
+    final ok = await ApiService.saveReport(data);
+    if (!ok) return;
+    final idx = reports.indexWhere((r) => r['id'] == report['id']);
+    if (idx != -1) {
+      reports[idx] = {...reports[idx], 'synced': true};
+      LocalStorageService.saveReports(reports.toList());
+    }
   }
 
   /// Called from "ফলো-আপ" button — adds to patient list.
@@ -249,6 +283,42 @@ class PatientController extends GetxController {
     // Sync to backend — exclude local id field
     final data = patient.toJson()..remove('id');
     ApiService.savePatient(data).catchError((_) {});
+  }
+
+  /// Attaches a fresh triage result to an existing patient (a follow-up
+  /// checkup) instead of creating a duplicate entry in the list.
+  /// Returns true if a patient with [patientId] was found and updated.
+  bool applyFollowUp({
+    required String patientId,
+    required String outcome,
+    required String reason,
+    required String nextStep,
+    required String situation,
+    required List<Map<String, String>> qaHistory,
+  }) {
+    final idx = patients.indexWhere((p) => p.id == patientId);
+    if (idx == -1) return false;
+    final updated = patients[idx].copyWith(
+      lastVisit: _todayLabel(),
+      risk: _riskFromOutcome(outcome),
+      outcome: outcome,
+      reason: reason,
+      nextStep: nextStep,
+      situation: situation,
+      qaHistory: qaHistory,
+    );
+    patients.removeAt(idx);
+    patients.insert(0, updated);
+    _save();
+    // Best-effort backend sync. Only patients already synced from the server
+    // have a real Mongo _id — update those in place via PUT. Patients that
+    // exist only locally (id 'p_…' / 'triage_…') are skipped so no duplicate
+    // document is created; their data still reaches the server via saveReport.
+    if (_isServerId(patientId)) {
+      final data = updated.toJson()..remove('id');
+      ApiService.updatePatient(patientId, data).catchError((_) => false);
+    }
+    return true;
   }
 
   void updatePatient(PatientModel updated) {
@@ -283,4 +353,19 @@ class PatientController extends GetxController {
     final now = DateTime.now();
     return '${now.day}/${now.month}/${now.year}';
   }
+
+  // A real MongoDB ObjectId is 24 hex chars. Locally-created patients use
+  // 'p_…' / 'triage_…' placeholder ids until their first server sync.
+  static final _objectIdPattern = RegExp(r'^[0-9a-fA-F]{24}$');
+  static bool _isServerId(String id) => _objectIdPattern.hasMatch(id);
+
+  /// A report created locally that has not been confirmed on the server yet —
+  /// its id still has the local 'report_' prefix and it is not marked synced.
+  static bool _isPendingReport(Map<String, dynamic> r) =>
+      r['synced'] != true &&
+      (r['id']?.toString() ?? '').startsWith('report_');
 }
+
+
+
+

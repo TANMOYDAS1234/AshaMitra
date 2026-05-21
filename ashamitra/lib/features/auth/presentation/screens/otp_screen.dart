@@ -179,13 +179,58 @@ class _OtpScreenState extends State<OtpScreen> {
                             isLoading: _ctrl.isLoading.value,
                             width: double.infinity,
                           )),
-                      const SizedBox(height: 12),
-                      TextButton(
-                        onPressed: () {},
+                      const SizedBox(height: 8),
+                      Obx(() {
+                        if (_ctrl.errorMsg.value.isEmpty) return const SizedBox.shrink();
+                        return Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEBEB),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.emergencyRed.withOpacity(0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline_rounded,
+                                  size: 16, color: AppColors.emergencyRed),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(_ctrl.errorMsg.value,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.emergencyRed,
+                                        fontWeight: FontWeight.w500)),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 4),
+                      Obx(() => TextButton(
+                        onPressed: _ctrl.isLoading.value
+                            ? null
+                            : () async {
+                                _ctrl.errorMsg.value = '';
+                                await _ctrl.login(_phone);
+                                if (_ctrl.errorMsg.value.isEmpty) {
+                                  Get.snackbar(
+                                    'OTP পাঠানো হয়েছে',
+                                    '$_phone নম্বরে নতুন OTP পাঠানো হয়েছে।',
+                                    snackPosition: SnackPosition.BOTTOM,
+                                    backgroundColor: AppColors.safeGreen,
+                                    colorText: Colors.white,
+                                    margin: const EdgeInsets.all(16),
+                                    borderRadius: 12,
+                                    duration: const Duration(seconds: 3),
+                                  );
+                                }
+                              },
                         child: Text('resend_otp'.tr,
                             style: const TextStyle(
                                 color: AppColors.primary, fontWeight: FontWeight.w600)),
-                      ),
+                      )),
                     ],
                   ),
                 ),

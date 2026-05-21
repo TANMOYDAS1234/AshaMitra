@@ -9,6 +9,7 @@ class PatientCard extends StatelessWidget {
   final String lastVisit;
   final RiskLevel riskLevel;
   final VoidCallback? onTap;
+  final VoidCallback? onCallTap;
 
   const PatientCard({
     super.key,
@@ -18,6 +19,7 @@ class PatientCard extends StatelessWidget {
     required this.lastVisit,
     this.riskLevel = RiskLevel.safe,
     this.onTap,
+    this.onCallTap,
   });
 
   @override
@@ -64,17 +66,32 @@ class PatientCard extends StatelessWidget {
                           color: Color(0xFF1E1B4B))),
                   const SizedBox(height: 3),
                   Text(
-                    '$caseType · Village: $village',
+                    '$caseType · $village',
                     style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Last visit: $lastVisit',
+                    lastVisit,
                     style: const TextStyle(fontSize: 12, color: Color(0xFF9CA3AF)),
                   ),
                 ],
               ),
             ),
+            if (onCallTap != null) ...[
+              GestureDetector(
+                onTap: onCallTap,
+                child: Container(
+                  width: 34, height: 34,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.safeGreen.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.phone_rounded,
+                      size: 16, color: AppColors.safeGreen),
+                ),
+              ),
+            ],
             RiskBadge(level: riskLevel),
           ],
         ),

@@ -1,9 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/services/rule_executor.dart';
-import '../../../../core/services/api_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../shared/widgets/triage_result_card.dart';
@@ -11,7 +10,6 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../patients/controller/patient_controller.dart';
 import '../../../../core/services/decision_trace_service.dart';
 import '../../../../core/services/mdsr_hook_service.dart';
-import '../../../../features/auth/controller/auth_controller.dart';
 
 class TriageResultScreen extends StatefulWidget {
   const TriageResultScreen({super.key});
@@ -68,8 +66,20 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
       vitals: vitalsMap,
     );
 
-    // If pipeline blocked (validation failed), treat as GREEN with warning
-    final effectiveBand = _engineResult.pipelineBlocked ? 'GREEN' : _engineResult.band;
+    // If pipeline blocked (validation failed), use conversational risk level as fallback
+    final conversationalRisk = _answers['_riskLevel'] ?? 'low';
+    final fallbackBand = switch (conversationalRisk) {
+      'emergency' => 'RED',
+      'high'      => 'RED',
+      'medium'    => 'YELLOW',
+      _           => 'GREEN',
+    };
+    final engineBand = _engineResult.pipelineBlocked ? 'GREEN' : _engineResult.band;
+    // Take the worse of engine band vs conversational risk — never downgrade
+    const bandOrder = ['GREEN', 'YELLOW', 'RED'];
+    final effectiveBand = bandOrder.indexOf(engineBand) >= bandOrder.indexOf(fallbackBand)
+        ? engineBand
+        : fallbackBand;
     _outcome = switch (effectiveBand) {
       'RED'    => TriageOutcome.emergency,
       'YELLOW' => TriageOutcome.attention,
@@ -87,7 +97,7 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
       TriageOutcome.emergency => '$label গুরুতর বিপদচিহ্ন শনাক্ত হয়েছে।',
     };
     _nextStepText = switch (_outcome) {
-      TriageOutcome.safe      => '২ দিন পর রুটিন ফলো-আপ করুন।',
+      TriageOutcome.safe      => _greenCounselling(_caseType),
       TriageOutcome.attention => 'আজই নিকটতম PHC-তে রেফার করুন।',
       TriageOutcome.emergency => 'এখনই অ্যাম্বুলেন্স কল করুন / ANM-কে জানান।',
     };
@@ -102,6 +112,30 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
     'postpartum'   => 'delivery_pnc',
     'immunization' => 'immunisation',
     _              => 'emergency',
+  };
+
+  // ── GREEN counselling scripts — one per case type ──────────────────────────
+  static String _greenCounselling(String caseType) => switch (caseType) {
+    'pregnancy' =>
+      'এখন ভালো আছেন। পরবর্তী ANC চেকআপ সময়মতো করুন। আয়রন ও ক্যালসিয়াম ট্যাবলেট নিয়মিত খান। '
+      'বাচ্চার নড়াচড়া কমলে বা মাথা ব্যথা হলে সঙ্গে সঙ্গে জানান।',
+    'postpartum' =>
+      'মা এখন ভালো আছেন। প্রতিদিন পরিষ্কার থাকুন, সেলাইয়ের জায়গা শুকনো রাখুন। '
+      'বুকের দুধ খাওয়ান। জ্বর বা অতিরিক্ত রক্তপাত হলে সঙ্গে সঙ্গে PHC-তে যান।',
+    'newborn' =>
+      'শিশু এখন ভালো আছে। প্রতি ২ ঘণ্টায় বুকের দুধ দিন। নাভি শুকনো ও পরিষ্কার রাখুন। '
+      'জ্বর, শ্বাসকষ্ট বা দুধ না খেলে সঙ্গে সঙ্গে SNCU-তে নিয়ে যান।',
+    'child' =>
+      'শিশু এখন ভালো আছে। পুষ্টিকর খাবার দিন, পানি পান করান। '
+      'টিকার সময়সূচি মেনে চলুন। জ্বর ৫ দিনের বেশি হলে PHC-তে নিয়ে যান।',
+    'immunization' =>
+      'টিকার সময়সূচি ঠিক আছে। পরবর্তী টিকার তারিখ মনে রাখুন। '
+      'টিকার পর জ্বর হলে প্যারাসিটামল দিন। কোনো সমস্যা হলে ANM-কে জানান।',
+    'emergency' =>
+      'এখন স্থিতিশীল আছেন। বিশ্রাম নিন। '
+      'যেকোনো নতুন উপসর্গ দেখা দিলে সঙ্গে সঙ্গে ১০৮ কল করুন।',
+    _ =>
+      '২ দিন পর রুটিন ফলো-আপ করুন। কোনো নতুন সমস্যা হলে জানান।',
   };
 
   static String _caseLabel(String c) => switch (c) {
@@ -194,61 +228,52 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
       recheckAfterHours: _engineResult.recheckAfterHours,
       transportAction: _engineResult.transportAction,
     );
-
-    // Save to backend API (MongoDB via REST — non-blocking)
-    try {
-      final auth = Get.find<AuthController>();
-      final band = _engineResult.finalBand.isNotEmpty
-          ? _engineResult.finalBand.toUpperCase()
-          : switch (_outcome) {
-              TriageOutcome.emergency => 'RED',
-              TriageOutcome.attention => 'YELLOW',
-              TriageOutcome.safe      => 'GREEN',
-            };
-      await ApiService.saveReport({
-        'sessionId':           sessionId,
-        'caseType':            _caseType,
-        'caseLabel':           _caseLabel(_caseType),
-        'moduleId':            _moduleId,
-        'finalBand':           band,
-        'outcome':             _outcome.name,
-        'reason':              _reasonText,
-        'nextStep':            _nextStepText,
-        'situation':           _answers['_situation'] ?? '',
-        'triggeredRules':      _engineResult.triggeredRules,
-        'riskScore':           _engineResult.riskScore.toInt(),
-        'riskLevel':           _engineResult.riskLevel,
-        'dangerSigns':         _engineResult.dangerSigns,
-        'suspectedConditions': _engineResult.suspectedConditions,
-        'facilityType':        _engineResult.facilityType,
-        'recheckAfterHours':   _engineResult.recheckAfterHours.toInt(),
-        'patientId':           _args['_patientId']?.toString() ?? '',
-        'patientName':         _args['_patientName']?.toString() ?? '',
-        'ashaId':              auth.user.value?.id ?? '',
-        'ashaName':            auth.user.value?.name ?? '',
-        'ashaPhone':           auth.user.value?.phone ?? '',
-        'qaHistory':           qaHistory,
-      });
-    } catch (e) {
-      debugPrint('[Report] API save failed: $e');
-      // Non-blocking — local save already succeeded
-    }
+    // The backend upload (and retry-on-failure) is handled inside
+    // PatientController.saveReport — no separate API call here, otherwise
+    // every report would be POSTed twice and duplicated on the server.
   }
 
   void _saveFollowUp() {
     final ctrl = Get.find<PatientController>();
-    ctrl.saveTriageResult(
-      caseType: _caseType,
-      outcome: _outcome.name == 'safe' ? 'safe'
-          : _outcome.name == 'emergency' ? 'emergency' : 'attention',
-      reason: _reasonText,
-      nextStep: _nextStepText,
-      situation: _answers['_situation'] ?? '',
-      qaHistory: _qaPairs.map((qa) => {'question': qa.question, 'answer': qa.answer}).toList(),
-    );
+    final outcomeStr = _outcome.name == 'safe'
+        ? 'safe'
+        : _outcome.name == 'emergency'
+            ? 'emergency'
+            : 'attention';
+    final qaHistory = _qaPairs
+        .map((qa) => {'question': qa.question, 'answer': qa.answer})
+        .toList();
+    final situation = _answers['_situation'] ?? '';
+    final patientId = _args['_patientId']?.toString() ?? '';
+
+    // If this triage was started from an existing patient, attach the result
+    // to that patient instead of creating a duplicate list entry.
+    final linked = patientId.isNotEmpty &&
+        ctrl.applyFollowUp(
+          patientId: patientId,
+          outcome: outcomeStr,
+          reason: _reasonText,
+          nextStep: _nextStepText,
+          situation: situation,
+          qaHistory: qaHistory,
+        );
+
+    if (!linked) {
+      ctrl.saveTriageResult(
+        caseType: _caseType,
+        outcome: outcomeStr,
+        reason: _reasonText,
+        nextStep: _nextStepText,
+        situation: situation,
+        qaHistory: qaHistory,
+      );
+    }
+
     Get.snackbar(
       'সংরক্ষিত হয়েছে',
-      'ট্রায়াজ ফলাফল রোগী তালিকায় যোগ হয়েছে।',
+      linked
+          ? 'রোগীর তথ্য হালনাগাদ করা হয়েছে।'
+          : 'ট্রায়াজ ফলাফল রোগী তালিকায় যোগ হয়েছে।',
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: AppColors.safeGreen,
       colorText: Colors.white,
@@ -456,6 +481,36 @@ class _ActionCard extends StatelessWidget {
             Text(actionText,
                 style: TextStyle(fontSize: 14, color: textColor, height: 1.6)),
           ],
+          // Directions to the nearest matching facility (referral cases)
+          if (outcome != TriageOutcome.safe &&
+              engineResult.referral.isNotEmpty &&
+              engineResult.referral != 'None') ...[
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: _openDirections,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 11),
+                decoration: BoxDecoration(
+                  color: border,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.directions_rounded,
+                        color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text('নিকটস্থ স্বাস্থ্যকেন্দ্রে পথ দেখুন',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
+            ),
+          ],
           // Sign-off pending badge
           if (engineResult.signOffPending) ...[
             const SizedBox(height: 10),
@@ -484,6 +539,29 @@ class _ActionCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Opens an external map searching for the nearest facility of the
+  // referred type. Without a facility-coordinate dataset this is a
+  // location-aware search, not turn-by-turn to one exact building.
+  Future<void> _openDirections() async {
+    final r = engineResult.referral.toUpperCase();
+    final query = r.contains('SNCU')
+        ? 'SNCU hospital near me'
+        : (r.contains('DH') || r.contains('DISTRICT'))
+            ? 'District Hospital near me'
+            : r.contains('CHC')
+                ? 'Community Health Centre near me'
+                : r.contains('PHC')
+                    ? 'Primary Health Centre near me'
+                    : 'government hospital near me';
+    final uri = Uri.parse('geo:0,0?q=${Uri.encodeComponent(query)}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      Get.snackbar('ম্যাপ খোলা যায়নি', 'ম্যাপ অ্যাপ পাওয়া যায়নি',
+          snackPosition: SnackPosition.BOTTOM);
+    }
   }
 }
 

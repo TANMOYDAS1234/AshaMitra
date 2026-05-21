@@ -7,6 +7,8 @@ class PatientModel {
   final String village;
   final String mobile;
   final String lastVisit;
+  final String age;
+  final String gender;
   final RiskLevel risk;
   final String? situation;
   final String? outcome;
@@ -22,6 +24,8 @@ class PatientModel {
     required this.village,
     required this.mobile,
     required this.lastVisit,
+    this.age = '',
+    this.gender = '',
     required this.risk,
     this.situation,
     this.outcome,
@@ -45,6 +49,8 @@ class PatientModel {
         'village': village,
         'mobile': mobile,
         'lastVisit': lastVisit,
+        'age': age,
+        'gender': gender,
         'risk': risk.name,
         if (situation != null) 'situation': situation,
         if (outcome != null) 'outcome': outcome,
@@ -61,6 +67,8 @@ class PatientModel {
         village: json['village'] as String,
         mobile: json['mobile'] as String? ?? '',
         lastVisit: json['lastVisit'] as String,
+        age: json['age'] as String? ?? '',
+        gender: json['gender'] as String? ?? '',
         risk: RiskLevel.values.firstWhere(
           (r) => r.name == json['risk'],
           orElse: () => RiskLevel.safe,
@@ -83,6 +91,8 @@ class PatientModel {
     String? village,
     String? mobile,
     String? lastVisit,
+    String? age,
+    String? gender,
     RiskLevel? risk,
     String? situation,
     String? outcome,
@@ -97,6 +107,8 @@ class PatientModel {
         village: village ?? this.village,
         mobile: mobile ?? this.mobile,
         lastVisit: lastVisit ?? this.lastVisit,
+        age: age ?? this.age,
+        gender: gender ?? this.gender,
         risk: risk ?? this.risk,
         situation: situation ?? this.situation,
         outcome: outcome ?? this.outcome,
