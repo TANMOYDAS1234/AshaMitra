@@ -173,6 +173,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
     // case is a red snackbar with the actual error message.
     var dialogShown = false;
     try {
+      // Hard cap on report count per PDF. The `pdf` package accumulates the
+      // entire document in memory before save. Each report can be 1-2 pages
+      // of complex content (header bar + KV rows + danger sign chips +
+      // suspected condition chips + triggered rules + Q&A table) — at
+      // ~5-10 MB per report in graphics-object memory, even with largeHeap
+      // we OOM around 40-50 reports. 30 is a safe ceiling with margin.
+      //
+      // When the worker exceeds the cap, we silently keep the most recent
+      // 30 and tell them how to get the rest (apply a time/band filter).
+      const maxReportsPerPdf = 30;
+      final wasTruncated = reports.length > maxReportsPerPdf;
+      if (wasTruncated) {
+        reports = reports.take(maxReportsPerPdf).toList();
+      }
+
       // Empty-list guard. PDF generation on zero reports would technically
       // succeed (an empty document), but the percentage math hits 0/0 and
       // some report-row code paths assume at least one entry. Easier to
@@ -189,6 +204,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
           duration: const Duration(seconds: 3),
         );
         return;
+      }
+
+      // If we truncated, tell the worker so they understand they're getting
+      // the most recent 30 — and how to export the rest (filter by date).
+      if (wasTruncated) {
+        Get.snackbar(
+          'PDF limited to 30 reports',
+          'Latest 30 sessions included. Use the date filter '
+              '(আজ / ৭ দিন / এই মাস) to export earlier sessions.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.warningYellow,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          duration: const Duration(seconds: 4),
+        );
+        // Tiny delay so the snackbar visibly appears before the dialog covers
+        // the screen. Pure UX — no functional impact.
+        await Future.delayed(const Duration(milliseconds: 300));
       }
 
       // Non-dismissible progress dialog so the user has visible feedback
