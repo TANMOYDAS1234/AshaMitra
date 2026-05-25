@@ -166,6 +166,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       );
 
   Future<void> _downloadPdf(List<Map<String, dynamic>> reports) async {
+    // Diagnostic milestones — these show up in logcat with [PDF] tag so any
+    // "stuck spinner" report can be pinpointed to the exact step that hung.
+    // Safe in release mode (print survives, only debugPrint is stripped).
+    // ignore: avoid_print
+    print('[PDF] start — reports.length=${reports.length}');
     // Defense-in-depth: catch ANY exception thrown during font load, page
     // assembly, or save. Previously a font-network failure or a malformed
     // report row would propagate as an unhandled exception, crashing the
@@ -252,8 +257,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
         barrierDismissible: false,
       );
       dialogShown = true;
+      // ignore: avoid_print
+      print('[PDF] dialog shown, loading font');
 
       final theme = await PdfHelper.bengaliTheme();
+      // ignore: avoid_print
+      print('[PDF] font loaded, creating document');
       final doc = pw.Document(theme: theme);
       final now = DateTime.now();
       final generatedAt =
@@ -422,6 +431,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     //   heavy reports with full Q&A history + multiple danger signs.
     const batchSize = 6;
     final totalRecords = reports.length;
+    // ignore: avoid_print
+    print('[PDF] starting per-session detail — totalRecords=$totalRecords batchSize=$batchSize');
     for (int batchStart = 0; batchStart < reports.length; batchStart += batchSize) {
       // Yield to the event loop — this is the key step that prevents ANR.
       await Future.delayed(Duration.zero);
@@ -429,6 +440,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final batchReports = reports.sublist(batchStart, batchEnd);
       final isFirstBatch = batchStart == 0;
       final batchOffset = batchStart; // for absolute report numbering
+      // ignore: avoid_print
+      print('[PDF] addPage batch ${batchStart ~/ batchSize + 1}: reports $batchStart..${batchEnd - 1}');
 
       doc.addPage(
       pw.MultiPage(
@@ -757,11 +770,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
     } // ── end of for-loop over batches ─────────────────────────────────────
 
+      // ignore: avoid_print
+      print('[PDF] all batches addPage-done, calling saveAndOpen');
       // Yield once more before save so the UI thread can repaint the spinner.
       await Future.delayed(Duration.zero);
       await PdfHelper.saveAndOpen(
           doc,
           'asha_mitra_report_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf');
+      // ignore: avoid_print
+      print('[PDF] saveAndOpen returned');
     } catch (e, st) {
       // Never let a PDF-build failure crash the app. Show the user the real
       // error (truncated) so they can report it; full stack stays in logcat.
@@ -780,10 +797,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
         duration: const Duration(seconds: 6),
       );
     } finally {
+      // ignore: avoid_print
+      print('[PDF] finally: dialogShown=$dialogShown isDialogOpen=${Get.isDialogOpen}');
       // ALWAYS dismiss the progress dialog, success or failure. Without this
       // an exception would leave the worker stuck staring at a spinner.
       if (dialogShown && (Get.isDialogOpen ?? false)) {
         Get.back();
+        // ignore: avoid_print
+        print('[PDF] dialog dismissed');
       }
     }
   }
