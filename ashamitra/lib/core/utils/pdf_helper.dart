@@ -80,18 +80,37 @@ class PdfHelper {
   }
 
   // ── Save + open ────────────────────────────────────────────────────────────
+  /// Writes the [doc] to a folder the app is allowed to write to without
+  /// requesting scary system permissions, then opens it in the system PDF
+  /// viewer. From the viewer the worker can read, print, share via
+  /// WhatsApp / Drive / email — anywhere they want.
+  ///
+  /// Why not /storage/emulated/0/Download directly?
+  ///   That requires MANAGE_EXTERNAL_STORAGE on Android 11+ (SDK 30+), which
+  ///   is a dangerous-permission special-settings flow. The previous code
+  ///   tried writeAsBytes to /Download, got permission-denied silently, and
+  ///   the user saw "PDF Downloaded" but no file actually appeared.
+  ///
+  /// What does work:
+  ///   getExternalStorageDirectory() returns the app's private external
+  ///   folder (e.g. /storage/emulated/0/Android/data/com.example.asha_mitra/
+  ///   files/). The app can read/write here on all Android versions without
+  ///   any permissions. The file IS visible in Files apps under the app's
+  ///   data folder, and OpenFile.open() launches the system PDF viewer
+  ///   regardless.
   static Future<void> saveAndOpen(pw.Document doc, String fileName) async {
     try {
       final bytes = await doc.save();
 
-      // Save to Downloads on Android, Documents on others
+      // Resolve a writable directory we don't need permissions for.
       final Directory dir;
       if (Platform.isAndroid) {
-        final downloads = Directory('/storage/emulated/0/Download');
-        dir = downloads.existsSync()
-            ? downloads
-            : await getExternalStorageDirectory() ??
-                await getApplicationDocumentsDirectory();
+        // App-scoped external storage. Use a subfolder so multiple PDFs
+        // don't clutter the root.
+        final external = await getExternalStorageDirectory() ??
+            await getApplicationDocumentsDirectory();
+        dir = Directory('${external.path}/asha_reports');
+        if (!dir.existsSync()) dir.createSync(recursive: true);
       } else {
         dir = await getApplicationDocumentsDirectory();
       }
@@ -101,38 +120,38 @@ class PdfHelper {
 
       final result = await OpenFile.open(path);
 
-      if (result.type == ResultType.done) {
-        Get.snackbar(
-          'PDF Downloaded',
-          'Saved to Downloads: $fileName',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.safeGreen,
-          colorText: Colors.white,
-          margin: const EdgeInsets.all(16),
-          borderRadius: 12,
-          duration: const Duration(seconds: 3),
-        );
-      } else {
-        Get.snackbar(
-          'PDF Saved',
-          'File saved to Downloads/$fileName\n(${result.message})',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.safeGreen,
-          colorText: Colors.white,
-          margin: const EdgeInsets.all(16),
-          borderRadius: 12,
-          duration: const Duration(seconds: 4),
-        );
-      }
+      // ResultType.done = viewer launched OK; otherwise we still saved the
+      // file but the platform couldn't find a viewer (rare — every Android
+      // device has at least the Files app or Drive).
+      final saved = File(path);
+      final sizeKb = saved.existsSync()
+          ? (saved.lengthSync() / 1024).toStringAsFixed(1)
+          : '?';
+      Get.snackbar(
+        result.type == ResultType.done ? 'PDF Opened' : 'PDF Saved',
+        result.type == ResultType.done
+            ? 'Use the share button in the viewer to send via WhatsApp, '
+                'Drive, print, etc. File: $fileName ($sizeKb KB)'
+            : 'Saved as $fileName ($sizeKb KB). ${result.message}. '
+                'Open Files → Internal Storage → Android/data → '
+                'com.example.asha_mitra → files → asha_reports.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.safeGreen,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        duration: const Duration(seconds: 5),
+      );
     } catch (e) {
       Get.snackbar(
-        'Error',
-        'Could not save PDF: $e',
+        'PDF failed',
+        'Could not generate PDF: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.emergencyRed,
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
         borderRadius: 12,
+        duration: const Duration(seconds: 6),
       );
     }
   }

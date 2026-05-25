@@ -9,6 +9,12 @@ class PatientController extends GetxController {
   final patients  = <PatientModel>[].obs;
   final reports   = <Map<String, dynamic>>[].obs;
 
+  /// Patients the user deleted while offline (or after a failed server delete).
+  /// Hidden from UI but retained until the next online sync can confirm the
+  /// server-side DELETE. Without this list the deleted row would silently
+  /// reappear after every syncFromServer.
+  final _pendingDeletes = <PatientModel>[].obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -19,12 +25,21 @@ class PatientController extends GetxController {
   void _load() {
     final raw = LocalStorageService.loadPatients();
     patients.value = raw.map(PatientModel.fromJson).toList();
+    _pendingDeletes.value = LocalStorageService.loadPendingDeletes()
+        .map(PatientModel.fromJson)
+        .toList();
     reports.value  = LocalStorageService.loadReports()
         .map((r) => _sanitizeReport(r))
         .toList();
   }
 
   void reloadFromStorage() => _load();
+
+  Future<void> _savePendingDeletes() async {
+    await LocalStorageService.savePendingDeletes(
+      _pendingDeletes.map((p) => p.toJson()).toList(),
+    );
+  }
 
   /// Primary data load from Atlas. Falls back to local if offline.
   ///
@@ -36,12 +51,40 @@ class PatientController extends GetxController {
     isLoading.value = true;
     try {
       // ── Patients ─────────────────────────────────────────────────────────
+      // Order matters: flush local pending operations to the server FIRST,
+      // then fetch the authoritative server state. Otherwise an offline-
+      // queued create would immediately be wiped by the remote fetch.
+      await _flushPendingPatientOps();
+
       final remotePatients = await _withRetry(() => ApiService.getPatients());
-      final list = remotePatients
+      final remoteList = remotePatients
           .map((e) => PatientModel.fromJson(e as Map<String, dynamic>))
           .toList();
-      patients.value = list;
-      await LocalStorageService.savePatients(list.map((p) => p.toJson()).toList());
+
+      // Build the visible list: server data minus anything still pending
+      // delete (server hasn't honored our DELETE yet — typically a transient
+      // failure that will resolve next sync), PLUS any still-pending local
+      // creates/updates that didn't make it to the server.
+      final pendingDeleteIds = _pendingDeletes.map((p) => p.id).toSet();
+      final stillUnsyncedLocal = patients
+          .where((p) => p.syncState != SyncState.synced)
+          .toList();
+      final stillUnsyncedIds = stillUnsyncedLocal.map((p) => p.id).toSet();
+
+      final mergedPatients = <PatientModel>[
+        // Server rows, excluding ones we're trying to delete AND ones we
+        // have a newer-locally version of (the local pending_update has
+        // edits the server hasn't accepted yet).
+        ...remoteList.where((p) =>
+            !pendingDeleteIds.contains(p.id) &&
+            !stillUnsyncedIds.contains(p.id)),
+        // Locally pending — show them so the user sees their own work.
+        ...stillUnsyncedLocal,
+      ];
+
+      patients.value = mergedPatients;
+      await LocalStorageService.savePatients(
+          mergedPatients.map((p) => p.toJson()).toList());
 
       // ── Reports ──────────────────────────────────────────────────────────
       // Push any report that never reached the server, THEN pull the
@@ -74,6 +117,120 @@ class PatientController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Drains the offline sync queue:
+  ///   1. Deletes — patients marked pendingDelete (DELETE /patients/:id)
+  ///   2. Creates — patients with syncState=pendingCreate (POST /patients)
+  ///   3. Updates — patients with syncState=pendingUpdate (PUT /patients/:id)
+  /// Anything that still fails stays queued for the next sync cycle. Returns
+  /// silently — the outer syncFromServer handles UI state.
+  Future<void> _flushPendingPatientOps() async {
+    // ── 1. Deletes ──────────────────────────────────────────────────────────
+    final stillDeleting = <PatientModel>[];
+    for (final p in _pendingDeletes.toList()) {
+      if (!_isServerId(p.id)) {
+        // Was never on the server (offline create then offline delete).
+        // Drop silently — nothing to delete remotely.
+        continue;
+      }
+      final ok = await ApiService.deletePatient(p.id);
+      if (!ok) stillDeleting.add(p);
+    }
+    if (stillDeleting.length != _pendingDeletes.length) {
+      _pendingDeletes.value = stillDeleting;
+      await _savePendingDeletes();
+    }
+
+    // ── 2 & 3. Creates and updates ──────────────────────────────────────────
+    for (var i = 0; i < patients.length; i++) {
+      final p = patients[i];
+      if (p.syncState == SyncState.synced) continue;
+
+      // Both pendingCreate and "pendingUpdate but id is still a placeholder"
+      // route through POST. The server's de-dup logic will return the
+      // existing doc if the (ashaId, name, mobile) tuple already exists.
+      final needsPost = p.syncState == SyncState.pendingCreate ||
+          (p.syncState == SyncState.pendingUpdate && !_isServerId(p.id));
+
+      if (needsPost) {
+        final data = p.toJson()..remove('id')..remove('syncState');
+        final response = await ApiService.savePatient(data);
+        if (response == null) continue; // retry next cycle
+        final serverId = response['id']?.toString();
+        if (serverId == null || serverId.isEmpty) continue;
+        final serverVersion = (response['version'] as num?)?.toInt() ?? 0;
+        final oldId = p.id;
+        patients[i] = p.copyWith(
+          id: serverId,
+          syncState: SyncState.synced,
+          version: serverVersion,
+        );
+        if (oldId != serverId) _repointReportsPatientId(oldId, serverId);
+      } else if (p.syncState == SyncState.pendingUpdate) {
+        final data = p.toJson()..remove('id')..remove('syncState');
+        final result = await ApiService.updatePatient(p.id, data);
+        if (result['status'] == 'success') {
+          final serverDoc = result['data'] as Map<String, dynamic>?;
+          final newVersion = (serverDoc?['version'] as num?)?.toInt() ?? p.version + 1;
+          patients[i] = p.copyWith(syncState: SyncState.synced, version: newVersion);
+        } else if (result['status'] == 'conflict') {
+          // Another writer beat us. Take server's version + re-apply our edits
+          // on top — last write merge, not last write overwrite. The user's
+          // changes are preserved unless they conflict on the same fields.
+          final serverDoc = result['data'] as Map<String, dynamic>?;
+          if (serverDoc != null) {
+            final serverPatient = PatientModel.fromJson(serverDoc);
+            // Re-apply our local edits on top of the server's current state.
+            patients[i] = serverPatient.copyWith(
+              lastVisit: p.lastVisit,
+              risk: p.risk,
+              outcome: p.outcome,
+              reason: p.reason,
+              nextStep: p.nextStep,
+              situation: p.situation,
+              qaHistory: p.qaHistory,
+              syncState: SyncState.pendingUpdate, // re-queue with new version
+            );
+          }
+        }
+        // 'failure' → stays pendingUpdate, retried next sync
+      }
+    }
+  }
+
+  /// When a patient's local placeholder id is swapped for its real Mongo _id,
+  /// any reports that referenced the placeholder must be re-pointed too —
+  /// otherwise admin views can't join patient ↔ report.
+  ///
+  /// Two paths:
+  ///   1. Locally-cached reports: patched in memory + persisted to storage.
+  ///   2. Reports already POSTed to the server: PATCH /reports/repoint flips
+  ///      their patientId server-side too, closing the race window where a
+  ///      triage was completed before savePatient returned.
+  void _repointReportsPatientId(String oldId, String newId) {
+    if (oldId == newId) return;
+
+    // 1. Local cache.
+    var changed = false;
+    for (var i = 0; i < reports.length; i++) {
+      if (reports[i]['patientId']?.toString() == oldId) {
+        reports[i] = {...reports[i], 'patientId': newId};
+        changed = true;
+      }
+    }
+    if (changed) {
+      reports.refresh();
+      LocalStorageService.saveReports(reports.toList());
+    }
+
+    // 2. Server-side repoint — fire and forget. If it fails (offline,
+    // cold-start, 5xx) the local sync logic on the next cycle will catch
+    // the same placeholder string and retry via the same mechanism that
+    // triggered this call. Worst case: admin sees the placeholder string
+    // in patientId for one report until the next sync round; the patient
+    // still appears by name. Non-blocking.
+    ApiService.repointReports(oldId, newId);
   }
 
   /// Retries an async call up to 2 times with backoff. Re-throws after
@@ -206,13 +363,48 @@ class PatientController extends GetxController {
       reason:    reason,
       nextStep:  nextStep,
       qaHistory: qaHistory,
+      syncState: SyncState.pendingCreate,
     );
     patients.insert(0, patient);
     _save();
-    // Sync to backend — exclude local id field
-    final data = patient.toJson()..remove('id');
-    ApiService.savePatient(data).catchError((_) => false);
+    // Try to flush this new patient to the server right away. If it succeeds,
+    // the placeholder id gets swapped for the real Mongo _id and syncState
+    // moves to synced. If it fails (offline, Render cold-start), the patient
+    // stays in pendingCreate and the next syncFromServer cycle will retry.
+    _syncOnePendingCreate(patient.id);
     return patient;
+  }
+
+  /// Tries to POST a single locally-created patient (syncState=pendingCreate)
+  /// and, on success, swaps the placeholder id for the server _id + marks
+  /// synced. Also re-points any reports that referenced the placeholder.
+  /// Best-effort — silent on failure (queued for next syncFromServer).
+  Future<void> _syncOnePendingCreate(String placeholderId) async {
+    final idx = patients.indexWhere((p) => p.id == placeholderId);
+    if (idx == -1) return;
+    final p = patients[idx];
+    if (p.syncState != SyncState.pendingCreate) return;
+
+    final data = p.toJson()..remove('id')..remove('syncState');
+    final response = await ApiService.savePatient(data);
+    if (response == null) return; // queued for retry
+    final serverId = response['id']?.toString();
+    if (serverId == null || serverId.isEmpty) return;
+
+    // The patient may have moved in the list since we started — re-locate by id.
+    final currentIdx = patients.indexWhere((q) => q.id == placeholderId);
+    if (currentIdx == -1) return; // user deleted in the meantime
+    final serverVersion = (response['version'] as num?)?.toInt() ?? 0;
+    patients[currentIdx] = p.copyWith(
+      id: serverId,
+      syncState: SyncState.synced,
+      version: serverVersion,
+    );
+    await _save();
+
+    if (serverId != placeholderId) {
+      _repointReportsPatientId(placeholderId, serverId);
+    }
   }
 
   /// Auto-called from TriageResultScreen — saves full DecisionOutput to reports.
@@ -302,12 +494,11 @@ class PatientController extends GetxController {
       reason:    reason,
       nextStep:  nextStep,
       qaHistory: qaHistory,
+      syncState: SyncState.pendingCreate,
     );
     patients.insert(0, patient);
     _save();
-    // Sync to backend — exclude local id field
-    final data = patient.toJson()..remove('id');
-    ApiService.savePatient(data).catchError((_) => false);
+    _syncOnePendingCreate(patient.id);
   }
 
   /// Attaches a fresh triage result to an existing patient (a follow-up
@@ -323,7 +514,15 @@ class PatientController extends GetxController {
   }) {
     final idx = patients.indexWhere((p) => p.id == patientId);
     if (idx == -1) return false;
-    final updated = patients[idx].copyWith(
+    // Mark pendingUpdate optimistically — if the PUT succeeds, we promote to
+    // synced; if not, it stays pending and the next syncFromServer retries.
+    // Patients with placeholder ids (still in pendingCreate from offline)
+    // collapse the pending_update back to pending_create: the next sync will
+    // POST the latest state, not the original snapshot.
+    final existing = patients[idx];
+    final shouldUpsert = !_isServerId(patientId) ||
+        existing.syncState == SyncState.pendingCreate;
+    final updated = existing.copyWith(
       lastVisit: _todayLabel(),
       risk: _riskFromOutcome(outcome),
       outcome: outcome,
@@ -331,29 +530,158 @@ class PatientController extends GetxController {
       nextStep: nextStep,
       situation: situation,
       qaHistory: qaHistory,
+      syncState: shouldUpsert
+          ? SyncState.pendingCreate
+          : SyncState.pendingUpdate,
     );
     patients.removeAt(idx);
     patients.insert(0, updated);
     _save();
-    // Best-effort backend sync. Only patients already synced from the server
-    // have a real Mongo _id — update those in place via PUT. Patients that
-    // exist only locally (id 'p_…' / 'triage_…') are skipped so no duplicate
-    // document is created; their data still reaches the server via saveReport.
-    if (_isServerId(patientId)) {
-      final data = updated.toJson()..remove('id');
-      ApiService.updatePatient(patientId, data).catchError((_) => false);
+
+    // Try to flush now — non-blocking. If we have a real server _id, PUT.
+    // Otherwise route through POST (the server de-dups by name+mobile, so
+    // re-POSTing the same patient with new fields effectively updates).
+    if (shouldUpsert) {
+      _syncOnePendingCreate(updated.id);
+    } else {
+      // Optimistic concurrency-aware update. On 409 we stay pendingUpdate
+      // and the next syncFromServer cycle will refetch the server's current
+      // state and re-apply our edits on top — non-destructive merge.
+      ApiService.updatePatient(
+        updated.id,
+        updated.toJson()..remove('id')..remove('syncState'),
+      ).then((result) {
+        if (result['status'] != 'success') return; // failure/conflict → stays pending
+        final i = patients.indexWhere((p) => p.id == updated.id);
+        if (i == -1) return;
+        final serverDoc = result['data'] as Map<String, dynamic>?;
+        final newVersion = (serverDoc?['version'] as num?)?.toInt() ?? updated.version + 1;
+        patients[i] = patients[i].copyWith(
+          syncState: SyncState.synced,
+          version: newVersion,
+        );
+        _save();
+      });
     }
     return true;
   }
 
-  void updatePatient(PatientModel updated) {
+  /// Worker-initiated edit of patient demographic details (name, type, village,
+  /// mobile, age, gender). Goes through the same sync queue as everything else:
+  ///   - server-id patient (already on backend) → marked pendingUpdate, PUT
+  ///     fires immediately with optimistic-concurrency version, on success
+  ///     transitions to synced
+  ///   - placeholder-id patient (still pendingCreate locally) → stays
+  ///     pendingCreate but with the new field values; next flush POSTs the
+  ///     latest snapshot
+  ///   - 409 (another writer beat us) → next syncFromServer refetches and
+  ///     re-applies our edits on top — non-destructive merge
+  ///   - 409 (duplicate name+mobile collision with another patient) → returns
+  ///     'duplicate' result for the UI to show "patient already exists" toast
+  ///
+  /// Returns 'success' | 'duplicate' | 'failure' so the calling screen can
+  /// give the right feedback.
+  Future<String> updatePatient(PatientModel updated) async {
     final idx = patients.indexWhere((p) => p.id == updated.id);
-    if (idx != -1) { patients[idx] = updated; _save(); }
+    if (idx == -1) return 'failure';
+
+    final existing = patients[idx];
+    final shouldUpsert = !_isServerId(updated.id) ||
+        existing.syncState == SyncState.pendingCreate;
+
+    final next = updated.copyWith(
+      syncState: shouldUpsert
+          ? SyncState.pendingCreate
+          : SyncState.pendingUpdate,
+      version: updated.version == 0 ? existing.version : updated.version,
+    );
+
+    patients[idx] = next;
+    await _save();
+
+    // Local-only patient — try to push via the create path (which the server
+    // will de-dup or accept). No conflict semantics needed for never-synced rows.
+    if (shouldUpsert) {
+      _syncOnePendingCreate(next.id);
+      return 'success';
+    }
+
+    // Server-side update with optimistic concurrency.
+    final data = next.toJson()..remove('id')..remove('syncState');
+    final result = await ApiService.updatePatient(next.id, data);
+    if (result['status'] == 'success') {
+      final serverDoc = result['data'] as Map<String, dynamic>?;
+      final newVersion = (serverDoc?['version'] as num?)?.toInt() ?? next.version + 1;
+      patients[idx] = next.copyWith(syncState: SyncState.synced, version: newVersion);
+      await _save();
+      return 'success';
+    }
+    if (result['status'] == 'conflict') {
+      final data = result['data'];
+      // Two flavors of 409: version mismatch (data is server's current doc) OR
+      // unique-index collision (no 'current' doc returned, server returned a
+      // friendly DUPLICATE_NAME_MOBILE code). Distinguish by whether data
+      // contains an 'id' field that matches our patient.
+      if (data is Map<String, dynamic> && data['id']?.toString() == next.id) {
+        // Version conflict — re-apply our edits on top of server's current state
+        // and stay pendingUpdate so the next sync retries with the right version.
+        final serverPatient = PatientModel.fromJson(data);
+        patients[idx] = serverPatient.copyWith(
+          name: next.name,
+          type: next.type,
+          village: next.village,
+          mobile: next.mobile,
+          age: next.age,
+          gender: next.gender,
+          syncState: SyncState.pendingUpdate,
+        );
+        await _save();
+        return 'success'; // user's intent honored, will sync next round
+      }
+      // Duplicate name+mobile collision — revert local change and tell the UI.
+      patients[idx] = existing;
+      await _save();
+      return 'duplicate';
+    }
+    // 'failure' → stays pendingUpdate, next syncFromServer retries.
+    return 'success'; // returned success because local change persisted + queued
   }
 
+  /// Removes the patient from the visible list immediately (optimistic).
+  /// - Local-only (never synced): dropped completely.
+  /// - Pending create that never reached server: dropped completely (no
+  ///   server doc to worry about, and the pending_create won't be flushed
+  ///   since the patient is no longer in the list).
+  /// - Server-side patient: queued for DELETE on the next online cycle.
+  ///   If the DELETE call here succeeds immediately, the patient is dropped
+  ///   from the pending-delete queue right away. If it fails (offline,
+  ///   cold-start timeout, 5xx), the patient stays in the pending-delete
+  ///   queue — hidden from UI, retried by every syncFromServer — until the
+  ///   server confirms. This prevents the "I deleted it but it came back"
+  ///   bug that the old fire-and-forget code had.
   void deletePatient(String id) {
-    patients.removeWhere((p) => p.id == id);
+    final idx = patients.indexWhere((p) => p.id == id);
+    if (idx == -1) return;
+    final removed = patients[idx];
+    patients.removeAt(idx);
     _save();
+
+    // Patient that never reached the server (local-only id, or still
+    // pending_create that never flushed). Nothing to delete remotely.
+    if (!_isServerId(id) || removed.syncState == SyncState.pendingCreate) {
+      return;
+    }
+
+    // Queue + try immediately. Always queue first so that even if the app
+    // is killed mid-flight, the next launch's sync still removes the row.
+    _pendingDeletes.add(removed.copyWith(syncState: SyncState.pendingDelete));
+    _savePendingDeletes();
+
+    ApiService.deletePatient(id).then((ok) {
+      if (!ok) return; // stays queued, retried next sync
+      _pendingDeletes.removeWhere((p) => p.id == id);
+      _savePendingDeletes();
+    });
   }
 
   /// Maps a triage outcome to a risk band. A patient with no triage yet

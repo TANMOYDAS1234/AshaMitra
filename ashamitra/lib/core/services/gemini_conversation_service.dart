@@ -1,6 +1,8 @@
-﻿import 'dart:convert';
+﻿import 'dart:async';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
+import 'ai_response_cache.dart';
 import 'vitals_extractor.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -269,34 +271,51 @@ risk_level অবশ্যই এর মধ্যে একটি: "low", "mediu
 extracted_answers শুধু সেই প্রশ্নগুলো যা কথোপকথন থেকে নিশ্চিতভাবে বোঝা গেছে
 ''';
 
-    // ── Call backend proxy — key lives on server ──────────────────────────────
-    // Retry up to 2 times with increasing timeouts (cold-start / rural network).
-    http.Response? response;
-    const timeouts = [Duration(seconds: 20), Duration(seconds: 30)];
-    for (int attempt = 0; attempt < timeouts.length; attempt++) {
-      try {
-        response = await http.post(
-          Uri.parse('${ApiConstants.baseUrl}/chat'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'prompt': prompt}),
-        ).timeout(timeouts[attempt]);
-        if (response.statusCode == 200) break; // success
-        if (response.statusCode != 503) break; // non-retryable error
-        // 503 = server cold-start — wait briefly then retry
-        await Future.delayed(Duration(seconds: attempt + 1));
-      } on Exception {
-        if (attempt == timeouts.length - 1) rethrow;
-        await Future.delayed(Duration(seconds: attempt + 1));
+    // ── Check on-device cache first ───────────────────────────────────────────
+    // Same prompt has been answered before → reuse the cached response. This
+    // makes the conversational flow work offline (once any given prompt has
+    // been seen at least once with internet) and reduces Gemini/Groq cost.
+    // The server has a matching cache too, so even on a fresh device,
+    // commonly-asked prompts return instantly from server cache.
+    final cache = AiResponseCache();
+    final cached = await cache.get(prompt);
+    Map<String, dynamic>? bodyJson;
+    if (cached != null) {
+      bodyJson = cached;
+    } else {
+      // ── Call backend proxy — key lives on server ────────────────────────────
+      // Retry up to 2 times with increasing timeouts (cold-start / rural network).
+      http.Response? response;
+      const timeouts = [Duration(seconds: 20), Duration(seconds: 30)];
+      for (int attempt = 0; attempt < timeouts.length; attempt++) {
+        try {
+          response = await http.post(
+            Uri.parse('${ApiConstants.baseUrl}/chat'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'prompt': prompt}),
+          ).timeout(timeouts[attempt]);
+          if (response.statusCode == 200) break; // success
+          if (response.statusCode != 503) break; // non-retryable error
+          // 503 = server cold-start — wait briefly then retry
+          await Future.delayed(Duration(seconds: attempt + 1));
+        } on Exception {
+          if (attempt == timeouts.length - 1) rethrow;
+          await Future.delayed(Duration(seconds: attempt + 1));
+        }
+      }
+
+      if (response == null || response.statusCode != 200) {
+        // ignore: avoid_print
+        print('[Chat] HTTP ${response?.statusCode}: ${response?.body}');
+        throw Exception('Backend chat error ${response?.statusCode}');
+      }
+
+      bodyJson = jsonDecode(response.body) as Map<String, dynamic>;
+      // Cache for offline reuse — non-blocking.
+      if ((bodyJson['text'] as String? ?? '').isNotEmpty) {
+        unawaited(cache.put(prompt, bodyJson));
       }
     }
-
-    if (response == null || response.statusCode != 200) {
-      // ignore: avoid_print
-      print('[Chat] HTTP ${response?.statusCode}: ${response?.body}');
-      throw Exception('Backend chat error ${response?.statusCode}');
-    }
-
-    final bodyJson = jsonDecode(response.body) as Map<String, dynamic>;
     final raw = (bodyJson['text'] as String? ?? '')
         .trim()
         .replaceAll('```json', '')

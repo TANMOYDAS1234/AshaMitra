@@ -11,6 +11,7 @@ import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../core/utils/validators.dart';
 import '../../controller/patient_controller.dart';
+import '../../data/models/patient_model.dart';
 
 class AddPatientScreen extends StatefulWidget {
   const AddPatientScreen({super.key});
@@ -29,12 +30,30 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   final _villageCtrl = TextEditingController();
   final _mobileCtrl = TextEditingController();
 
+  /// If non-null, this screen is in EDIT mode for an existing patient.
+  /// Pre-fills the form fields and the Save button calls updatePatient
+  /// instead of addPatient. Triage-derived fields (outcome, reason,
+  /// nextStep, qaHistory, risk, lastVisit) are preserved unchanged.
+  PatientModel? _editing;
+
   @override
   void initState() {
     super.initState();
     _ctrl = Get.isRegistered<PatientController>()
         ? Get.find<PatientController>()
         : Get.put(PatientController(), permanent: true);
+
+    // Edit-mode detection: pass the existing PatientModel as Get.arguments.
+    final args = Get.arguments;
+    if (args is PatientModel) {
+      _editing = args;
+      _nameCtrl.text    = args.name;
+      _ageCtrl.text     = args.age;
+      _villageCtrl.text = args.village == 'Unknown' || args.village == '—' ? '' : args.village;
+      _mobileCtrl.text  = args.mobile;
+      _caseType = args.type;
+      _gender   = args.gender.isNotEmpty ? args.gender : 'Female';
+    }
   }
 
   @override
@@ -46,8 +65,51 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     super.dispose();
   }
 
-  void _save() {
+  bool get _isEditing => _editing != null;
+
+  void _showSnack(String title, String body, Color color) {
+    Get.snackbar(
+      title, body,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: color,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+      duration: const Duration(seconds: 2),
+    );
+  }
+
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_isEditing) {
+      // EDIT mode: only update demographic fields. Triage data is preserved
+      // by copyWith semantics — those fields aren't passed so the existing
+      // values carry over.
+      final updated = _editing!.copyWith(
+        name:    _nameCtrl.text.trim(),
+        type:    _caseType,
+        village: _villageCtrl.text.trim().isEmpty ? 'Unknown' : _villageCtrl.text.trim(),
+        mobile:  _mobileCtrl.text.trim(),
+        age:     _ageCtrl.text.trim(),
+        gender:  _gender,
+      );
+      final result = await _ctrl.updatePatient(updated);
+      if (!mounted) return;
+      if (result == 'duplicate') {
+        _showSnack(
+          'Cannot Save',
+          'Another patient already has this name and mobile number.',
+          AppColors.warningYellow,
+        );
+        return;
+      }
+      Get.back();
+      _showSnack('Patient Updated', '${updated.name} updated successfully.', AppColors.safeGreen);
+      return;
+    }
+
+    // ADD mode
     _ctrl.addPatient(
       name: _nameCtrl.text.trim(),
       type: _caseType,
@@ -57,16 +119,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       gender: _gender,
     );
     Get.back();
-    Get.snackbar(
-      'Patient Added',
-      '${_nameCtrl.text.trim()} has been added successfully.',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: AppColors.safeGreen,
-      colorText: Colors.white,
-      margin: const EdgeInsets.all(16),
-      borderRadius: 12,
-      duration: const Duration(seconds: 2),
-    );
+    _showSnack('Patient Added', '${_nameCtrl.text.trim()} has been added successfully.', AppColors.safeGreen);
   }
 
   void _saveAndCheckup() {
@@ -94,7 +147,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              const AppHeader(title: 'Add Patient'),
+              AppHeader(title: _isEditing ? 'Edit Patient' : 'Add Patient'),
               const SizedBox(height: 12),
               Expanded(
                 child: SingleChildScrollView(
@@ -204,18 +257,22 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                         Column(
                           children: [
                             AppButton(
-                              label: 'Save Patient',
+                              label: _isEditing ? 'Save Changes' : 'Save Patient',
                               onPressed: _save,
-                              outlined: true,
+                              outlined: !_isEditing, // edit mode: primary; add mode: secondary (paired with checkup)
                               width: double.infinity,
                             ),
-                            const SizedBox(height: 10),
-                            AppButton(
-                              label: 'Save & Start Checkup',
-                              onPressed: _saveAndCheckup,
-                              icon: Icons.mic_rounded,
-                              width: double.infinity,
-                            ),
+                            // "Save & Start Checkup" only makes sense for new patients —
+                            // editing doesn't need a follow-up checkup step.
+                            if (!_isEditing) ...[
+                              const SizedBox(height: 10),
+                              AppButton(
+                                label: 'Save & Start Checkup',
+                                onPressed: _saveAndCheckup,
+                                icon: Icons.mic_rounded,
+                                width: double.infinity,
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 24),

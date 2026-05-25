@@ -1,5 +1,12 @@
 import '../../../../shared/widgets/risk_badge.dart';
 
+/// Sync state tracking for offline-first patient operations.
+/// - synced         : the canonical truth lives on the server, local copy matches
+/// - pendingCreate  : added offline, waiting for next online cycle to POST
+/// - pendingUpdate  : modified offline since last successful PUT
+/// - pendingDelete  : marked for deletion, hidden from UI, waiting to DELETE
+enum SyncState { synced, pendingCreate, pendingUpdate, pendingDelete }
+
 class PatientModel {
   final String id;
   final String name;
@@ -16,6 +23,11 @@ class PatientModel {
   final String? nextStep;
   final List<Map<String, String>> qaHistory;
   final DateTime createdAt;
+  final SyncState syncState;
+  /// Server-side version for optimistic concurrency. Incremented on every
+  /// successful POST/PUT. The client sends this on PUT; if it no longer
+  /// matches the server, the server returns 409 and the client refetches.
+  final int version;
 
   PatientModel({
     required this.id,
@@ -33,6 +45,8 @@ class PatientModel {
     this.nextStep,
     this.qaHistory = const [],
     DateTime? createdAt,
+    this.syncState = SyncState.synced,
+    this.version = 0,
   }) : createdAt = createdAt ?? DateTime.now();
 
   RiskLevel get riskFromOutcome {
@@ -58,6 +72,8 @@ class PatientModel {
         if (nextStep != null) 'nextStep': nextStep,
         'qaHistory': qaHistory,
         'createdAt': createdAt.toIso8601String(),
+        'syncState': syncState.name,
+        'version': version,
       };
 
   factory PatientModel.fromJson(Map<String, dynamic> json) => PatientModel(
@@ -83,9 +99,17 @@ class PatientModel {
         createdAt: json['createdAt'] != null
             ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
             : DateTime.now(),
+        // Migration-safe default: rows loaded from old local storage (no
+        // syncState field) are assumed already-synced.
+        syncState: SyncState.values.firstWhere(
+          (s) => s.name == json['syncState'],
+          orElse: () => SyncState.synced,
+        ),
+        version: (json['version'] as num?)?.toInt() ?? 0,
       );
 
   PatientModel copyWith({
+    String? id,
     String? name,
     String? type,
     String? village,
@@ -99,9 +123,11 @@ class PatientModel {
     String? reason,
     String? nextStep,
     List<Map<String, String>>? qaHistory,
+    SyncState? syncState,
+    int? version,
   }) =>
       PatientModel(
-        id: id,
+        id: id ?? this.id,
         name: name ?? this.name,
         type: type ?? this.type,
         village: village ?? this.village,
@@ -116,5 +142,7 @@ class PatientModel {
         nextStep: nextStep ?? this.nextStep,
         qaHistory: qaHistory ?? this.qaHistory,
         createdAt: createdAt,
+        syncState: syncState ?? this.syncState,
+        version: version ?? this.version,
       );
 }

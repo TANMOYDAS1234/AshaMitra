@@ -1,24 +1,85 @@
-# Environment files - NEVER commit secrets
+# ── Secrets — never commit ───────────────────────────────────────────────
+cloud TTS api key.txt
+mongo*.txt
+*.key
+*.pem
+*-key.json
+gcp-tts-key.json
 .env
+.env.local
+.env.*.local
 **/.env
+**/.env.local
+**/.env.*.local
 
-# Node
+# ── Backend (Node) ───────────────────────────────────────────────────────
 node_modules/
 **/node_modules/
+backend/test-tts-output.mp3
+backend/gcloud_test.mp3
+backend/prod_test.mp3
+backend/leda_*.mp3
+backend/leda_*.wav
+backend/voice_samples/
 
-# Flutter/Dart
+# ── Flutter / Dart ───────────────────────────────────────────────────────
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 build/
+**/.dart_tool/
+**/build/
+ashamitra/.metadata
+ashamitra/pubspec.lock
+ashamitra/dart_defines.env
+ashamitra/devtools_options.yaml
 
-# IDE
-.idea/
-.vscode/
-*.iml
+# ── Android build ────────────────────────────────────────────────────────
+**/.gradle/
+ashamitra/android/captures/
+ashamitra/android/local.properties
+ashamitra/android/key.properties
+ashamitra/android/**/*.keystore
+ashamitra/android/**/*.jks
+ashamitra/android/app/release/
+ashamitra/android/app/debug/
+ashamitra/android/app/profile/
+ashamitra/android/**/GeneratedPluginRegistrant.java
 
-# OS
+# ── iOS build ────────────────────────────────────────────────────────────
+ashamitra/ios/Pods/
+ashamitra/ios/.symlinks/
+ashamitra/ios/Flutter/App.framework/
+ashamitra/ios/Flutter/Flutter.framework/
+ashamitra/ios/Flutter/Flutter.podspec
+ashamitra/ios/Flutter/Generated.xcconfig
+ashamitra/ios/Flutter/ephemeral/
+ashamitra/ios/Flutter/flutter_export_environment.sh
+ashamitra/ios/ServiceDefinitions.json
+ashamitra/ios/Runner/GeneratedPluginRegistrant.*
+ashamitra/ios/.generated/
+ashamitra/ios/Runner.xcworkspace/xcuserdata/
+ashamitra/ios/Runner.xcodeproj/xcuserdata/
+
+# ── Local test artifacts in project root ─────────────────────────────────
+*.apk
+elevenlabs_test.mp3
+tts_test.mp3
+vapi_*.mp3
+overpass_test.json
+
+# ── OS / editor noise ────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+.vscode/
+.idea/
+*.iml
+.claude/
+
+# ── Logs ─────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*

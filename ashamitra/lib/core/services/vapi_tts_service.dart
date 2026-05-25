@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -8,8 +9,9 @@ import '../constants/api_constants.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // VapiTtsService
-// Calls backend /api/tts → ElevenLabs (multilingual, incl. Bengali)
-// Caches every MP3 on device so it plays offline after first use
+// Calls backend /api/tts → Google Cloud Chirp3-HD Leda (Bengali)
+// Caches every MP3 on device so it plays offline after first use.
+// Supports prefetch() for warming the cache at startup.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class VapiTtsService {
@@ -19,9 +21,9 @@ class VapiTtsService {
 
   final _player = AudioPlayer();
   static const _cacheLimit = 60 * 1024 * 1024; // 60 MB max cache
-  // Cache-key tag only — actual voice is chosen server-side from ELEVENLABS_VOICE_ID.
+  // Cache-key tag only — actual voice is chosen server-side.
   // Bump this string when switching voices so old cached MP3s are not replayed.
-  static const _voice = 'elevenlabs:default';
+  static const _voice = 'gcloud:Chirp3-HD-Leda:v1';
 
   Function()? onStart;
   Function()? onComplete;
@@ -35,34 +37,57 @@ class VapiTtsService {
     return dir;
   }
 
-  // ── Cache key: MD5 of text + voice ───────────────────────────────────────
-  String _cacheKey(String text) {
-    final input = '$text|$_voice';
+  // ── Cache key: MD5 of text + voice + tone ────────────────────────────────
+  String _cacheKey(String text, String tone) {
+    final input = '$text|$_voice|$tone';
     return md5.convert(utf8.encode(input)).toString();
   }
 
-  // ── Speak: cache hit → play file, miss → fetch → cache → play ────────────
-  Future<bool> speak(String text) async {
+  // ── Lookup priority for cached MP3:
+  //   1. On-disk cache (most-used path — fastest after first hit)
+  //   2. APK-bundled assets (works even on day-1 zero-internet install)
+  //   3. Backend /api/tts → cache to disk
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /// Returns the bundle-asset bytes for [key] if such an MP3 ships in the
+  /// APK at assets/voices/<key>.mp3. Null otherwise. The generate-bundled-
+  /// voices.js script produces these files using the SAME cache key, so a
+  /// match here means the bundled audio is byte-identical to what the live
+  /// /api/tts would produce.
+  Future<List<int>?> _loadBundledAsset(String key) async {
+    try {
+      final data = await rootBundle.load('assets/voices/$key.mp3');
+      return data.buffer.asUint8List();
+    } catch (_) {
+      return null; // not bundled — that's fine, fall through to network
+    }
+  }
+
+  // ── Speak: disk cache → bundled asset → network ──────────────────────────
+  Future<bool> speak(String text, {String tone = 'normal'}) async {
     if (text.trim().isEmpty) return false;
 
-    final key  = _cacheKey(text);
+    final key  = _cacheKey(text, tone);
     final dir  = await _cacheDir;
     final file = File('${dir.path}/$key.mp3');
 
     try {
       if (!file.existsSync()) {
-        // Fetch from backend proxy
-        final response = await http.post(
-          Uri.parse('${ApiConstants.baseUrl}/tts'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'text': text}),
-        ).timeout(const Duration(seconds: 15));
-
-        if (response.statusCode != 200) return false;
-
-        // Save to cache
-        await file.writeAsBytes(response.bodyBytes);
-        await _evictIfNeeded(dir);
+        // Try APK-bundled asset first (works offline-first-ever).
+        final bundled = await _loadBundledAsset(key);
+        if (bundled != null) {
+          await file.writeAsBytes(bundled);
+        } else {
+          // Fall through to backend.
+          final response = await http.post(
+            Uri.parse('${ApiConstants.baseUrl}/tts'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'text': text, 'tone': tone}),
+          ).timeout(const Duration(seconds: 15));
+          if (response.statusCode != 200) return false;
+          await file.writeAsBytes(response.bodyBytes);
+          await _evictIfNeeded(dir);
+        }
       }
 
       // Play the cached MP3
@@ -77,6 +102,47 @@ class VapiTtsService {
   }
 
   Future<void> stop() async => _player.stop();
+
+  /// Returns true if [text]+[tone] is already in the local MP3 cache.
+  Future<bool> isCached(String text, {String tone = 'normal'}) async {
+    if (text.trim().isEmpty) return false;
+    final dir  = await _cacheDir;
+    final file = File('${dir.path}/${_cacheKey(text, tone)}.mp3');
+    return file.existsSync();
+  }
+
+  /// Fetch and cache [text]+[tone] without playing.
+  /// Used by [TtsPrewarmService] at startup to make the app offline-ready.
+  /// Returns true on success (cached or just fetched), false on failure.
+  /// Short timeout — prewarm is best-effort and must not block startup.
+  Future<bool> prefetch(String text, {String tone = 'normal'}) async {
+    if (text.trim().isEmpty) return false;
+    final key  = _cacheKey(text, tone);
+    final dir  = await _cacheDir;
+    final file = File('${dir.path}/$key.mp3');
+    if (file.existsSync()) return true;
+
+    // Skip network if the phrase ships in the APK — copy from bundle.
+    final bundled = await _loadBundledAsset(key);
+    if (bundled != null) {
+      await file.writeAsBytes(bundled);
+      return true;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/tts'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'text': text, 'tone': tone}),
+      ).timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) return false;
+      await file.writeAsBytes(response.bodyBytes);
+      await _evictIfNeeded(dir);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 
   // ── Evict oldest files if cache exceeds limit ─────────────────────────────
   Future<void> _evictIfNeeded(Directory dir) async {

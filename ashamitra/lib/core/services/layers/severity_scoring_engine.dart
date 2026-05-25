@@ -85,7 +85,20 @@ class SeverityScoringEngine {
     _VitalPenalty(vital: 'respiratory_rate', operator: 'GT', threshold: 50, penalty: 2, reason: 'RR > 50/min — tachypnoea (infant/child)'),
 
     // Temperature
-    _VitalPenalty(vital: 'temperature_c', operator: 'GT', threshold: 38.5, penalty: 3, reason: 'Temp > 38.5°C — high fever'),
+    // Clinical rationale (IMNCI/HBYC): fever alone, without other danger signs
+    // (chest indrawing, severe dehydration, unable to drink, fever > 5 days,
+    // convulsions, stiff neck) is NOT a RED-band event. It is a YELLOW concern
+    // warranting PHC follow-up. The previous +3 single-vital penalty was
+    // pushing legitimate YELLOW cases into RED (e.g., child 102°F + mild
+    // cough → score 6 → RED) which is over-triage.
+    //
+    // Newborn fever (> 37.5°C) and puerperal fever (> 38.0°C) remain
+    // hard-stop RED — handled separately in vitals_extractor.dart and the
+    // newborn / delivery_pnc modules in triage_cases.json. This penalty
+    // applies to child / ANC / immunisation modules where fever alone is
+    // not RED.
+    _VitalPenalty(vital: 'temperature_c', operator: 'GT', threshold: 40.0, penalty: 3, reason: 'Temp > 40.0°C — hyperpyrexia (severe)'),
+    _VitalPenalty(vital: 'temperature_c', operator: 'GT', threshold: 38.5, penalty: 2, reason: 'Temp > 38.5°C — high fever (YELLOW-tier, refer PHC if other signs)'),
     _VitalPenalty(vital: 'temperature_c', operator: 'GT', threshold: 37.5, penalty: 1, reason: 'Temp > 37.5°C — low-grade fever'),
 
     // Blood pressure

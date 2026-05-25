@@ -121,31 +121,81 @@ class ApiService {
     return body['data'] as List? ?? [];
   }
 
-  static Future<bool> savePatient(Map<String, dynamic> patient) async {
+  /// Saves a patient. Returns the server document (with Mongo-assigned `id`)
+  /// on success so the caller can replace the local placeholder id with the
+  /// real server _id. Returns null on any failure — caller treats the local
+  /// row as "not yet synced" and the next syncFromServer will pick it up.
+  ///
+  /// Server-side dedup: if a patient with the same (ashaId, name, mobile)
+  /// already exists, the server returns that existing doc — so the local
+  /// row gets re-pointed at the canonical document instead of creating a
+  /// stray duplicate.
+  static Future<Map<String, dynamic>?> savePatient(Map<String, dynamic> patient) async {
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/patients'),
         headers: _headers,
         body: jsonEncode(patient),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 45)); // was 15 — Render cold-start can exceed
       _guard(res.statusCode);
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      return body['success'] == true;
+      if (body['success'] != true) return null;
+      final data = body['data'];
+      return data is Map<String, dynamic> ? data : null;
     } catch (_) {
-      return false;
+      return null;
     }
   }
 
+  /// Result of an optimistic-concurrency PUT. Carries enough info for the
+  /// controller to handle a 409 (refetch + merge) without a separate call.
+  ///   - status: 'success' | 'conflict' | 'failure'
+  ///   - data:   on success → updated doc; on conflict → server's current doc;
+  ///             on failure → null
+  /// (Plain map instead of a class so it serializes/transports easily.)
+
   /// Updates an existing patient document in place (PUT /patients/:id).
   /// [id] must be a real server _id — never a local placeholder id.
-  static Future<bool> updatePatient(String id, Map<String, dynamic> patient) async {
+  /// [patient] should include a `version` field; on mismatch the server
+  /// returns 409 and the controller can refetch + merge.
+  ///
+  /// Returns a map: `{status: 'success'|'conflict'|'failure', data: Map?}`.
+  static Future<Map<String, dynamic>> updatePatient(String id, Map<String, dynamic> patient) async {
     try {
       final res = await http.put(
         Uri.parse('$baseUrl/patients/$id'),
         headers: _headers,
         body: jsonEncode(patient),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 45));
+      if (res.statusCode == 401) throw UnauthorizedException();
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode == 200 && body['success'] == true) {
+        return {'status': 'success', 'data': body['data']};
+      }
+      if (res.statusCode == 409) {
+        return {'status': 'conflict', 'data': body['current']};
+      }
+      return {'status': 'failure', 'data': null};
+    } catch (_) {
+      return {'status': 'failure', 'data': null};
+    }
+  }
+
+  /// Permanently deletes a patient (DELETE /patients/:id). [id] must be a
+  /// real server _id — caller should skip the network round-trip for
+  /// placeholder local-only ids (`p_<ts>` / `triage_<ts>`).
+  /// Returns true on confirmed delete, false on any failure (offline,
+  /// cold-start timeout, 404, etc).
+  static Future<bool> deletePatient(String id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/patients/$id'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 45)); // Render cold-start tolerance
       _guard(res.statusCode);
+      if (res.statusCode != 200 && res.statusCode != 204) return false;
+      // 200 with body / 204 no-body — both count as success
+      if (res.body.isEmpty) return true;
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       return body['success'] == true;
     } catch (_) {
@@ -161,8 +211,34 @@ class ApiService {
         Uri.parse('$baseUrl/reports'),
         headers: _headers,
         body: jsonEncode(report),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 45));
       _guard(res.statusCode);
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['success'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// PATCH /reports/repoint — updates all reports whose patientId matches
+  /// [oldPatientId] to use [newPatientId] instead. Called by the patient
+  /// controller immediately after a local placeholder id is swapped for a
+  /// server _id, so reports POSTed during the brief race window get
+  /// correctly linked to the canonical patient document.
+  /// Returns true on success, false on any failure (silent — best effort).
+  static Future<bool> repointReports(String oldPatientId, String newPatientId) async {
+    if (oldPatientId == newPatientId) return true;
+    try {
+      final res = await http.patch(
+        Uri.parse('$baseUrl/reports/repoint'),
+        headers: _headers,
+        body: jsonEncode({
+          'oldPatientId': oldPatientId,
+          'newPatientId': newPatientId,
+        }),
+      ).timeout(const Duration(seconds: 30));
+      _guard(res.statusCode);
+      if (res.statusCode != 200) return false;
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       return body['success'] == true;
     } catch (_) {

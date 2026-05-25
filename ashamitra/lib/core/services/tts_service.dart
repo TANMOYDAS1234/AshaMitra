@@ -21,9 +21,9 @@ class TtsService {
   final FlutterTts _deviceTts = FlutterTts();
   final VapiTtsService _vapiTts = VapiTtsService();
 
-  // Flip to true when ElevenLabs is on a paid plan ($5/mo Starter+). Free tier
-  // is blocked from datacenter IPs (Render), so for now we use device TTS only.
-  static const bool _useOnlineTts = false;
+  // Online TTS = Google Cloud Chirp3-HD Bengali via backend /api/tts.
+  // Offline fallback = on-device flutter_tts.
+  static const bool _useOnlineTts = true;
 
   bool _initialized = false;
   TtsTone _currentTone = TtsTone.normal;
@@ -90,9 +90,9 @@ class TtsService {
     if (text.trim().isEmpty) return;
 
     if (_useOnlineTts && await _isOnline()) {
-      final success = await _vapiTts.speak(text);
+      final success = await _vapiTts.speak(text, tone: tone.name);
       if (success) return;
-      // Online TTS failed (quota, cold start, datacenter block) — fall through.
+      // Online TTS failed (quota, cold start, network) — fall through to device TTS.
     }
 
     await _speakDevice(text, tone);
@@ -132,7 +132,7 @@ class TtsService {
   /// Emergency alert — always urgent, never cached (time-critical).
   Future<void> speakEmergency(String text) async {
     if (_useOnlineTts && await _isOnline()) {
-      final success = await _vapiTts.speak(text)
+      final success = await _vapiTts.speak(text, tone: TtsTone.emergency.name)
           .timeout(const Duration(seconds: 5), onTimeout: () => false);
       if (success) return;
     }

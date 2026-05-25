@@ -10,6 +10,7 @@ import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/risk_badge.dart';
 import '../../controller/patient_controller.dart';
+import '../../data/models/patient_model.dart';
 
 class PatientProfileScreen extends StatelessWidget {
   const PatientProfileScreen({super.key});
@@ -104,7 +105,29 @@ class PatientProfileScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              const AppHeader(title: 'Patient Profile'),
+              AppHeader(
+                title: 'Patient Profile',
+                actions: [
+                  HeaderActionPill(
+                    icon: Icons.edit_outlined,
+                    label: 'Edit',
+                    onTap: () {
+                      // Resolve the live PatientModel from the controller so we
+                      // get the current syncState + version, not a snapshot from
+                      // navigation args. Falls back to a synthesized model if
+                      // the patient is somehow missing (shouldn't happen).
+                      PatientModel? model;
+                      if (Get.isRegistered<PatientController>()) {
+                        final ctrl = Get.find<PatientController>();
+                        final idx = ctrl.patients.indexWhere((p) => p.id == patientId);
+                        if (idx != -1) model = ctrl.patients[idx];
+                      }
+                      if (model == null) return; // patient gone — defensive no-op
+                      Get.toNamed(AppRoutes.addPatient, arguments: model);
+                    },
+                  ),
+                ],
+              ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
