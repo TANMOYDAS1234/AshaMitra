@@ -10,6 +10,12 @@ class AdminController extends GetxController {
   final ashaWorkers     = <UserModel>[].obs;
   final reports         = <Map<String, dynamic>>[].obs;
   final filteredReports = <Map<String, dynamic>>[].obs;
+  /// Soft-deleted reports surfaced via the audit endpoint. Populated only
+  /// when [loadDeletedReports] is called (the admin "Deleted reports"
+  /// screen). Each entry includes the original report fields plus
+  /// ashaName / ashaDistrict / ashaBlock from the populated worker doc.
+  final deletedReports  = <Map<String, dynamic>>[].obs;
+  final isLoadingDeleted = false.obs;
   final errorMsg        = ''.obs;
 
   final totalWorkers  = 0.obs;
@@ -90,6 +96,25 @@ class AdminController extends GetxController {
   }
 
   // ── ASHA Workers ───────────────────────────────────────────────
+
+  /// Populates [deletedReports] from the admin audit endpoint. Each row
+  /// carries the original report fields plus the worker name / district /
+  /// block (server-side populated). Sorted by most-recent deletion first.
+  Future<void> loadDeletedReports() async {
+    isLoadingDeleted.value = true;
+    try {
+      final data = await ApiService.getDeletedReports();
+      deletedReports.value = data
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } on UnauthorizedException {
+      _handleUnauth();
+    } catch (_) {
+      errorMsg.value = 'মুছে ফেলা রিপোর্ট লোড ব্যর্থ।';
+    } finally {
+      isLoadingDeleted.value = false;
+    }
+  }
 
   Future<void> loadAshaWorkers() async {
     isLoading.value = true;

@@ -10,6 +10,7 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/pdf_helper.dart';
 import '../../../admin/controller/admin_controller.dart';
+import 'admin_deleted_reports_screen.dart';
 import 'admin_report_detail.dart';
 
 class AdminReportsTab extends StatefulWidget {
@@ -87,6 +88,17 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                       ],
                     );
                   }),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    onPressed: () => Get.to(() => const AdminDeletedReportsScreen()),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.grey.shade100,
+                      padding: const EdgeInsets.all(10),
+                    ),
+                    icon: const Icon(Icons.delete_outline_rounded,
+                        color: AppColors.emergencyRed, size: 20),
+                    tooltip: 'Deleted reports',
+                  ),
                   const SizedBox(width: 8),
                   Obx(() => IconButton(
                         onPressed: ctrl.filteredReports.isEmpty
