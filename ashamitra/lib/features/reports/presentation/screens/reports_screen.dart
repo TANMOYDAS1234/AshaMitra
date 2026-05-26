@@ -786,7 +786,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   }
 
                   final allReports = ctrl.reports;
-                  final reports = allReports.where(_matchesFilters).toList();
+                  // De-dup by id before filtering so a brief sync window
+                  // (local placeholder + server doc both present) cannot
+                  // produce two cards with the same Dismissible key.
+                  // Reports with a non-empty id are uniqued; reports without
+                  // an id are all kept (they're locally-pending and each one
+                  // is a distinct triage session).
+                  final seenIds = <String>{};
+                  final reports = allReports.where(_matchesFilters).where((r) {
+                    final id = r['id']?.toString() ?? '';
+                    if (id.isEmpty) return true;
+                    return seenIds.add(id);
+                  }).toList();
 
                   if (allReports.isEmpty) {
                     return const EmptyState(
@@ -868,10 +879,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         Text('সেশন ইতিহাস', style: AppTextStyles.h3),
                         const SizedBox(height: 10),
 
-                        ...reports.map((r) {
+                        ...reports.asMap().entries.map((entry) {
+                          final i = entry.key;
+                          final r = entry.value;
                           final reportId = r['id']?.toString() ?? '';
+                          // Key MUST be unique within the parent — id alone
+                          // can be empty for locally-pending reports (no
+                          // server _id yet), and two empty-id rows would
+                          // collide. createdAt + index is unique by
+                          // construction.
+                          final createdAt = r['createdAt']?.toString() ?? '';
+                          final keyStr = reportId.isNotEmpty
+                              ? reportId
+                              : 'pending_${i}_$createdAt';
                           return Dismissible(
-                            key: ValueKey('report_$reportId'),
+                            key: ValueKey('report_$keyStr'),
                             direction: DismissDirection.endToStart,
                             background: Container(
                               margin: const EdgeInsets.symmetric(vertical: 6),
