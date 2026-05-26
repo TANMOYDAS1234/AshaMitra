@@ -474,7 +474,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   //   1. Show progress dialog
   //   2. Load the bundled font bytes (rootBundle, ~250 KB ea, fast)
   //   3. Send (fonts + reports + timestamp) to the isolate and await bytes
-  //   4. Hand the bytes off to PdfHelper.saveBytesAndOpen
+  //   4. Hand the bytes off to PdfHelper.saveAndOpen
   Future<void> _downloadPdf(List<Map<String, dynamic>> reports) async {
     // ignore: avoid_print
     print('[PDF] start — reports.length=${reports.length}');
@@ -573,9 +573,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       // 4. Persist + open via PdfHelper. Snackbar fires inside on result.
       final fileName =
           'asha_mitra_report_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf';
-      await PdfHelper.saveBytesAndOpen(bytes, fileName);
+      await PdfHelper.saveAndOpen(bytes, fileName);
       // ignore: avoid_print
-      print('[PDF] saveBytesAndOpen returned');
+      print('[PDF] saveAndOpen returned');
     } catch (e, st) {
       // Any failure — font load, isolate spawn, isolate work, file save —
       // surfaces here as a red snackbar instead of a silent crash.

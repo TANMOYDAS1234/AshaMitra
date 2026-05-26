@@ -286,8 +286,9 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
           ],
         ),
       );
+      final bytes = await doc.save();
       await PdfHelper.saveAndOpen(
-          doc,
+          bytes,
           'admin_reports_${DateTime.now().millisecondsSinceEpoch}.pdf');
     } catch (e) {
       Get.snackbar('Error', 'Could not generate PDF: $e',

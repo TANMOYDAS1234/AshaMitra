@@ -105,7 +105,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
         ],
       ),
     );
-    await PdfHelper.saveAndOpen(doc, 'asha_mitra_patients_${DateTime.now().millisecondsSinceEpoch}.pdf');
+    // saveAndOpen now takes pre-computed bytes — call doc.save() to serialize.
+    final bytes = await doc.save();
+    await PdfHelper.saveAndOpen(bytes, 'asha_mitra_patients_${DateTime.now().millisecondsSinceEpoch}.pdf');
   }
 
   @override

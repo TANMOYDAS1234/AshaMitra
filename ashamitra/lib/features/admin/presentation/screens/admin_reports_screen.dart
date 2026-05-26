@@ -180,7 +180,8 @@ class AdminReportsScreen extends StatelessWidget {
           ],
         ),
       );
-      await PdfHelper.saveAndOpen(doc, 'admin_reports_${DateTime.now().millisecondsSinceEpoch}.pdf');
+      final bytes = await doc.save();
+      await PdfHelper.saveAndOpen(bytes, 'admin_reports_${DateTime.now().millisecondsSinceEpoch}.pdf');
     } catch (e) {
       Get.snackbar('Error', 'Could not generate PDF: $e', snackPosition: SnackPosition.BOTTOM);
     }
