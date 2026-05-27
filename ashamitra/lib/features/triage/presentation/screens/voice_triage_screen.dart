@@ -68,6 +68,24 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   String _statusText = '';
   double _confidence = 0.0;
   OrbState _orbState = OrbState.idle;
+  // ── Continuous-listen state ────────────────────────────────────
+  // When true (the default), the mic auto-restarts after each TTS
+  // response completes — worker never has to tap mic between turns.
+  // Toggled off when the user explicitly stops the mic (long press or
+  // when the screen is disposed).
+  bool _autoListen = true;
+  // Index for round-robin selection of ack fillers so the same short
+  // phrase doesn't play three times in a row.
+  int _ackFillerIndex = 0;
+  // Short bridge phrases played the instant STT finalizes — covers the
+  // 1-3 sec gap before the real LLM response can be spoken. Every
+  // entry is pre-cached on disk by the prewarm service, so playback
+  // is instant from local file (no network round-trip).
+  static const _ackFillers = <String>[
+    'বুঝেছি।',
+    'একটু অপেক্ষা করুন।',
+    'ধন্যবাদ।',
+  ];
 
   // ── Offline fallback questions ────────────────────────────────
   List<EngineQuestion> _offlineQuestions = [];
@@ -119,11 +137,38 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   // ── TTS init ──────────────────────────────────────────────────
   Future<void> _initTts() async {
     _tts.onStart    = () { if (mounted) setState(() => _orbState = OrbState.processing); };
-    _tts.onComplete = () { if (mounted) setState(() => _orbState = OrbState.idle); };
+    // After every utterance finishes, auto-restart the mic if continuous
+    // listening is on and we're not in the middle of a network turn.
+    // This is what makes the experience feel "always listening" — the
+    // worker never taps mic between turns.
+    _tts.onComplete = () {
+      if (!mounted) return;
+      setState(() => _orbState = OrbState.idle);
+      if (_autoListen && !_isProcessing && !_isListening) {
+        _autoRestartListening();
+      }
+    };
     _tts.onError    = () { if (mounted) setState(() => _orbState = OrbState.idle); };
     await _tts.init();
     await Future.delayed(const Duration(milliseconds: 600));
     await _tts.speak('পরিস্থিতি বলুন বা প্রশ্ন করুন', tone: TtsTone.empathy);
+    // The TTS completion handler above will fire after this opening
+    // prompt finishes and start listening — no first-tap needed.
+  }
+
+  /// Idempotent auto-start of the mic, used by the TTS completion
+  /// callback. Skips if STT isn't available, the screen is being torn
+  /// down, the worker manually disabled autoListen, or processing is
+  /// already in flight (e.g. offline path still computing).
+  Future<void> _autoRestartListening() async {
+    if (!mounted) return;
+    if (!_autoListen || _isProcessing || _isListening || !_sttAvailable) return;
+    // Tiny delay so the audio player fully releases the mic channel
+    // before STT grabs it — without this the first 200ms of speech
+    // can get clipped.
+    await Future.delayed(const Duration(milliseconds: 250));
+    if (!mounted || !_autoListen || _isProcessing || _isListening) return;
+    await _toggleListening();
   }
 
   // ── Natural speech helper (delegates to TtsService) ─────────────────────
@@ -154,6 +199,10 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
 
   @override
   void dispose() {
+    // Important: kill auto-listen FIRST so the TTS onComplete callback
+    // (which can fire mid-teardown) doesn't try to reopen the mic on
+    // a disposed state.
+    _autoListen = false;
     _tts.stop();
     _stt.stop();
     _sttFallback.stop();
@@ -191,6 +240,9 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   // ── Toggle mic ────────────────────────────────────────────────
   Future<void> _toggleListening() async {
     if (_isListening) {
+      // Manual stop — also disable auto-restart so we don't fight the
+      // worker by re-opening the mic after they explicitly closed it.
+      _autoListen = false;
       await _stt.stop();
       await _sttFallback.stop();
       setState(() { _isListening = false; _orbState = OrbState.idle; });
@@ -198,6 +250,8 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       return;
     }
     if (!_sttAvailable || _isProcessing) return;
+    // Tap-to-start always re-enables continuous mode.
+    _autoListen = true;
     await _tts.stop();
 
     final online = await _hasInternet();
@@ -218,10 +272,14 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       cancelOnError: false,
     );
 
+    // pauseFor reduced from 7s → 3s for snappier turn-taking. Rural
+    // workers still speak slowly, but partialResults stream keeps the
+    // recognizer alive between words; 3s of true silence is plenty to
+    // signal "I'm done speaking" without making the worker feel rushed.
     await _stt.listen(
       localeId: 'bn_IN',
       listenFor: const Duration(seconds: 60),
-      pauseFor: const Duration(seconds: 7), // Gap 6: rural workers speak slowly
+      pauseFor: const Duration(seconds: 3),
       listenOptions: opts,
       onResult: _onSpeechResult,
       onSoundLevelChange: (level) {
@@ -236,7 +294,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       _sttFallback.listen(
         localeId: 'hi_IN',
         listenFor: const Duration(seconds: 60),
-        pauseFor: const Duration(seconds: 7),
+        pauseFor: const Duration(seconds: 3),
         listenOptions: opts,
         onResult: _onSpeechResult,
       );
@@ -255,8 +313,25 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       _stt.stop();
       _sttFallback.stop();
       setState(() { _isListening = false; _orbState = OrbState.processing; });
+      // Bridge the network gap — play a 1-second cached ack ("বুঝেছি।")
+      // immediately so the worker never hears silence between speaking
+      // and the LLM response. Fire-and-forget; the real response will
+      // queue behind it once the audio player frees up.
+      _playAckFiller();
       _processInput(text);
     }
+  }
+
+  /// Plays a short cached "got it" filler from disk while the LLM/TTS
+  /// network round-trip is in flight. Round-robins through [_ackFillers]
+  /// so the same phrase doesn't repeat back-to-back. No-op if the cache
+  /// miss falls through to the network (we don't want to add latency).
+  void _playAckFiller() {
+    final phrase = _ackFillers[_ackFillerIndex % _ackFillers.length];
+    _ackFillerIndex++;
+    // Don't await — the main response will overwrite this when ready.
+    // tone=normal keeps the cache key consistent with prewarmed assets.
+    _tts.speak(phrase, tone: TtsTone.normal);
   }
 
   // ── Core: process any input through conversational AI ─────────
