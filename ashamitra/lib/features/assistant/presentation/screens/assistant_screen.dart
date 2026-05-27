@@ -58,6 +58,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
   bool _isListening = false;
   bool _isThinking = false;
   bool _showSaveChip = false;
+  // True while the screen wants to stay listening between turns and even
+  // through silent pauses. Flipped off only on dispose so background
+  // STT events can't accidentally restart the mic after teardown.
+  bool _autoListen = true;
 
   @override
   void initState() {
@@ -146,6 +150,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
     final input = _liveTranscript.trim();
     if (input.isEmpty) {
       _statusLine = _idleStatus(_activeLang);
+      // Silent timeout (4s pauseFor or 30s listenFor with no speech) —
+      // re-arm the mic so the screen stays truly always-listening while
+      // open. Without this the worker would have to tap the orb after
+      // any silent pause. Tiny delay so STT releases cleanly first.
+      if (_autoListen && !_isThinking && !_showSaveChip) {
+        Future.delayed(const Duration(milliseconds: 250), () {
+          if (mounted && _autoListen && !_isListening && !_isThinking) {
+            _startListening();
+          }
+        });
+      }
       return;
     }
     _handleUserInput(input);
@@ -244,6 +259,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   @override
   void dispose() {
+    // Flip auto-listen off first so the delayed restart callback can't
+    // re-open the mic on a disposed state.
+    _autoListen = false;
     _tts.stop();
     _stt.stop();
     super.dispose();
