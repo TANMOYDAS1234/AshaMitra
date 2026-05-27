@@ -68,6 +68,18 @@ class _AssistantScreenState extends State<AssistantScreen> {
   // than the app being frozen. Cancelled when the reply lands.
   Timer? _coldStartHintTimer;
 
+  // Round-robin index for the ack-filler phrases — same pattern as triage.
+  // Plays a 1-second cached "got it" the moment STT finalizes so the worker
+  // never hears silence while the LLM/TTS round-trip is in flight. Every
+  // phrase is bundled in the APK and cached on disk, so playback is
+  // instant (no network).
+  int _ackFillerIndex = 0;
+  static const _ackFillers = <String>[
+    'বুঝেছি।',
+    'একটু অপেক্ষা করুন।',
+    'ধন্যবাদ।',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -168,7 +180,24 @@ class _AssistantScreenState extends State<AssistantScreen> {
       }
       return;
     }
+    // Bridge the network/LLM wait: play a 1-sec cached ack the moment STT
+    // finalizes so the worker never hears silence between speaking and
+    // the assistant's full reply. Fire-and-forget; the response audio
+    // will replace this as soon as it arrives.
+    _playAckFiller();
     _handleUserInput(input);
+  }
+
+  /// Plays a short cached "got it" filler from disk (round-robin through
+  /// [_ackFillers] so the same phrase doesn't repeat back-to-back). No-op
+  /// if the assistant is processing the previous turn — we don't want to
+  /// stack ack audio over an in-flight response.
+  void _playAckFiller() {
+    if (_isThinking) return;
+    final phrase = _ackFillers[_ackFillerIndex % _ackFillers.length];
+    _ackFillerIndex++;
+    // Don't await — the main response will replace this when ready.
+    _tts.speak(phrase, tone: TtsTone.normal);
   }
 
   // ── Main loop: send to Gemini, speak reply ─────────────────────────────
