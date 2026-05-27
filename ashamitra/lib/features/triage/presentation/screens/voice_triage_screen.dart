@@ -203,6 +203,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     // (which can fire mid-teardown) doesn't try to reopen the mic on
     // a disposed state.
     _autoListen = false;
+    _coldStartHintTimer?.cancel();
     _tts.stop();
     _stt.stop();
     _sttFallback.stop();
@@ -334,6 +335,12 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     _tts.speak(phrase, tone: TtsTone.normal);
   }
 
+  // Timer that escalates the status text from "connecting" to "waking
+  // server" after 5s of waiting — gives the worker a real signal that
+  // the cold-start is happening, not a frozen app. Cancelled as soon
+  // as the response arrives (or _isProcessing flips off).
+  Timer? _coldStartHintTimer;
+
   // ── Core: process any input through conversational AI ─────────
   Future<void> _processInput(String input) async {
     if (input.trim().isEmpty || _isProcessing) return;
@@ -347,6 +354,15 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     });
     _history.add(ConversationTurn(role: 'asha', text: input));
     _turnCount++;
+    // Arm the cold-start hint. If a reply lands in < 5s the timer is
+    // cancelled below; otherwise the worker sees "সার্ভার জাগাচ্ছি..."
+    // so they don't think the app is broken.
+    _coldStartHintTimer?.cancel();
+    _coldStartHintTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted && _isProcessing) {
+        setState(() => _statusText = 'সার্ভার জাগাচ্ছি, একটু অপেক্ষা করুন...');
+      }
+    });
     final online = await _hasInternet();
     _isOffline = !online;
     if (_isOffline) {
@@ -440,6 +456,8 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       _history.add(ConversationTurn(
           role: 'assistant', text: response.spokenResponse));
 
+      // Response landed — kill the cold-start hint timer.
+      _coldStartHintTimer?.cancel();
       setState(() {
         _isProcessing = false;
         _orbState = OrbState.idle;
@@ -489,6 +507,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       // signal. Fall back to the offline engine instead of dead-ending on a
       // "network issue" the worker cannot get past.
       if (!mounted) return;
+      _coldStartHintTimer?.cancel();
       // Bug 1: reset _isProcessing so mic is not permanently blocked.
       // Bug 2: undo turn increment so offline does not burn a wasted turn.
       // Bug 3: do not set _isOffline permanently; _hasInternet() resets it.

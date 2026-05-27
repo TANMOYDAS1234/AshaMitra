@@ -63,6 +63,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
   // STT events can't accidentally restart the mic after teardown.
   bool _autoListen = true;
 
+  // Escalates the status line from "thinking" to "waking server" after
+  // 5s of waiting so the worker knows the cold-start is happening rather
+  // than the app being frozen. Cancelled when the reply lands.
+  Timer? _coldStartHintTimer;
+
   @override
   void initState() {
     super.initState();
@@ -177,11 +182,22 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _liveTranscript = '';
     });
 
+    // Arm cold-start hint — after 5s of waiting, switch the status line
+    // to "waking the server" so the worker knows the app isn't frozen.
+    _coldStartHintTimer?.cancel();
+    _coldStartHintTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted && _isThinking) {
+        setState(() => _statusLine = _wakingServerStatus(_activeLang));
+      }
+    });
+
     final response = await _chat.ask(
       userInput: input,
       history: _history,
       appLanguage: _activeLang,
     );
+
+    _coldStartHintTimer?.cancel();
 
     // Switch active language to whatever the worker just spoke
     _activeLang = response.detectedLanguage;
@@ -262,6 +278,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     // Flip auto-listen off first so the delayed restart callback can't
     // re-open the mic on a disposed state.
     _autoListen = false;
+    _coldStartHintTimer?.cancel();
     _tts.stop();
     _stt.stop();
     super.dispose();
@@ -356,6 +373,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
         AssistantLang.bn => 'ভাবছি...',
         AssistantLang.hi => 'सोच रही हूँ...',
         AssistantLang.en => 'Thinking...',
+      };
+  String _wakingServerStatus(AssistantLang l) => switch (l) {
+        AssistantLang.bn => 'সার্ভার জাগাচ্ছি, একটু অপেক্ষা করুন...',
+        AssistantLang.hi => 'सर्वर जगा रहे हैं, थोड़ा रुकें...',
+        AssistantLang.en => 'Waking the server, please wait...',
       };
   String _idleStatus(AssistantLang l) => switch (l) {
         AssistantLang.bn => 'অর্বে ট্যাপ করুন কথা বলতে',
