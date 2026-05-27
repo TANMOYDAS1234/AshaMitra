@@ -18,6 +18,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/api_constants.dart';
 import '../../../core/services/ai_response_cache.dart';
@@ -148,10 +149,10 @@ class AssistantChatService {
             )
             .timeout(const Duration(seconds: 25));
       } catch (_) {
-        return _offlineFallback(userInput, appLanguage);
+        return await _offlineFallback(userInput, appLanguage);
       }
       if (res.statusCode != 200) {
-        return _offlineFallback(userInput, appLanguage);
+        return await _offlineFallback(userInput, appLanguage);
       }
       body = jsonDecode(res.body) as Map<String, dynamic>;
     }
@@ -301,10 +302,21 @@ ASHA এইমাত্র বললেন: "$userInput"
     return fallback;
   }
 
-  AssistantResponse _offlineFallback(String input, AssistantLang appLanguage) {
+  /// Returns the right fallback message based on WHY the network call
+  /// failed. Without this check, every server-side failure (cold-start,
+  /// rate-limit, 503) was reported as "no internet" — which made the
+  /// worker blame their connection even when they had full bars. Now we
+  /// actually verify connectivity first and choose the message accordingly.
+  Future<AssistantResponse> _offlineFallback(
+      String input, AssistantLang appLanguage) async {
     final detected = _heuristicLang(input, appLanguage);
+    final connectivity = await Connectivity().checkConnectivity();
+    final hasNetwork =
+        connectivity.any((c) => c != ConnectivityResult.none);
     return AssistantResponse(
-      text: _offlineMessage(detected),
+      text: hasNetwork
+          ? _serverSlowMessage(detected)
+          : _offlineMessage(detected),
       detectedLanguage: detected,
       isClinical: false,
       shouldOfferSave: false,
@@ -313,11 +325,20 @@ ASHA এইমাত্র বললেন: "$userInput"
 
   String _offlineMessage(AssistantLang l) => switch (l) {
         AssistantLang.bn =>
-          'এখন ইন্টারনেট সংযোগ নেই। আপনার প্রশ্ন মনে রাখুন — অনলাইন হলে উত্তর দেবো। এখন আপনি ট্রায়াজ চালু রাখতে পারেন।',
+          'এখন ইন্টারনেট সংযোগ নেই। অনলাইন হলে আবার চেষ্টা করুন। এখন আপনি ট্রায়াজ চালু রাখতে পারেন।',
         AssistantLang.hi =>
-          'अभी इंटरनेट नहीं है। आपका सवाल याद रखें — ऑनलाइन होते ही जवाब दूँगी। अभी आप ट्रायाज जारी रख सकती हैं।',
+          'अभी इंटरनेट नहीं है। ऑनलाइन होने पर फिर कोशिश करें। अभी आप ट्रायाज जारी रख सकती हैं।',
         AssistantLang.en =>
-          'No internet right now. Hold the question — I\'ll answer when we\'re online. Triage still works offline.',
+          'No internet right now. Please try again when online. Triage still works offline.',
+      };
+
+  String _serverSlowMessage(AssistantLang l) => switch (l) {
+        AssistantLang.bn =>
+          'সার্ভার এখন একটু ধীর, একটু অপেক্ষা করে আবার চেষ্টা করুন।',
+        AssistantLang.hi =>
+          'सर्वर अभी थोड़ा धीमा है, थोड़ी देर बाद फिर पूछें।',
+        AssistantLang.en =>
+          'The server is slow right now, please try again in a moment.',
       };
 
   String _genericReply(AssistantLang l) => switch (l) {

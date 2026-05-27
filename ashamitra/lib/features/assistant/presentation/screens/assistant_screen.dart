@@ -566,23 +566,26 @@ class _MessageBubble extends StatelessWidget {
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
           if (!isUser) ...[
+            // AshaMitra logo as the assistant avatar. White circle so the
+            // logo's natural colors read cleanly regardless of what's
+            // inside the PNG (a tint mask was breaking on logos with
+            // non-trivial alpha). Subtle indigo ring keeps it on-brand.
             Container(
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.purple],
-                ),
+                color: Colors.white,
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.6),
+                  width: 1.5,
+                ),
                 boxShadow: AppShadows.tinted(AppColors.primary),
               ),
-              padding: const EdgeInsets.all(5),
-              // AshaMitra logo as the assistant avatar — tinted white
-              // so the brand mark reads cleanly against the gradient.
-              child: const ColorFiltered(
-                colorFilter: ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                child: Image(
-                  image: AssetImage('assets/images/ashalogo.png'),
+              padding: const EdgeInsets.all(3),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/ashalogo.png',
                   fit: BoxFit.contain,
                 ),
               ),
