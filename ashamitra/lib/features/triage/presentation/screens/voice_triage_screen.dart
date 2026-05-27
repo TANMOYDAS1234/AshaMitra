@@ -91,6 +91,9 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     _patientName = map['patientName'] as String?;
     _statusText = 'মাইক ট্যাপ করুন কথা বলতে';
     _offlineBrain.init(Get.find<RuleExecutor>());
+    // Engine-grounded Q&A: lets the CLUP pipeline answer ASHA's clinical
+    // questions ("জ্বর কত হলে বিপদ?") using the live rule engine offline.
+    _clup.setRuleExecutor(Get.find<RuleExecutor>());
     _initTts();
     _initStt();
 

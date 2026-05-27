@@ -106,6 +106,33 @@ class RuleExecutor {
     return result;
   }
 
+  /// Returns the numeric (vitals) rules for [moduleId], or empty if the module
+  /// is unknown. Used by [EngineGroundedQA] to answer "what's the threshold?"
+  /// questions offline, with the same auditable rules that drive triage.
+  List<EngineRule> numericRulesForModule(String moduleId) =>
+      _modules[moduleId]?.numericRules ?? const [];
+
+  /// Returns all rule arrays for [moduleId] (hard-stop + combination + numeric
+  /// + yellow) flattened. Used when a question could match any rule shape.
+  List<EngineRule> allRulesForModule(String moduleId) {
+    final m = _modules[moduleId];
+    if (m == null) return const [];
+    return [
+      ...m.hardStopRules,
+      ...m.combinationRules,
+      ...m.numericRules,
+      ...m.yellowRules,
+    ];
+  }
+
+  /// Question metadata for [moduleId]: `{questionId: (textBn, textEn, options)}`.
+  /// Used by [EngineGroundedQA] to look up the human description of a question
+  /// when the ASHA asks about a symptom (e.g. "জন্ডিস মানে কী?" → look up the
+  /// question that has `id: n6` and use its textBn).
+  Map<String, ({String textBn, String textEn, List<String> options})>
+      questionsForModule(String moduleId) =>
+          _modules[moduleId]?.questions ?? const {};
+
   // ── Main execute — runs all 11 layers ────────────────────────────────────
   //
   // [moduleId]        — newborn | child | pregnancy | delivery_pnc |

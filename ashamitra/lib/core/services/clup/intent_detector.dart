@@ -15,6 +15,7 @@ enum IntentClass {
   nonClinical,
   administrative,
   thirdParty,
+  questionBack,   // ASHA is asking US a question (e.g. "জন্ডিস কেন হয়?")
   unclear,
 }
 
@@ -42,6 +43,7 @@ class IntentResult {
   bool get needsClarification => intent == IntentClass.clinicalVague;
   bool get isNonClinical => intent == IntentClass.nonClinical;
   bool get isThirdParty => intent == IntentClass.thirdParty;
+  bool get isQuestionBack => intent == IntentClass.questionBack;
 
   Map<String, dynamic> toMap() => {
     'intent': intent.name,
@@ -248,6 +250,28 @@ class IntentDetector {
     'kintu', 'tobe', 'ar', 'ebong', 'lekin', 'aur', 'magar',
   ];
 
+  // ── Question-back markers ────────────────────────────────────────────────
+  // When ANY of these appears, the ASHA is asking us a question, not answering
+  // one. We must NOT feed this to the rule engine — "জন্ডিস কেন হয়?" should
+  // never get parsed as "yes, jaundice is present".
+  //
+  // Note: bare 'কি' / 'কী' alone is too ambiguous (yes/no marker) — only
+  // counted when paired with another marker or a sentence-final '?'.
+  static const _questionBackMarkers = [
+    // Bengali question words (unambiguous)
+    'কেন', 'কেনো', 'কীভাবে', 'কি ভাবে', 'কী করে', 'কিভাবে',
+    'কোথায়', 'কোথা থেকে', 'কখন', 'কতক্ষণ', 'কত', 'কতটা', 'কতগুলো',
+    'কেমন করে', 'বুঝিয়ে বলবেন', 'বুঝিয়ে দিন', 'জানতে চাই', 'জানাবেন',
+    'বলবেন কি', 'বলতে পারবেন', 'মানে কি', 'মানে কী', 'এটা কি',
+    // Hindi / Bhojpuri
+    'kyon', 'kyun', 'kaise', 'kab', 'kahaan', 'kahan',
+    'kitna', 'kitne', 'kitni', 'samjhao', 'batao', 'samjhayenge',
+    'kya matlab', 'kya hai',
+    // English / transliterated
+    'why', 'how', 'when', 'where', 'how much', 'how many',
+    'explain', 'tell me', 'what is', 'what does', 'meaning of',
+  ];
+
   // ── Main classify ─────────────────────────────────────────────────────────
   IntentResult classify(String input, {String? moduleId}) {
     final text = input.trim().toLowerCase();
@@ -265,7 +289,31 @@ class IntentDetector {
       );
     }
 
-    // Step 2: Third-party check
+    // Step 2: Question-back check — "জন্ডিস কেন হয়?" must NOT be parsed as a
+    // jaundice symptom. We catch this before clinical token matching so the
+    // rule engine never sees a question as an answer.
+    //
+    // Trigger: any unambiguous question word OR (sentence-final '?' AND
+    // contains either a clinical or vague token — i.e. the ASHA is asking
+    // about a clinical concept, not answering a yes/no prompt).
+    final qBackMatches = _matchTokens(text, _questionBackMarkers);
+    final endsWithQuestionMark = input.trim().endsWith('?') ||
+        input.trim().endsWith('？'); // full-width '?' from Bengali keyboards
+    if (qBackMatches.isNotEmpty ||
+        (endsWithQuestionMark &&
+            (_matchTokens(text, _clinicalTokens).isNotEmpty ||
+                _matchTokens(text, _vagueTokens).isNotEmpty) &&
+            // Don't treat "জ্বর আছে?" (a yes/no clarification by the ASHA)
+            // as a question-back — only multi-word questions count.
+            text.split(RegExp(r'\s+')).length >= 3)) {
+      return IntentResult(
+        intent: IntentClass.questionBack,
+        confidence: qBackMatches.isNotEmpty ? 0.9 : 0.7,
+        matchedTokens: qBackMatches.isEmpty ? ['?'] : qBackMatches,
+      );
+    }
+
+    // Step 3: Third-party check
     final thirdPartyMatches = _matchTokens(text, _thirdPartyMarkers);
     if (thirdPartyMatches.isNotEmpty) {
       final selfClinical = _matchTokens(text, _clinicalTokens);

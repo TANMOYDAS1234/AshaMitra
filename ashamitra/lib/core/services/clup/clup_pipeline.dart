@@ -13,6 +13,8 @@
 //   - emergency  → bypass all layers, lock RED immediately
 // ─────────────────────────────────────────────────────────────────────────────
 
+import '../rule_executor.dart';
+import 'engine_grounded_qa.dart';
 import 'intent_detector.dart';
 import 'clinical_relevance_filter.dart';
 import 'clarification_engine.dart';
@@ -74,6 +76,13 @@ class CLUPPipeline {
   final _relevanceFilter   = ClinicalRelevanceFilter();
   final _clarificationEngine = ClarificationEngine();
 
+  /// Optional — wire the live rule executor in (after `executor.load()`) so
+  /// question-back inputs can be answered with engine-grounded thresholds
+  /// instead of just the static keyword bank. Safe to leave null; pipeline
+  /// falls back to static answers when no executor is set.
+  RuleExecutor? _executor;
+  void setRuleExecutor(RuleExecutor executor) => _executor = executor;
+
   /// Processes raw speech input through the full CLUP pipeline.
   ///
   /// [input]    — raw speech transcript
@@ -120,6 +129,41 @@ class CLUPPipeline {
         clarification: null,
         extractedSymptoms: intent.matchedTokens,
         cleanedText: trimmed,
+        rawInput: trimmed,
+        moduleId: moduleId,
+        timestamp: timestamp,
+      );
+    }
+
+    // ── Question-back: ASHA asked us a question — answer + redirect ──────
+    // Must NOT reach the rule engine, otherwise the surface clinical token
+    // in the question ("জ্বর কত হলে...") gets misread as a confirmed symptom.
+    //
+    // If a live RuleExecutor is wired in, try engine-grounded lookup first
+    // (answers from the same protocol-signed rules that drive triage). Falls
+    // back to the static educational bank in ClarificationEngine otherwise.
+    if (intent.isQuestionBack) {
+      ({String bn, String en})? preferredAnswer;
+      if (_executor != null) {
+        preferredAnswer = EngineGroundedQA.lookup(
+          rawInput: trimmed,
+          moduleId: moduleId,
+          executor: _executor!,
+        );
+      }
+      final clarification = _clarificationEngine.generate(
+        intent: intent,
+        moduleId: moduleId,
+        rawInput: trimmed,
+        preferredAnswer: preferredAnswer,
+      );
+      return CLUPDecision(
+        action: CLUPAction.askClarification,
+        intentResult: intent,
+        relevanceResult: null,
+        clarification: clarification,
+        extractedSymptoms: [],
+        cleanedText: null,
         rawInput: trimmed,
         moduleId: moduleId,
         timestamp: timestamp,
