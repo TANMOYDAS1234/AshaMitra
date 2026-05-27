@@ -518,6 +518,11 @@ class PatientController extends GetxController {
   /// immediately, then asks the server to set deletedAt. If the server
   /// call fails the local copy is restored so the worker isn't lied to.
   /// Returns the removed report map (for undo) or null on failure.
+  ///
+  /// Locally-pending reports (id starts with `report_`) are deleted
+  /// locally only — the server never saw them, so calling DELETE with
+  /// that placeholder id used to fail with Mongoose CastError (500),
+  /// triggering rollback that made the card reappear and look broken.
   Future<Map<String, dynamic>?> deleteReport(String reportId) async {
     final idx = reports.indexWhere((r) => r['id'] == reportId);
     if (idx == -1) return null;
@@ -525,6 +530,15 @@ class PatientController extends GetxController {
     reports.removeAt(idx);
     reports.refresh();
     await LocalStorageService.saveReports(reports.toList());
+
+    // Local-only path: this report was never synced to the server, so
+    // there's nothing for the server to soft-delete. Removing it from
+    // local storage is the whole job.
+    final isLocalOnly = reportId.startsWith('report_') ||
+        snapshot['synced'] == false;
+    if (isLocalOnly) {
+      return snapshot;
+    }
 
     final ok = await ApiService.deleteReport(reportId);
     if (!ok) {
@@ -540,6 +554,10 @@ class PatientController extends GetxController {
   /// Restores a soft-deleted report. Inserts it back at the top of the
   /// list (sorted-by-recency stays consistent) and clears deletedAt on
   /// the server. Used by the "Undo" snackbar.
+  ///
+  /// For locally-pending reports the server PATCH is skipped — the
+  /// server never knew about them, so just putting the snapshot back
+  /// in the local list is the whole restore.
   Future<bool> restoreReport(Map<String, dynamic> snapshot) async {
     final reportId = snapshot['id']?.toString();
     if (reportId == null || reportId.isEmpty) return false;
@@ -551,6 +569,12 @@ class PatientController extends GetxController {
       reports.insert(0, snapshot);
       reports.refresh();
       await LocalStorageService.saveReports(reports.toList());
+    }
+
+    final isLocalOnly = reportId.startsWith('report_') ||
+        snapshot['synced'] == false;
+    if (isLocalOnly) {
+      return true;
     }
 
     final ok = await ApiService.restoreReport(reportId);

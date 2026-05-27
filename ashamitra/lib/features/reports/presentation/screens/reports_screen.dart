@@ -503,17 +503,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final snapshot = await ctrl.deleteReport(reportId);
     if (!mounted) return;
+    messenger.hideCurrentSnackBar();
     if (snapshot == null) {
-      Get.snackbar(
-        'মুছে ফেলা যায়নি',
-        'নেটওয়ার্ক ত্রুটি — আবার চেষ্টা করুন',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.emergencyRed,
-        colorText: Colors.white,
+      // The Dismissible already animated the card out, but rollback
+      // restored it in the underlying list — the Obx rebuild will bring
+      // it back. Tell the worker explicitly so they don't think the
+      // action was lost or duplicated.
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('সার্ভার এখন সাড়া দিচ্ছে না — আবার চেষ্টা করুন'),
+          duration: const Duration(seconds: 4),
+          backgroundColor: AppColors.emergencyRed,
+        ),
       );
       return;
     }
-    messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
         content: const Text('রিপোর্ট মুছে ফেলা হয়েছে'),
