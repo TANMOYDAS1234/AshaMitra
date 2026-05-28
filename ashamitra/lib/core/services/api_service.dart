@@ -386,6 +386,58 @@ class ApiService {
     }
   }
 
+  /// PATCH /admin/reports/:id/restore — admin clears deletedAt on any
+  /// report (cross-worker, unlike the worker-scoped /reports/:id/restore).
+  /// Powers the "Restore" button in the admin deleted-reports panel.
+  static Future<bool> adminRestoreReport(String reportId) async {
+    try {
+      final res = await http.patch(
+        Uri.parse('$baseUrl/admin/reports/$reportId/restore'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 30));
+      _guard(res.statusCode);
+      if (res.statusCode != 200) {
+        // ignore: avoid_print
+        print('[adminRestoreReport] HTTP ${res.statusCode}: ${res.body}');
+        return false;
+      }
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['success'] == true;
+    } on UnauthorizedException {
+      rethrow;
+    } catch (e) {
+      // ignore: avoid_print
+      print('[adminRestoreReport] error: $e');
+      return false;
+    }
+  }
+
+  /// DELETE /admin/reports/:id/permanent — hard-deletes a soft-deleted
+  /// report. Server rejects this with 400 if the report isn't already
+  /// soft-deleted (forces the "audit first" policy).
+  static Future<bool> adminPermanentlyDeleteReport(String reportId) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/admin/reports/$reportId/permanent'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 30));
+      _guard(res.statusCode);
+      if (res.statusCode != 200) {
+        // ignore: avoid_print
+        print('[adminPermanentlyDeleteReport] HTTP ${res.statusCode}: ${res.body}');
+        return false;
+      }
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['success'] == true;
+    } on UnauthorizedException {
+      rethrow;
+    } catch (e) {
+      // ignore: avoid_print
+      print('[adminPermanentlyDeleteReport] error: $e');
+      return false;
+    }
+  }
+
   /// GET /admin/reports/deleted — admin audit view of every soft-deleted
   /// report (worker name populated). Sorted most-recent deletion first.
   static Future<List<dynamic>> getDeletedReports() async {

@@ -529,10 +529,17 @@ class PatientController extends GetxController {
   /// call fails the local copy is restored so the worker isn't lied to.
   /// Returns the removed report map (for undo) or null on failure.
   ///
-  /// Locally-pending reports (id starts with `report_`) are deleted
-  /// locally only — the server never saw them, so calling DELETE with
-  /// that placeholder id used to fail with Mongoose CastError (500),
-  /// triggering rollback that made the card reappear and look broken.
+  /// Three id states are handled:
+  ///   - `synced == false` or non-Mongo id with synced != true:
+  ///       genuinely local-only — local removal IS the whole job.
+  ///   - synced == true AND id is a valid Mongo ObjectId:
+  ///       fast path. PATCH the server, done.
+  ///   - synced == true BUT id is still a stale placeholder
+  ///     (e.g. uploaded before the id-swap fix landed in 51ff9d6):
+  ///       force a syncFromServer to refresh the id, then retry by
+  ///       matching the snapshot against the refreshed list by content.
+  ///       Without this recovery the worker would delete it locally,
+  ///       refresh, and see it come right back (pilot complaint).
   Future<Map<String, dynamic>?> deleteReport(String reportId) async {
     final idx = reports.indexWhere((r) => r['id'] == reportId);
     if (idx == -1) return null;
@@ -541,21 +548,52 @@ class PatientController extends GetxController {
     reports.refresh();
     await LocalStorageService.saveReports(reports.toList());
 
-    // Local-only path: ANY id that isn't a 24-char hex Mongo ObjectId is
-    // a local placeholder (report_<ts>, sessionId-style, etc.) and was
-    // never actually written to the server. Calling DELETE on those used
-    // to fail with Mongoose CastError (500) → rollback → card reappeared.
-    final isMongoId = RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(reportId);
-    if (!isMongoId || snapshot['synced'] == false) {
+    bool isMongoId(String id) =>
+        RegExp(r'^[0-9a-fA-F]{24}$').hasMatch(id);
+
+    // ── Genuinely local-only (never synced) ──
+    if (snapshot['synced'] != true && !isMongoId(reportId)) {
       return snapshot;
+    }
+
+    // ── Stale-id synced state (uploaded before id-swap fix) ──
+    // Local says synced but the id we have is a placeholder. The server
+    // has the same row under a real Mongo _id. Force a sync to refresh
+    // the local id, then re-locate the report by content match.
+    String effectiveId = reportId;
+    if (snapshot['synced'] == true && !isMongoId(reportId)) {
+      try {
+        await syncFromServer();
+      } catch (_) { /* offline — fall through */ }
+      // Re-find by content (createdAt + situation + caseType). The sync
+      // pulled the server copy with its real _id; match it back to the
+      // snapshot the worker meant to delete.
+      final match = reports.firstWhere(
+        (r) =>
+            r['createdAt'] == snapshot['createdAt'] &&
+            r['situation'] == snapshot['situation'] &&
+            r['caseType']  == snapshot['caseType'],
+        orElse: () => <String, dynamic>{},
+      );
+      if (match.isNotEmpty && match['id'] is String &&
+          isMongoId(match['id'] as String)) {
+        effectiveId = match['id'] as String;
+        // Remove the newly-resurrected copy locally — we're about to
+        // delete it server-side too.
+        reports.removeWhere((r) => r['id'] == effectiveId);
+        reports.refresh();
+        await LocalStorageService.saveReports(reports.toList());
+      } else {
+        // Still no Mongo id after sync — server lost this row OR sync
+        // failed. Treat as local-only success (it's gone from this device).
+        return snapshot;
+      }
     }
 
     bool ok;
     try {
-      ok = await ApiService.deleteReport(reportId);
+      ok = await ApiService.deleteReport(effectiveId);
     } on UnauthorizedException {
-      // Token expired — restore locally so the worker sees the report
-      // again, then let the auth flow drive them to re-login.
       reports.insert(idx.clamp(0, reports.length), snapshot);
       reports.refresh();
       await LocalStorageService.saveReports(reports.toList());

@@ -79,6 +79,8 @@ class _AdminDeletedReportsScreenState extends State<AdminDeletedReportsScreen> {
                   return _DeletedReportCard(
                     r: r,
                     onTap: () => showAdminReportDetail(context, r),
+                    onRestore: () => _onRestore(context, r),
+                    onPermanentDelete: () => _onPermanentDelete(context, r),
                   );
                 },
               ),
@@ -88,13 +90,75 @@ class _AdminDeletedReportsScreenState extends State<AdminDeletedReportsScreen> {
       ),
     );
   }
+
+  Future<void> _onRestore(BuildContext context, Map<String, dynamic> r) async {
+    final reportId = r['id']?.toString() ?? '';
+    if (reportId.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await ctrl.restoreDeletedReport(reportId);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(
+      content: Text(ok
+          ? 'Report restored — visible to the worker again'
+          : 'Restore failed — try again'),
+      duration: const Duration(seconds: 3),
+      backgroundColor: ok ? AppColors.safeGreen : AppColors.emergencyRed,
+    ));
+  }
+
+  Future<void> _onPermanentDelete(
+      BuildContext context, Map<String, dynamic> r) async {
+    final reportId = r['id']?.toString() ?? '';
+    if (reportId.isEmpty) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Permanently delete?'),
+        content: Text(
+          'This will erase the report from the database. The worker '
+          'soft-deleted it on ${r['deletedAt']?.toString().substring(0, 10) ?? "—"}. '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: AppColors.emergencyRed),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Erase'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final ok = await ctrl.permanentlyDeleteReport(reportId);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(
+      content: Text(ok
+          ? 'Report permanently erased'
+          : 'Permanent delete failed — try again'),
+      duration: const Duration(seconds: 3),
+      backgroundColor: ok ? AppColors.safeGreen : AppColors.emergencyRed,
+    ));
+  }
 }
 
 class _DeletedReportCard extends StatelessWidget {
   final Map<String, dynamic> r;
   final VoidCallback onTap;
+  final VoidCallback onRestore;
+  final VoidCallback onPermanentDelete;
 
-  const _DeletedReportCard({required this.r, required this.onTap});
+  const _DeletedReportCard({
+    required this.r,
+    required this.onTap,
+    required this.onRestore,
+    required this.onPermanentDelete,
+  });
 
   String _fmtDate(String? iso) {
     if (iso == null || iso.isEmpty) return '—';
@@ -218,6 +282,44 @@ class _DeletedReportCard extends StatelessWidget {
                 label: 'Deleted',
                 value: deletedAt,
                 valueColor: AppColors.emergencyRed,
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1),
+              const SizedBox(height: 10),
+              // ── Admin actions ────────────────────────────────────────
+              // Restore brings the report back to the worker's view +
+              // the main admin list. Permanent delete (red) erases the
+              // doc from the DB after confirmation — only allowed because
+              // it was already soft-deleted (the audit-then-erase policy
+              // enforced server-side).
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: onRestore,
+                      icon: const Icon(Icons.restore_rounded,
+                          size: 16, color: AppColors.primary),
+                      label: const Text('Restore',
+                          style: TextStyle(color: AppColors.primary)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.primary),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: onPermanentDelete,
+                      icon: const Icon(Icons.delete_forever_rounded, size: 16),
+                      label: const Text('Erase'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.emergencyRed,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

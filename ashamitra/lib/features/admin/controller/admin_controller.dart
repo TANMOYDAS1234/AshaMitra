@@ -116,6 +116,61 @@ class AdminController extends GetxController {
     }
   }
 
+  /// Restores a soft-deleted report (admin-only — cross-worker scope).
+  /// Optimistically removes from [deletedReports] so the audit list updates
+  /// immediately; rolls back on server failure. Also refreshes the main
+  /// [reports] list so the restored row appears there next time admin
+  /// views it.
+  Future<bool> restoreDeletedReport(String reportId) async {
+    final idx = deletedReports.indexWhere((r) => r['id'] == reportId);
+    if (idx == -1) return false;
+    final snapshot = deletedReports[idx];
+    deletedReports.removeAt(idx);
+    try {
+      final ok = await ApiService.adminRestoreReport(reportId);
+      if (!ok) {
+        deletedReports.insert(idx.clamp(0, deletedReports.length), snapshot);
+        return false;
+      }
+      // Drop the cached live list so the next loadReports() pulls fresh.
+      reports.removeWhere((r) => r['id'] == reportId);
+      return true;
+    } on UnauthorizedException {
+      deletedReports.insert(idx.clamp(0, deletedReports.length), snapshot);
+      _handleUnauth();
+      return false;
+    } catch (_) {
+      deletedReports.insert(idx.clamp(0, deletedReports.length), snapshot);
+      return false;
+    }
+  }
+
+  /// Hard-deletes a soft-deleted report (admin-only, irreversible).
+  /// Server enforces "audit first" — rejects with 400 if the report
+  /// isn't already soft-deleted. Optimistic UI: row disappears from the
+  /// audit list immediately; restored on failure.
+  Future<bool> permanentlyDeleteReport(String reportId) async {
+    final idx = deletedReports.indexWhere((r) => r['id'] == reportId);
+    if (idx == -1) return false;
+    final snapshot = deletedReports[idx];
+    deletedReports.removeAt(idx);
+    try {
+      final ok = await ApiService.adminPermanentlyDeleteReport(reportId);
+      if (!ok) {
+        deletedReports.insert(idx.clamp(0, deletedReports.length), snapshot);
+        return false;
+      }
+      return true;
+    } on UnauthorizedException {
+      deletedReports.insert(idx.clamp(0, deletedReports.length), snapshot);
+      _handleUnauth();
+      return false;
+    } catch (_) {
+      deletedReports.insert(idx.clamp(0, deletedReports.length), snapshot);
+      return false;
+    }
+  }
+
   Future<void> loadAshaWorkers() async {
     isLoading.value = true;
     try {
