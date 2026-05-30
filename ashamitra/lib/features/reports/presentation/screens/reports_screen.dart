@@ -410,8 +410,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   // Worker only sees their own reports — no need for worker/district axes.
   // Band: 'all' | 'emergency' | 'attention' | 'safe'
   // Time: 'all' | 'today' | 'week' | 'month'
+  // Sort: 'newest' | 'oldest' — defaults to newest-first (most recent on top)
   String _bandFilter = 'all';
   String _timeFilter = 'all';
+  String _sortOrder  = 'newest';
 
   bool _matchesFilters(Map<String, dynamic> r) {
     if (_bandFilter != 'all' && r['outcome']?.toString() != _bandFilter) {
@@ -700,7 +702,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
               }),
               const SizedBox(height: 8),
 
-              // ── Filter chips ────────────────────────────────────────────
+              // ── Filter + Sort strip ─────────────────────────────────────
+              // Two grouped rows so band chips and time chips don't visually
+              // run together in one cramped scroll. Tiny section labels
+              // make the grouping obvious at a glance. Sort toggle on the
+              // right of the band row swaps newest ↔ oldest.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                child: Row(
+                  children: [
+                    Text('ব্যান্ড',
+                        style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    _SortToggle(
+                      order: _sortOrder,
+                      onChanged: (v) => setState(() => _sortOrder = v),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
               SizedBox(
                 height: 40,
                 child: ListView(
@@ -730,13 +753,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       selected: _bandFilter == 'safe',
                       onTap: () => setState(() => _bandFilter = 'safe'),
                     ),
-                    const SizedBox(width: 6),
-                    Container(
-                      width: 1,
-                      height: 24,
-                      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      color: AppColors.cardBorder,
-                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text('সময়',
+                    style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w700)),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
                     _ChipBtn(
                       label: 'সব সময়',
                       selected: _timeFilter == 'all',
@@ -793,15 +827,22 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   // De-dup by id before filtering so a brief sync window
                   // (local placeholder + server doc both present) cannot
                   // produce two cards with the same Dismissible key.
-                  // Reports with a non-empty id are uniqued; reports without
-                  // an id are all kept (they're locally-pending and each one
-                  // is a distinct triage session).
                   final seenIds = <String>{};
                   final reports = allReports.where(_matchesFilters).where((r) {
                     final id = r['id']?.toString() ?? '';
                     if (id.isEmpty) return true;
                     return seenIds.add(id);
                   }).toList();
+                  // Apply user-selected sort order on createdAt.
+                  reports.sort((a, b) {
+                    final da = DateTime.tryParse(a['createdAt']?.toString() ?? '')
+                        ?? DateTime(0);
+                    final db = DateTime.tryParse(b['createdAt']?.toString() ?? '')
+                        ?? DateTime(0);
+                    return _sortOrder == 'newest'
+                        ? db.compareTo(da)
+                        : da.compareTo(db);
+                  });
 
                   if (allReports.isEmpty) {
                     return const EmptyState(
@@ -1620,30 +1661,72 @@ class _ChipBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = color ?? AppColors.primary;
+    final fill   = selected ? accent : AppColors.surface;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: Material(
-        color: selected ? accent : AppColors.surface,
+        color: fill,
         borderRadius: AppRadius.pillR,
+        clipBehavior: Clip.antiAlias,
+        elevation: selected ? 2 : 0.5,
+        shadowColor: selected ? accent : Colors.black26,
         child: InkWell(
           onTap: onTap,
           borderRadius: AppRadius.pillR,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: selected ? accent : AppColors.surface,
-              borderRadius: AppRadius.pillR,
-              boxShadow: selected
-                  ? AppShadows.tinted(accent, strength: 2)
-                  : AppShadows.low,
-            ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            alignment: Alignment.center,
             child: Text(
               label,
               style: AppTextStyles.label.copyWith(
                 color: selected ? AppColors.onPrimary : AppColors.textSecondary,
+                height: 1.1,
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SortToggle extends StatelessWidget {
+  final String order; // 'newest' | 'oldest'
+  final ValueChanged<String> onChanged;
+
+  const _SortToggle({required this.order, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final isNewest = order == 'newest';
+    return Material(
+      color: AppColors.surface,
+      borderRadius: AppRadius.pillR,
+      elevation: 0.5,
+      child: InkWell(
+        borderRadius: AppRadius.pillR,
+        onTap: () => onChanged(isNewest ? 'oldest' : 'newest'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isNewest
+                    ? Icons.arrow_downward_rounded
+                    : Icons.arrow_upward_rounded,
+                size: 14,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                isNewest ? 'নতুন আগে' : 'পুরাতন আগে',
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
       ),
