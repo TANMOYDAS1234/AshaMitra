@@ -21,6 +21,7 @@ import '../../../../core/services/clup/situation_extractor.dart';
 import '../../../../features/auth/controller/auth_controller.dart';
 import '../../../../core/services/local_storage_service.dart';
 import '../../../../core/services/tts_service.dart';
+import '../../../../core/utils/permissions.dart';
 
 class VoiceTriageScreen extends StatefulWidget {
   const VoiceTriageScreen({super.key});
@@ -188,6 +189,22 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
 
   // ── STT init ──────────────────────────────────────────────────
   Future<void> _initStt() async {
+    // Explicitly request mic permission FIRST. `speech_to_text` triggers
+    // a system prompt internally on most Android versions, but on Xiaomi
+    // / Vivo (very common in rural India) the implicit request can
+    // silently fail — the worker taps the mic and gets no audio with no
+    // error. Calling permission_handler directly surfaces an OS dialog
+    // every time and lets us show a clear empty-state if denied.
+    final micOk = await AppPermissions.requestMicrophone();
+    if (!micOk) {
+      if (mounted) {
+        setState(() {
+          _sttAvailable = false;
+          _statusText = 'mic_permission_denied'.tr;
+        });
+      }
+      return;
+    }
     _sttAvailable = await _stt.initialize(
       onError: (_) {
         if (mounted) setState(() { _isListening = false; _orbState = OrbState.idle; });

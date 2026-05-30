@@ -18,6 +18,8 @@ import '../../../../shared/components/bottom_nav.dart';
 import '../../../../shared/widgets/count_up.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/skeleton.dart';
+import '../../../../core/utils/logger.dart';
+import '../../../auth/controller/auth_controller.dart';
 import '../../../patients/controller/patient_controller.dart';
 
 // Top-level so Isolate.run can capture it. Receives only plain-data args.
@@ -97,9 +99,23 @@ Future<List<int>> _buildPdfBytes(
       ..sort((a, b) => b.value.compareTo(a.value)),
   );
 
+  // Explicit map-to-String — `.cast<String>()` is LAZY and throws TypeError
+  // on iteration when JSON round-trip leaves elements as `dynamic` (the
+  // root cause of the PDF hang where the isolate silently died and
+  // workers stared at "PDF তৈরি হচ্ছে..." for 150 sec).
+  List<String> safeStrList(dynamic v) {
+    if (v is! List) return const [];
+    final out = <String>[];
+    for (final e in v) {
+      if (e == null) continue;
+      out.add(e.toString());
+    }
+    return out;
+  }
+
   final dangerFreq = <String, int>{};
   for (final r in reports) {
-    for (final s in (r['dangerSigns'] as List? ?? []).cast<String>()) {
+    for (final s in safeStrList(r['dangerSigns'])) {
       dangerFreq[s] = (dangerFreq[s] ?? 0) + 1;
     }
   }
@@ -228,7 +244,12 @@ Future<List<int>> _buildPdfBytes(
                 height: 1,
                 color: PdfColors.grey300),
             pw.SizedBox(height: 18),
-            // Meta block
+            // Meta block — worker identity first so the printout is
+            // attributable at a glance; then the report metadata.
+            metaRow(t('pdf_worker'), labels['__workerName'] ?? '—'),
+            metaRow(t('pdf_district'), labels['__workerDistrict'] ?? '—'),
+            metaRow(t('pdf_block'), labels['__workerBlock'] ?? '—'),
+            pw.SizedBox(height: 6),
             metaRow(t('pdf_meta_generated'), generatedAt),
             metaRow(t('pdf_meta_date_range'), dateRange),
             metaRow(t('pdf_meta_total'), '$total'),
@@ -247,9 +268,9 @@ Future<List<int>> _buildPdfBytes(
             pw.SizedBox(height: 12),
             pw.Row(children: [
               statBox(t('pdf_stat_total'), '$total', const PdfColor.fromInt(0xFF4F46E5)),
-              statBox('RED', '$emergency', const PdfColor.fromInt(0xFFDC2626)),
-              statBox('YELLOW', '$attention', const PdfColor.fromInt(0xFFD97706)),
-              statBox('GREEN', '$safe', const PdfColor.fromInt(0xFF16A34A)),
+              statBox(t('pdf_band_red'), '$emergency', const PdfColor.fromInt(0xFFDC2626)),
+              statBox(t('pdf_band_yellow'), '$attention', const PdfColor.fromInt(0xFFD97706)),
+              statBox(t('pdf_band_green'), '$safe', const PdfColor.fromInt(0xFF16A34A)),
             ]),
             pw.SizedBox(height: 28),
 
@@ -367,10 +388,10 @@ Future<List<int>> _buildPdfBytes(
         final r = entry.value;
         final outcome = r['outcome']?.toString() ?? 'safe';
         final bandColor = bc(outcome);
-        final dangerSigns = (r['dangerSigns'] as List? ?? []).cast<String>();
-        final suspectedConditions = (r['suspectedConditions'] as List? ?? []).cast<String>();
-        final triggeredRules = (r['triggeredRules'] as List? ?? []).cast<String>();
-        final qaHistory = r['qaHistory'] as List? ?? [];
+        final dangerSigns = safeStrList(r['dangerSigns']);
+        final suspectedConditions = safeStrList(r['suspectedConditions']);
+        final triggeredRules = safeStrList(r['triggeredRules']);
+        final qaHistory = (r['qaHistory'] is List) ? (r['qaHistory'] as List) : const [];
         final riskScore = r['riskScore'] as int? ?? 0;
         final recheckHours = r['recheckAfterHours'] as int? ?? 0;
 
@@ -536,9 +557,22 @@ Future<List<int>> _buildPdfBytes(
 /// strings render as boxes here (Helvetica doesn't have the glyphs) but the
 /// English-only fields (date / band / case ID / risk score) still come out
 /// readable, so the worker can at least see WHAT was triaged WHEN.
+///
+/// English-only by design — uses default Helvetica, no font asset loading,
+/// no Unicode edge cases, no isolate. This is the "rock solid" path that
+/// is wired to the second "Quick PDF" header pill so the worker always
+/// has a guaranteed-working export option even if the fancy multi-page
+/// build crashes on a low-end device.
 Future<List<int>> _buildMinimalPdfBytes(
-    List<Map<String, dynamic>> reports, String generatedAt) async {
+    List<Map<String, dynamic>> reports, String generatedAt,
+    {String? workerName, String? district, String? block}) async {
   final doc = pw.Document();
+
+  final total = reports.length;
+  final red = reports.where((r) => r['outcome'] == 'emergency').length;
+  final yellow = reports.where((r) => r['outcome'] == 'attention').length;
+  final green = reports.where((r) => r['outcome'] == 'safe').length;
+
   doc.addPage(pw.MultiPage(
     pageFormat: PdfPageFormat.a4,
     margin: const pw.EdgeInsets.all(28),
@@ -548,33 +582,55 @@ Future<List<int>> _buildMinimalPdfBytes(
           style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
       pw.Text('Generated: $generatedAt',
           style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
-      pw.Text('Total: ${reports.length}',
-          style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+      if (workerName != null && workerName.isNotEmpty)
+        pw.Text('Worker: $workerName  |  District: ${district ?? "-"}  |  Block: ${block ?? "-"}',
+            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+      pw.SizedBox(height: 8),
+      pw.Container(
+        padding: const pw.EdgeInsets.all(10),
+        decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF3F4F6)),
+        child: pw.Text(
+          'Total: $total   |   RED: $red   |   YELLOW: $yellow   |   GREEN: $green',
+          style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+        ),
+      ),
       pw.SizedBox(height: 12),
       pw.TableHelper.fromTextArray(
-        headers: ['#', 'Date', 'Case ID', 'Band', 'Risk'],
+        headers: ['#', 'Date', 'Case', 'Band', 'Risk', 'Patient'],
         data: List.generate(reports.length, (i) {
           final r = reports[i];
           String fmt(String? iso) {
-            if (iso == null) return '—';
+            if (iso == null) return '-';
             try {
               final d = DateTime.parse(iso);
               return '${d.day}/${d.month}/${d.year} '
                   '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
             } catch (_) { return iso; }
           }
+          // ASCII-fold the patient name — Helvetica can't render Bengali so
+          // unmapped glyphs become tofu boxes. Strip anything outside
+          // basic Latin so the cell stays legible even on the minimal path.
+          String asciiOnly(String s) =>
+              s.replaceAll(RegExp(r'[^\x20-\x7E]'), '').trim();
+          final pn = asciiOnly(r['patientName']?.toString() ?? '');
           return [
             '${i + 1}',
             fmt(r['createdAt']?.toString()),
-            r['caseType']?.toString() ?? '—',
-            r['finalBand']?.toString() ?? '—',
+            r['caseType']?.toString() ?? '-',
+            r['finalBand']?.toString() ?? '-',
             '${r['riskScore'] ?? 0}',
+            pn.isEmpty ? '(Bengali name)' : pn,
           ];
         }),
         headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 9),
         headerDecoration: const pw.BoxDecoration(color: PdfColors.grey300),
         cellStyle: const pw.TextStyle(fontSize: 9),
         cellAlignment: pw.Alignment.centerLeft,
+      ),
+      pw.SizedBox(height: 18),
+      pw.Text(
+        'Quick export — text-only, English. For the full Bengali/Hindi PDF with charts, use the "PDF" button.',
+        style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
       ),
     ],
   ));
@@ -597,6 +653,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String _bandFilter = 'all';
   String _timeFilter = 'all';
   String _sortOrder  = 'newest';
+
+  @override
+  void dispose() {
+    _pdfStage.dispose();
+    super.dispose();
+  }
 
   bool _matchesFilters(Map<String, dynamic> r) {
     if (_bandFilter != 'all' && r['outcome']?.toString() != _bandFilter) {
@@ -723,10 +785,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
       );
       return;
     }
+    // -1 = the controller queued an offline delete. Show a softer
+    // "queued, will sync" message instead of the success "deleted" —
+    // keeping the worker honest about what actually happened.
+    final wasQueued = ctrl.lastDeleteFailureStatus == -1;
     messenger.showSnackBar(
       SnackBar(
-        content: Text('report_deleted'.tr),
+        content: Text(wasQueued ? 'report_delete_queued'.tr : 'report_deleted'.tr),
         duration: const Duration(seconds: 5),
+        backgroundColor: wasQueued ? AppColors.warningYellow : null,
         action: SnackBarAction(
           label: 'undo'.tr,
           textColor: Colors.white,
@@ -748,13 +815,60 @@ class _ReportsScreenState extends State<ReportsScreen> {
   //   2. Load the bundled font bytes (rootBundle, ~250 KB ea, fast)
   //   3. Send (fonts + reports + timestamp) to the isolate and await bytes
   //   4. Hand the bytes off to PdfHelper.saveAndOpen
+  // ValueNotifier so the loading dialog updates with stage text instead
+  // of showing a frozen "PDF তৈরি হচ্ছে..." for up to 150 sec.
+  final ValueNotifier<String> _pdfStage =
+      ValueNotifier<String>('pdf_stage_starting');
+
+  /// Bulletproof, English-only, no-isolate export. The fancy [_downloadPdf]
+  /// can still crash the pdf library on low-end devices with malformed
+  /// data; this is the "demo guarantee" path — straight call to
+  /// [_buildMinimalPdfBytes] + save. ~half a second on a mid-range phone.
+  Future<void> _quickPdf(List<Map<String, dynamic>> reports) async {
+    if (reports.isEmpty) {
+      Get.snackbar('pdf_no_reports_title'.tr, 'pdf_no_reports_msg'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.warningYellow, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12,
+          duration: const Duration(seconds: 3));
+      return;
+    }
+    if (reports.length > 50) reports = reports.take(50).toList();
+    final now = DateTime.now();
+    final generatedAt =
+        '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}  '
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    String? wName, wDistrict, wBlock;
+    try {
+      final u = Get.find<AuthController>().user.value;
+      wName = u?.name; wDistrict = u?.district; wBlock = u?.block;
+    } catch (_) {}
+
+    try {
+      final bytes = await _buildMinimalPdfBytes(
+        reports, generatedAt,
+        workerName: wName, district: wDistrict, block: wBlock,
+      ).timeout(const Duration(seconds: 25));
+      final fileName =
+          'asha_mitra_quick_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}.pdf';
+      await PdfHelper.saveAndOpen(bytes, fileName)
+          .timeout(const Duration(seconds: 15));
+    } catch (e, st) {
+      AppLogger.e('Quick PDF failed', e, st);
+      Get.snackbar('pdf_generation_failed'.tr, e.toString(),
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.emergencyRed, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12,
+          duration: const Duration(seconds: 5));
+    }
+  }
+
   Future<void> _downloadPdf(List<Map<String, dynamic>> reports) async {
-    // ignore: avoid_print
-    print('[PDF] start — reports.length=${reports.length}');
+    AppLogger.d('PDF start — reports.length=${reports.length}');
     if (reports.isEmpty) {
       Get.snackbar(
-        'No reports to export',
-        'Complete at least one triage session first.',
+        'pdf_no_reports_title'.tr,
+        'pdf_no_reports_msg'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.warningYellow,
         colorText: Colors.white,
@@ -773,9 +887,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (wasTruncated) reports = reports.take(maxReportsPerPdf).toList();
     if (wasTruncated) {
       Get.snackbar(
-        'PDF limited to 30 reports',
-        'Latest 30 sessions included. Use the date filter '
-            '(আজ / ৭ দিন / এই মাস) to export earlier sessions.',
+        'pdf_truncated_title'.tr,
+        'pdf_truncated_msg'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.warningYellow,
         colorText: Colors.white,
@@ -787,21 +900,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
 
     var dialogShown = false;
+    _pdfStage.value = 'pdf_stage_starting';
     try {
-      // 1. Show the progress dialog.
+      // 1. Show the progress dialog (live stage label via ValueListenableBuilder).
       Get.dialog<void>(
-        const PopScope(
+        PopScope(
           canPop: false,
           child: Center(
             child: Card(
               child: Padding(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: AppColors.primary),
-                    SizedBox(width: 16),
-                    Text('PDF তৈরি হচ্ছে...'),
+                    const CircularProgressIndicator(color: AppColors.primary),
+                    const SizedBox(width: 16),
+                    ValueListenableBuilder<String>(
+                      valueListenable: _pdfStage,
+                      builder: (_, key, __) => Text(key.tr),
+                    ),
                   ],
                 ),
               ),
@@ -811,8 +928,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
         barrierDismissible: false,
       );
       dialogShown = true;
-      // ignore: avoid_print
-      print('[PDF] dialog shown — loading font bytes');
+      AppLogger.d('PDF dialog shown — loading font bytes');
+      _pdfStage.value = 'pdf_stage_loading_fonts';
 
       // 2. Load font bytes from the APK bundle. Fast (assets are mmap'd) and
       // produces serializable Uint8List that can cross the isolate boundary.
@@ -820,8 +937,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final boldData    = await rootBundle.load('assets/fonts/HindSiliguri-Bold.ttf');
       final regularBytes = regularData.buffer.asUint8List();
       final boldBytes    = boldData.buffer.asUint8List();
-      // ignore: avoid_print
-      print('[PDF] fonts loaded (${regularBytes.length} + ${boldBytes.length} bytes) — spawning isolate');
+      AppLogger.d('PDF fonts loaded (${regularBytes.length}+${boldBytes.length} B)');
 
       final now = DateTime.now();
       final generatedAt =
@@ -854,8 +970,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
           'pdf_qa_col_question', 'pdf_qa_col_answer',
           'pdf_footer', 'pdf_header_session_details', 'pdf_page_of',
           'pdf_band_red', 'pdf_band_yellow', 'pdf_band_green',
+          'pdf_worker', 'pdf_district', 'pdf_block',
         ]) k: k.tr,
       };
+
+      // Worker info pulled from AuthController.user (UI thread only; the
+      // GetX controller registry isn't available in the spawned isolate).
+      // Falls back to '—' if not signed in (e.g. demo / offline flow).
+      try {
+        final u = Get.find<AuthController>().user.value;
+        labels['__workerName'] = u?.name ?? '—';
+        labels['__workerDistrict'] = u?.district ?? '—';
+        labels['__workerBlock'] = u?.block ?? '—';
+      } catch (_) {
+        labels['__workerName'] = '—';
+        labels['__workerDistrict'] = '—';
+        labels['__workerBlock'] = '—';
+      }
 
       // 3. Build the PDF with layered timeouts so the loading dialog can
       // never hang forever:
@@ -866,32 +997,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
       //      flat table, no Bengali, no styled cards, never hits the
       //      pdf-library edge cases that caused the earlier hangs.
       List<int> bytes;
+      _pdfStage.value = 'pdf_stage_building';
       try {
         bytes = await Isolate.run(
           () => _buildPdfBytes((regularBytes, boldBytes, reports, generatedAt, labels)),
         ).timeout(const Duration(seconds: 90));
-        // ignore: avoid_print
-        print('[PDF] isolate returned ${bytes.length} bytes');
+        AppLogger.d('PDF isolate returned ${bytes.length} bytes');
       } catch (e) {
-        // ignore: avoid_print
-        print('[PDF] isolate failed ($e) — trying UI-thread fancy build');
+        AppLogger.e('PDF isolate failed — trying UI-thread fancy build', e);
+        _pdfStage.value = 'pdf_stage_fallback_fancy';
         try {
           bytes = await _buildPdfBytes(
             (regularBytes, boldBytes, reports, generatedAt, labels),
           ).timeout(const Duration(seconds: 60));
-          // ignore: avoid_print
-          print('[PDF] UI-thread fancy returned ${bytes.length} bytes');
+          AppLogger.d('PDF UI-thread fancy returned ${bytes.length} bytes');
         } catch (e2) {
-          // ignore: avoid_print
-          print('[PDF] UI-thread fancy failed ($e2) — minimal fallback');
+          AppLogger.e('PDF UI-thread fancy failed — minimal fallback', e2);
+          _pdfStage.value = 'pdf_stage_fallback_minimal';
           bytes = await _buildMinimalPdfBytes(reports, generatedAt)
               .timeout(const Duration(seconds: 30));
-          // ignore: avoid_print
-          print('[PDF] minimal fallback returned ${bytes.length} bytes');
+          AppLogger.d('PDF minimal fallback returned ${bytes.length} bytes');
         }
       }
-      // ignore: avoid_print
-      print('[PDF] dismissing dialog');
+      _pdfStage.value = 'pdf_stage_saving';
+      AppLogger.d('PDF dismissing dialog');
 
       // Dismiss the dialog BEFORE saveAndOpen so the success snackbar isn't
       // covered by the modal overlay and OpenFile's viewer can take focus.
@@ -909,8 +1038,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         await PdfHelper.saveAndOpen(bytes, fileName)
             .timeout(const Duration(seconds: 15));
       } on TimeoutException {
-        // ignore: avoid_print
-        print('[PDF] saveAndOpen timed out — file probably saved but viewer hung');
+        AppLogger.e('PDF saveAndOpen timed out — file probably saved');
         Get.snackbar(
           'pdf_saved'.tr,
           'pdf_saved_open_msg'.trParams({'name': fileName}),
@@ -922,15 +1050,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
           duration: const Duration(seconds: 5),
         );
       }
-      // ignore: avoid_print
-      print('[PDF] saveAndOpen returned');
+      AppLogger.d('PDF saveAndOpen returned');
     } catch (e, st) {
       // Any failure — font load, isolate spawn, isolate work, file save —
       // surfaces here as a red snackbar instead of a silent crash.
-      // ignore: avoid_print
-      print('[PDF] build failed: $e\n$st');
+      AppLogger.e('PDF build failed', e, st);
       Get.snackbar(
-        'PDF generation failed',
+        'pdf_generation_failed'.tr,
         e.toString().length > 200
             ? '${e.toString().substring(0, 200)}...'
             : e.toString(),
@@ -970,6 +1096,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   subtitle: 'reports_subtitle'.tr,
                   showBack: false,
                   actions: [
+                    HeaderActionPill(
+                      icon: Icons.flash_on_rounded,
+                      label: 'Quick',
+                      onTap: () => _quickPdf(visibleReports),
+                    ),
+                    const SizedBox(width: 6),
                     HeaderActionPill(
                       icon: Icons.download_rounded,
                       label: 'PDF',
@@ -1351,10 +1483,14 @@ class _ReportCardState extends State<_ReportCard> {
   Widget build(BuildContext context) {
     final r = widget.r;
     final outcomeColor = widget.outcomeColor;
-    final dangerSigns = (r['dangerSigns'] as List? ?? []).cast<String>();
-    final suspectedConditions = (r['suspectedConditions'] as List? ?? []).cast<String>();
-    final triggeredRules = (r['triggeredRules'] as List? ?? []).cast<String>();
-    final qaHistory = r['qaHistory'] as List? ?? [];
+    List<String> safeStrList(dynamic v) {
+      if (v is! List) return const [];
+      return [for (final e in v) if (e != null) e.toString()];
+    }
+    final dangerSigns = safeStrList(r['dangerSigns']);
+    final suspectedConditions = safeStrList(r['suspectedConditions']);
+    final triggeredRules = safeStrList(r['triggeredRules']);
+    final qaHistory = (r['qaHistory'] is List) ? (r['qaHistory'] as List) : const [];
     final riskScore = r['riskScore'] as int? ?? 0;
     final facilityType = r['facilityType']?.toString() ?? '';
     final recheckHours = r['recheckAfterHours'] as int? ?? 0;

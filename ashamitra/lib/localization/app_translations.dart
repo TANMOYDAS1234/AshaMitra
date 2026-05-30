@@ -214,6 +214,8 @@ class AppTranslations extends Translations {
     "delete_report_confirm_msg": "The report will be removed from your list. Tap Undo within 5 seconds to restore it.",
     "delete": "Delete",
     "report_deleted": "Report deleted",
+    "report_delete_queued": "Marked for deletion — will sync when online",
+    "mic_permission_denied": "Microphone permission denied. Open Settings → Permissions to allow access.",
     "undo": "Undo",
     // ── Attach patient ────────────────────────────────────────────
     "add_patient_now": "Add patient",
@@ -416,6 +418,20 @@ class AppTranslations extends Translations {
     "pdf_band_red": "RED — Urgent",
     "pdf_band_yellow": "YELLOW — Needs attention",
     "pdf_band_green": "GREEN — Safe",
+    "pdf_worker": "Health worker",
+    "pdf_district": "District",
+    "pdf_block": "Block",
+    "pdf_stage_starting": "Preparing PDF...",
+    "pdf_stage_loading_fonts": "Loading fonts...",
+    "pdf_stage_building": "Building report...",
+    "pdf_stage_fallback_fancy": "Retrying (UI thread)...",
+    "pdf_stage_fallback_minimal": "Building minimal version...",
+    "pdf_stage_saving": "Saving file...",
+    "pdf_no_reports_title": "No reports to export",
+    "pdf_no_reports_msg": "Complete at least one triage session first.",
+    "pdf_truncated_title": "PDF limited to 30 reports",
+    "pdf_truncated_msg": "Latest 30 sessions included. Use the date filter to export earlier sessions.",
+    "pdf_generation_failed": "PDF generation failed",
   };
 
   static const _bn = {
@@ -631,6 +647,8 @@ class AppTranslations extends Translations {
     "delete_report_confirm_msg": "রিপোর্টটি আপনার তালিকা থেকে সরিয়ে নেওয়া হবে। ৫ সেকেন্ডের মধ্যে \"Undo\" চেপে ফিরিয়ে আনা যাবে।",
     "delete": "মুছে ফেলুন",
     "report_deleted": "রিপোর্ট মুছে ফেলা হয়েছে",
+    "report_delete_queued": "মোছার জন্য চিহ্নিত — অনলাইনে এলে সিঙ্ক হবে",
+    "mic_permission_denied": "মাইক্রোফোনের অনুমতি দেওয়া হয়নি। সেটিংস → অনুমতি থেকে চালু করুন।",
     "undo": "Undo",
     // ── Attach patient ────────────────────────────────────────────
     "add_patient_now": "রোগী যুক্ত করুন",
@@ -829,6 +847,20 @@ class AppTranslations extends Translations {
     "pdf_band_red": "RED — জরুরি",
     "pdf_band_yellow": "YELLOW — মনোযোগ দরকার",
     "pdf_band_green": "GREEN — নিরাপদ",
+    "pdf_worker": "স্বাস্থ্যকর্মী",
+    "pdf_district": "জেলা",
+    "pdf_block": "ব্লক",
+    "pdf_stage_starting": "PDF প্রস্তুত হচ্ছে...",
+    "pdf_stage_loading_fonts": "ফন্ট লোড হচ্ছে...",
+    "pdf_stage_building": "রিপোর্ট তৈরি হচ্ছে...",
+    "pdf_stage_fallback_fancy": "আবার চেষ্টা হচ্ছে...",
+    "pdf_stage_fallback_minimal": "সহজ সংস্করণ তৈরি হচ্ছে...",
+    "pdf_stage_saving": "ফাইল সেভ হচ্ছে...",
+    "pdf_no_reports_title": "এক্সপোর্ট করার মতো রিপোর্ট নেই",
+    "pdf_no_reports_msg": "প্রথমে একটি ট্রায়াজ সেশন সম্পন্ন করুন।",
+    "pdf_truncated_title": "PDF ৩০টি রিপোর্টে সীমিত",
+    "pdf_truncated_msg": "সর্বশেষ ৩০টি সেশন অন্তর্ভুক্ত। পুরোনো সেশন এক্সপোর্ট করতে তারিখ ফিল্টার ব্যবহার করুন।",
+    "pdf_generation_failed": "PDF তৈরি ব্যর্থ হয়েছে",
   };
 
   static const _hi = {
@@ -1044,6 +1076,8 @@ class AppTranslations extends Translations {
     "delete_report_confirm_msg": "रिपोर्ट आपकी सूची से हट जाएगी। 5 सेकंड में Undo दबाकर वापस लाई जा सकती है।",
     "delete": "हटाएं",
     "report_deleted": "रिपोर्ट हटाई गई",
+    "report_delete_queued": "हटाने के लिए चिह्नित — ऑनलाइन होने पर सिंक होगा",
+    "mic_permission_denied": "माइक्रोफ़ोन की अनुमति नहीं दी गई। सेटिंग्स → अनुमतियाँ से अनुमति दें।",
     "undo": "Undo",
     // ── Attach patient ────────────────────────────────────────────
     "add_patient_now": "मरीज़ जोड़ें",
@@ -1242,6 +1276,20 @@ class AppTranslations extends Translations {
     "pdf_band_red": "RED — आपातकाल",
     "pdf_band_yellow": "YELLOW — ध्यान दें",
     "pdf_band_green": "GREEN — सुरक्षित",
+    "pdf_worker": "स्वास्थ्य कार्यकर्ता",
+    "pdf_district": "जिला",
+    "pdf_block": "ब्लॉक",
+    "pdf_stage_starting": "PDF तैयार हो रहा है...",
+    "pdf_stage_loading_fonts": "फ़ॉन्ट लोड हो रहे हैं...",
+    "pdf_stage_building": "रिपोर्ट बन रही है...",
+    "pdf_stage_fallback_fancy": "फिर से प्रयास...",
+    "pdf_stage_fallback_minimal": "सरल संस्करण बन रहा है...",
+    "pdf_stage_saving": "फ़ाइल सेव हो रही है...",
+    "pdf_no_reports_title": "एक्सपोर्ट के लिए कोई रिपोर्ट नहीं",
+    "pdf_no_reports_msg": "पहले एक ट्रिएज सत्र पूरा करें।",
+    "pdf_truncated_title": "PDF 30 रिपोर्ट तक सीमित",
+    "pdf_truncated_msg": "नवीनतम 30 सत्र शामिल हैं। पुराने सत्र निर्यात करने के लिए तिथि फ़िल्टर का उपयोग करें।",
+    "pdf_generation_failed": "PDF बनाने में विफल",
   };
 
   @override

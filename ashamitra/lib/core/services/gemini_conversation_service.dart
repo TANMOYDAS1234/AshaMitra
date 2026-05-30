@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
+import '../utils/logger.dart';
 import 'ai_response_cache.dart';
 import 'api_service.dart';
 import 'vitals_extractor.dart';
@@ -420,8 +421,7 @@ extracted_answers শুধু সেই প্রশ্নগুলো যা �
           }
         }
         if (response == null || response.statusCode != 200) {
-          // ignore: avoid_print
-          print('[Chat] HTTP ${response?.statusCode}: ${response?.body}');
+          AppLogger.e('Chat HTTP ${response?.statusCode}');
           throw Exception('Backend chat error ${response?.statusCode}');
         }
         bodyJson = jsonDecode(response.body) as Map<String, dynamic>;

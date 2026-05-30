@@ -72,6 +72,14 @@ tts_test.mp3
 vapi_*.mp3
 overpass_test.json
 
+# Ad-hoc screenshots from device debugging.
+_current.png
+_after_pdf.png
+_*.png
+
+# Intermediate HTML emitted by docs/.build-pdf.js — regeneratable.
+docs/.stakeholder-doc.html
+
 # ── OS / editor noise ────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db

@@ -10,6 +10,7 @@ class LocalStorageService {
   static const _keyTriageSessions = 'session_triage';
   static const _keyReports = 'session_reports';
   static const _keyPendingDeletes = 'session_pending_deletes';
+  static const _keyPendingReportDeletes = 'session_pending_report_deletes';
 
   static Future<void> init() async =>
       _prefs = await SharedPreferences.getInstance();
@@ -82,6 +83,24 @@ class LocalStorageService {
       _prefs.setString(_keyPendingDeletes, jsonEncode(list));
   static List<Map<String, dynamic>> loadPendingDeletes() {
     final raw = _prefs.getString(_keyPendingDeletes);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (_) { return []; }
+  }
+
+  // ── Pending report deletes (offline-resilient sync) ──────────
+  // Mirrors the pending-patient-delete pattern: reports the worker
+  // tried to delete while offline. Stored as full snapshots so the
+  // UI can hide them and the next syncFromServer can both flush the
+  // DELETE and the merge step can re-exclude any server rows that
+  // still match (handles the 75-sec-timeout-then-retry case).
+  static Future<void> savePendingReportDeletes(List<Map<String, dynamic>> list) =>
+      _prefs.setString(_keyPendingReportDeletes, jsonEncode(list));
+  static List<Map<String, dynamic>> loadPendingReportDeletes() {
+    final raw = _prefs.getString(_keyPendingReportDeletes);
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)

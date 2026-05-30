@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../utils/logger.dart';
 import 'local_storage_service.dart';
 
 class UnauthorizedException implements Exception {}
@@ -227,8 +228,7 @@ class ApiService {
     } on UnauthorizedException {
       rethrow;
     } catch (e) {
-      // ignore: avoid_print
-      print('[saveReport] error: $e');
+      AppLogger.e('saveReport', e);
       return null;
     }
   }
@@ -353,8 +353,8 @@ class ApiService {
       ).timeout(const Duration(seconds: 75));
       _guard(res.statusCode);
       if (res.statusCode != 200) {
-        // ignore: avoid_print
-        print('[deleteReport] HTTP ${res.statusCode}: ${res.body}');
+        // Log status only — `res.body` may include patient names.
+        AppLogger.e('deleteReport HTTP ${res.statusCode}');
         return (ok: false, status: res.statusCode, reason: res.body);
       }
       final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -362,12 +362,10 @@ class ApiService {
     } on UnauthorizedException {
       rethrow;
     } on TimeoutException catch (e) {
-      // ignore: avoid_print
-      print('[deleteReport] timeout: $e');
+      AppLogger.e('deleteReport timeout', e);
       return (ok: false, status: 0, reason: 'timeout');
     } catch (e) {
-      // ignore: avoid_print
-      print('[deleteReport] network error: $e');
+      AppLogger.e('deleteReport network error', e);
       return (ok: false, status: 0, reason: e.toString());
     }
   }
@@ -382,8 +380,7 @@ class ApiService {
       ).timeout(const Duration(seconds: 30));
       _guard(res.statusCode);
       if (res.statusCode != 200) {
-        // ignore: avoid_print
-        print('[restoreReport] HTTP ${res.statusCode}: ${res.body}');
+        AppLogger.e('restoreReport HTTP ${res.statusCode}');
         return false;
       }
       final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -391,8 +388,7 @@ class ApiService {
     } on UnauthorizedException {
       rethrow;
     } catch (e) {
-      // ignore: avoid_print
-      print('[restoreReport] error: $e');
+      AppLogger.e('restoreReport', e);
       return false;
     }
   }
@@ -408,8 +404,7 @@ class ApiService {
       ).timeout(const Duration(seconds: 30));
       _guard(res.statusCode);
       if (res.statusCode != 200) {
-        // ignore: avoid_print
-        print('[adminRestoreReport] HTTP ${res.statusCode}: ${res.body}');
+        AppLogger.e('adminRestoreReport HTTP ${res.statusCode}');
         return false;
       }
       final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -417,8 +412,7 @@ class ApiService {
     } on UnauthorizedException {
       rethrow;
     } catch (e) {
-      // ignore: avoid_print
-      print('[adminRestoreReport] error: $e');
+      AppLogger.e('adminRestoreReport', e);
       return false;
     }
   }
@@ -434,8 +428,7 @@ class ApiService {
       ).timeout(const Duration(seconds: 30));
       _guard(res.statusCode);
       if (res.statusCode != 200) {
-        // ignore: avoid_print
-        print('[adminPermanentlyDeleteReport] HTTP ${res.statusCode}: ${res.body}');
+        AppLogger.e('adminPermanentlyDeleteReport HTTP ${res.statusCode}');
         return false;
       }
       final body = jsonDecode(res.body) as Map<String, dynamic>;
@@ -443,8 +436,7 @@ class ApiService {
     } on UnauthorizedException {
       rethrow;
     } catch (e) {
-      // ignore: avoid_print
-      print('[adminPermanentlyDeleteReport] error: $e');
+      AppLogger.e('adminPermanentlyDeleteReport', e);
       return false;
     }
   }
