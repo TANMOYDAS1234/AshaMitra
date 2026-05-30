@@ -45,11 +45,11 @@ class VapiTtsService {
   static const _cacheLimit = 60 * 1024 * 1024; // 60 MB max cache
   // Cache-key tag only — actual voice is chosen server-side.
   // Bump this string when switching voices so old cached MP3s are not replayed.
-  // History: Charon (male) → Kore (Bangladeshi-leaning) → Aoede (more Indian).
+  // History: Charon → Kore (Bangladeshi-lean) → Aoede (HD but neutral) →
+  //          Wavenet-A (distinctly Indian Bengali, current default).
   // Bumping this tag invalidates every device's cached MP3s — the next
-  // prewarm cycle will re-fetch all phrases with the new voice. Without
-  // this bump, old audio would keep playing from cache.
-  static const _voice = 'gcloud:Chirp3-HD-Aoede:v1';
+  // prewarm cycle will re-fetch all phrases with the new voice.
+  static const _voice = 'gcloud:Wavenet-A:v1';
 
   Function()? onStart;
   Function()? onComplete;

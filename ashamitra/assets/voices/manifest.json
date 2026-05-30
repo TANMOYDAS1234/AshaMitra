@@ -2,1408 +2,1408 @@
   {
     "text": "১০৮ এ কল করুন। এটা জরুরি অবস্থা।",
     "tone": "emergency",
-    "key": "f3e17633575485c0becc134d1d0ffe79",
-    "filename": "f3e17633575485c0becc134d1d0ffe79.mp3",
-    "bytes": 16032
+    "key": "64394dace7701a39d05ca8ec85ab0deb",
+    "filename": "64394dace7701a39d05ca8ec85ab0deb.mp3",
+    "bytes": 25728
   },
   {
     "text": "এখনই হাসপাতালে যান। দেরি করবেন না।",
     "tone": "emergency",
-    "key": "8f75ef0ceb5fdd80b5d8bdc9442ff97e",
-    "filename": "8f75ef0ceb5fdd80b5d8bdc9442ff97e.mp3",
-    "bytes": 14592
+    "key": "cbfbb4c67d29d20abd52bd3240b36ad1",
+    "filename": "cbfbb4c67d29d20abd52bd3240b36ad1.mp3",
+    "bytes": 23424
   },
   {
     "text": "এটা গুরুতর। FRU বা DH-তে এখনই রেফার করুন।",
     "tone": "emergency",
-    "key": "1d82fc48b975fc9963ebca5f949046cf",
-    "filename": "1d82fc48b975fc9963ebca5f949046cf.mp3",
-    "bytes": 21408
+    "key": "2117ead3f8ff13383d1655bcd3ae3fc3",
+    "filename": "2117ead3f8ff13383d1655bcd3ae3fc3.mp3",
+    "bytes": 29376
   },
   {
     "text": "রোগীকে বাম কাতে শোয়ান এবং অপেক্ষা করুন।",
     "tone": "emergency",
-    "key": "f006ed65e36c6ed64e8e11e3b6d115ad",
-    "filename": "f006ed65e36c6ed64e8e11e3b6d115ad.mp3",
-    "bytes": 13920
+    "key": "0bd3ecf9d5b12adb12b56a2cb7268b65",
+    "filename": "0bd3ecf9d5b12adb12b56a2cb7268b65.mp3",
+    "bytes": 23232
   },
   {
     "text": "বুঝেছি। এটা একটা বিপদচিহ্ন।",
     "tone": "urgent",
-    "key": "d2fed744c9ee9dd1332f384c1102bc40",
-    "filename": "d2fed744c9ee9dd1332f384c1102bc40.mp3",
-    "bytes": 16032
+    "key": "14f7fa6b5b4c32af81dc2f311aff4c47",
+    "filename": "14f7fa6b5b4c32af81dc2f311aff4c47.mp3",
+    "bytes": 23040
   },
   {
     "text": "শিশুর শ্বাসকষ্ট গুরুতর। SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "548d0367cb85912307a219cd55d6e153",
-    "filename": "548d0367cb85912307a219cd55d6e153.mp3",
-    "bytes": 19776
+    "key": "384d7371251fa973f32e0b3d13e424c1",
+    "filename": "384d7371251fa973f32e0b3d13e424c1.mp3",
+    "bytes": 32448
   },
   {
     "text": "গুরুতর রক্তপাত। এখনই FRU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "efe4bbe1aea8bcd465efbc5062ce08ee",
-    "filename": "efe4bbe1aea8bcd465efbc5062ce08ee.mp3",
-    "bytes": 18720
+    "key": "cbc25ed81c0353fb3a6d881ddf704a7b",
+    "filename": "cbc25ed81c0353fb3a6d881ddf704a7b.mp3",
+    "bytes": 27264
   },
   {
     "text": "পরিস্থিতি বলুন বা প্রশ্ন করুন",
     "tone": "empathy",
-    "key": "6d81c4b74510bd6c516135a080b5eb0c",
-    "filename": "6d81c4b74510bd6c516135a080b5eb0c.mp3",
-    "bytes": 11712
+    "key": "d4778db71519c50cab2aaa2927d35012",
+    "filename": "d4778db71519c50cab2aaa2927d35012.mp3",
+    "bytes": 22080
   },
   {
     "text": "মাইক্রোফোন চালু করুন এবং কথা বলুন।",
     "tone": "empathy",
-    "key": "f4aa518346e2228c18ddd7010cb6445f",
-    "filename": "f4aa518346e2228c18ddd7010cb6445f.mp3",
-    "bytes": 14880
+    "key": "22aa8412cf4a76cccb4b85d4fdf83e73",
+    "filename": "22aa8412cf4a76cccb4b85d4fdf83e73.mp3",
+    "bytes": 24960
   },
   {
     "text": "আমি আশামিত্র। আপনার সহায়তা করতে এসেছি।",
     "tone": "empathy",
-    "key": "788a787a883c1457ed0ca5b43d2aa40c",
-    "filename": "788a787a883c1457ed0ca5b43d2aa40c.mp3",
-    "bytes": 20352
+    "key": "f47f569bb98323dcafe2f1c0438da6e8",
+    "filename": "f47f569bb98323dcafe2f1c0438da6e8.mp3",
+    "bytes": 32448
   },
   {
     "text": "চিন্তা করবেন না। সব ঠিক হয়ে যাবে।",
     "tone": "positive",
-    "key": "19ac74e8ebc5632c4e2597d838132acd",
-    "filename": "19ac74e8ebc5632c4e2597d838132acd.mp3",
-    "bytes": 16320
+    "key": "d5fd00cbc1ce06853483b2a31301e823",
+    "filename": "d5fd00cbc1ce06853483b2a31301e823.mp3",
+    "bytes": 25728
   },
   {
     "text": "আপনি ভালো করেছেন জানিয়েছেন। ধন্যবাদ।",
     "tone": "empathy",
-    "key": "0a86818af78ad1202a38c39efd87c079",
-    "filename": "0a86818af78ad1202a38c39efd87c079.mp3",
-    "bytes": 19200
+    "key": "597096f0ca57b4ab2cac339f64d51489",
+    "filename": "597096f0ca57b4ab2cac339f64d51489.mp3",
+    "bytes": 29184
   },
   {
     "text": "রোগী এখন নিরাপদ। বাড়িতে যত্ন নিন।",
     "tone": "positive",
-    "key": "1a70da1e0c1336bb33c3e2a9e8ac347a",
-    "filename": "1a70da1e0c1336bb33c3e2a9e8ac347a.mp3",
-    "bytes": 19968
+    "key": "e523eac2c421dd0da686adb230064e8c",
+    "filename": "e523eac2c421dd0da686adb230064e8c.mp3",
+    "bytes": 28608
   },
   {
     "text": "বুঝেছি।",
     "tone": "normal",
-    "key": "513d818ef5e6d0ce9351b4ff7a6c4c94",
-    "filename": "513d818ef5e6d0ce9351b4ff7a6c4c94.mp3",
-    "bytes": 6528
+    "key": "6a31511b62d2c3c33f77b2b09c998ed7",
+    "filename": "6a31511b62d2c3c33f77b2b09c998ed7.mp3",
+    "bytes": 9984
   },
   {
     "text": "আরেকটু জানতে চাই।",
     "tone": "question",
-    "key": "3557cf6454d828b827d0bb8499275b07",
-    "filename": "3557cf6454d828b827d0bb8499275b07.mp3",
-    "bytes": 9120
+    "key": "046dacdfd03ae82e68463215de7632aa",
+    "filename": "046dacdfd03ae82e68463215de7632aa.mp3",
+    "bytes": 15360
   },
   {
     "text": "জ্বর 37.6°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "f16f2c8db2fa9d0bde05e27870d9d18c",
-    "filename": "f16f2c8db2fa9d0bde05e27870d9d18c.mp3",
-    "bytes": 38496
+    "key": "33616ed1157d95fdd2d128703bfbb8ca",
+    "filename": "33616ed1157d95fdd2d128703bfbb8ca.mp3",
+    "bytes": 55104
   },
   {
     "text": "জ্বর 37.7°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "5f0a9b0abec6ff81e4960a7bbfd48232",
-    "filename": "5f0a9b0abec6ff81e4960a7bbfd48232.mp3",
-    "bytes": 38976
+    "key": "efcb93883ad4ec26fe1c73cbca2000de",
+    "filename": "efcb93883ad4ec26fe1c73cbca2000de.mp3",
+    "bytes": 55104
   },
   {
     "text": "জ্বর 37.8°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "f9d742f6df7c22b0fcfe8ab03a3821ed",
-    "filename": "f9d742f6df7c22b0fcfe8ab03a3821ed.mp3",
-    "bytes": 39456
+    "key": "be0d37b893bed6b85c56235af7d72032",
+    "filename": "be0d37b893bed6b85c56235af7d72032.mp3",
+    "bytes": 54144
   },
   {
     "text": "জ্বর 37.9°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "b31cd82a9441ec2c785e822e95a97be3",
-    "filename": "b31cd82a9441ec2c785e822e95a97be3.mp3",
-    "bytes": 44160
+    "key": "b030f823a90d84eb030d83f79e2ac007",
+    "filename": "b030f823a90d84eb030d83f79e2ac007.mp3",
+    "bytes": 54720
   },
   {
     "text": "জ্বর 38.0°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "0275fbeb473722f1f3683de94a2e93a2",
-    "filename": "0275fbeb473722f1f3683de94a2e93a2.mp3",
-    "bytes": 39744
+    "key": "8ad6fd298979c8b13fb603ddaf3ba888",
+    "filename": "8ad6fd298979c8b13fb603ddaf3ba888.mp3",
+    "bytes": 55104
   },
   {
     "text": "জ্বর 38.1°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "42d4db7c38e267972ae277d984a45f7d",
-    "filename": "42d4db7c38e267972ae277d984a45f7d.mp3",
-    "bytes": 38496
+    "key": "96343e46e41f60e71bf9e5ac45490b02",
+    "filename": "96343e46e41f60e71bf9e5ac45490b02.mp3",
+    "bytes": 53952
   },
   {
     "text": "জ্বর 38.2°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "74a504364a04b074f41aa2c774460d28",
-    "filename": "74a504364a04b074f41aa2c774460d28.mp3",
-    "bytes": 47328
+    "key": "07ed5b3fb97c3429390b4f873102c770",
+    "filename": "07ed5b3fb97c3429390b4f873102c770.mp3",
+    "bytes": 54144
   },
   {
     "text": "জ্বর 38.3°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "4536b5a6e59783013a4eafbd252eba91",
-    "filename": "4536b5a6e59783013a4eafbd252eba91.mp3",
-    "bytes": 42144
+    "key": "2cfbd2936d08d50aa6cbe38f38659f0f",
+    "filename": "2cfbd2936d08d50aa6cbe38f38659f0f.mp3",
+    "bytes": 54144
   },
   {
     "text": "জ্বর 38.4°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "6dcf2c8a7f219da538fb0ac59cf00914",
-    "filename": "6dcf2c8a7f219da538fb0ac59cf00914.mp3",
-    "bytes": 38496
+    "key": "3a7a0d8a8334395f41e72e1792102c1c",
+    "filename": "3a7a0d8a8334395f41e72e1792102c1c.mp3",
+    "bytes": 54144
   },
   {
     "text": "জ্বর 38.5°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "b21386d798f92840a9752381e21011de",
-    "filename": "b21386d798f92840a9752381e21011de.mp3",
-    "bytes": 39264
+    "key": "59b19ca306a37c134e30eeba8ce091c2",
+    "filename": "59b19ca306a37c134e30eeba8ce091c2.mp3",
+    "bytes": 54336
   },
   {
     "text": "জ্বর 38.6°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "cc0a2cd321ac4bc50696f8327d774369",
-    "filename": "cc0a2cd321ac4bc50696f8327d774369.mp3",
-    "bytes": 39264
+    "key": "882a5f1351574cbb206c0c7d7fabc053",
+    "filename": "882a5f1351574cbb206c0c7d7fabc053.mp3",
+    "bytes": 54336
   },
   {
     "text": "জ্বর 38.7°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "48b94ae6264cbadf411a629ff24fe757",
-    "filename": "48b94ae6264cbadf411a629ff24fe757.mp3",
-    "bytes": 39264
+    "key": "12f9cd4cf772092cd8eb0361cd50950a",
+    "filename": "12f9cd4cf772092cd8eb0361cd50950a.mp3",
+    "bytes": 54336
   },
   {
     "text": "জ্বর 38.8°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "51087c80f5908cdf2773ea22582981ea",
-    "filename": "51087c80f5908cdf2773ea22582981ea.mp3",
-    "bytes": 46560
+    "key": "0171bb8c5cdc6a6674469fa04eef450e",
+    "filename": "0171bb8c5cdc6a6674469fa04eef450e.mp3",
+    "bytes": 53760
   },
   {
     "text": "জ্বর 38.9°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "7f355a5c4af5f1f763764de73b5711bc",
-    "filename": "7f355a5c4af5f1f763764de73b5711bc.mp3",
-    "bytes": 38784
+    "key": "8eebf59d64412f6c5740d052e993058a",
+    "filename": "8eebf59d64412f6c5740d052e993058a.mp3",
+    "bytes": 53952
   },
   {
     "text": "জ্বর 39.0°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "2cdc0e03ee1c75c0f48c4928db37cd84",
-    "filename": "2cdc0e03ee1c75c0f48c4928db37cd84.mp3",
-    "bytes": 40224
+    "key": "8e3f10156e077d46fd545a1691e3db47",
+    "filename": "8e3f10156e077d46fd545a1691e3db47.mp3",
+    "bytes": 56256
   },
   {
     "text": "জ্বর 38.6°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।",
     "tone": "urgent",
-    "key": "e638655e611dfaac0811b55614bf68f0",
-    "filename": "e638655e611dfaac0811b55614bf68f0.mp3",
-    "bytes": 35328
+    "key": "4b9dc4180614f7bc741d575d3ade9235",
+    "filename": "4b9dc4180614f7bc741d575d3ade9235.mp3",
+    "bytes": 45696
   },
   {
     "text": "জ্বর 38.8°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।",
     "tone": "urgent",
-    "key": "594962c8db742243d1908a67d2e48947",
-    "filename": "594962c8db742243d1908a67d2e48947.mp3",
-    "bytes": 35616
+    "key": "357126dfe76e68861348168075fa6e45",
+    "filename": "357126dfe76e68861348168075fa6e45.mp3",
+    "bytes": 45120
   },
   {
     "text": "জ্বর 39.0°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।",
     "tone": "urgent",
-    "key": "0714af9121d43901755adfbf75e39912",
-    "filename": "0714af9121d43901755adfbf75e39912.mp3",
-    "bytes": 40512
+    "key": "8881be314624d1556319e586195fca59",
+    "filename": "8881be314624d1556319e586195fca59.mp3",
+    "bytes": 47424
   },
   {
     "text": "জ্বর 39.2°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।",
     "tone": "urgent",
-    "key": "a51d3d171b4777b9aa28a81b2de9238e",
-    "filename": "a51d3d171b4777b9aa28a81b2de9238e.mp3",
-    "bytes": 36096
+    "key": "16dbdf78ce3f1614e21576f8bab9d513",
+    "filename": "16dbdf78ce3f1614e21576f8bab9d513.mp3",
+    "bytes": 46656
   },
   {
     "text": "জ্বর 39.5°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।",
     "tone": "urgent",
-    "key": "fbacb58a3947021759c73e940d2e722e",
-    "filename": "fbacb58a3947021759c73e940d2e722e.mp3",
-    "bytes": 35040
+    "key": "ea1c67e6b21de6a2b619fb78df136634",
+    "filename": "ea1c67e6b21de6a2b619fb78df136634.mp3",
+    "bytes": 46464
   },
   {
     "text": "জ্বর 39.8°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।",
     "tone": "urgent",
-    "key": "b32ff3fc3e1ba3116604d799c42c9c79",
-    "filename": "b32ff3fc3e1ba3116604d799c42c9c79.mp3",
-    "bytes": 35808
+    "key": "9626a9e2b4e7846a55b2b899c417dd63",
+    "filename": "9626a9e2b4e7846a55b2b899c417dd63.mp3",
+    "bytes": 46080
   },
   {
     "text": "জ্বর 40.0°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।",
     "tone": "urgent",
-    "key": "888430acf11e90f34a7d6718de669381",
-    "filename": "888430acf11e90f34a7d6718de669381.mp3",
-    "bytes": 35808
+    "key": "393be90f2032f2a89b1b785bec7aae5d",
+    "filename": "393be90f2032f2a89b1b785bec7aae5d.mp3",
+    "bytes": 46464
   },
   {
     "text": "জ্বর 40.5°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।",
     "tone": "urgent",
-    "key": "e39c12c05197cdafea13ae6a5416193e",
-    "filename": "e39c12c05197cdafea13ae6a5416193e.mp3",
-    "bytes": 35808
+    "key": "d62a11d1f2794ab008b769484949843b",
+    "filename": "d62a11d1f2794ab008b769484949843b.mp3",
+    "bytes": 45696
   },
   {
     "text": "জ্বর 41.0°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।",
     "tone": "urgent",
-    "key": "d6bd0063e4adf57f870af259e1bb0eb9",
-    "filename": "d6bd0063e4adf57f870af259e1bb0eb9.mp3",
-    "bytes": 36096
+    "key": "ce44f536d8ed8ebc4da27d77a26ba660",
+    "filename": "ce44f536d8ed8ebc4da27d77a26ba660.mp3",
+    "bytes": 47232
   },
   {
     "text": "শ্বাসের হার 61/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "fac338f62ebd4beee19f730033d148ed",
-    "filename": "fac338f62ebd4beee19f730033d148ed.mp3",
-    "bytes": 37344
+    "key": "93fb16d4892e797b8807b50fb99fa9b2",
+    "filename": "93fb16d4892e797b8807b50fb99fa9b2.mp3",
+    "bytes": 50880
   },
   {
     "text": "শ্বাসের হার 62/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "e87c11d95d720a079807663177227d36",
-    "filename": "e87c11d95d720a079807663177227d36.mp3",
-    "bytes": 41184
+    "key": "160c38ff4a9352e75ab4e304191edf28",
+    "filename": "160c38ff4a9352e75ab4e304191edf28.mp3",
+    "bytes": 50880
   },
   {
     "text": "শ্বাসের হার 63/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "745a155a3e36f3607abdcdfe070926d5",
-    "filename": "745a155a3e36f3607abdcdfe070926d5.mp3",
-    "bytes": 42912
+    "key": "2481b4d7ab67f46c99b47504bdb8ac69",
+    "filename": "2481b4d7ab67f46c99b47504bdb8ac69.mp3",
+    "bytes": 50688
   },
   {
     "text": "শ্বাসের হার 64/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "6d59e1a5f9a0f3853f9a7e061859b730",
-    "filename": "6d59e1a5f9a0f3853f9a7e061859b730.mp3",
-    "bytes": 39456
+    "key": "a3e07bf562b0301a753844afe0dbf299",
+    "filename": "a3e07bf562b0301a753844afe0dbf299.mp3",
+    "bytes": 51648
   },
   {
     "text": "শ্বাসের হার 65/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "e66e09e2f980f1fcc250dab8f0793e34",
-    "filename": "e66e09e2f980f1fcc250dab8f0793e34.mp3",
-    "bytes": 40512
+    "key": "3fcb1c30dbf423f11745c0662dd29289",
+    "filename": "3fcb1c30dbf423f11745c0662dd29289.mp3",
+    "bytes": 51648
   },
   {
     "text": "শ্বাসের হার 66/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "9ce46d948e5239d7742ecc72b6724b50",
-    "filename": "9ce46d948e5239d7742ecc72b6724b50.mp3",
-    "bytes": 36096
+    "key": "f3840d8293c8d8cb7ef70c20c4fa0ce7",
+    "filename": "f3840d8293c8d8cb7ef70c20c4fa0ce7.mp3",
+    "bytes": 51072
   },
   {
     "text": "শ্বাসের হার 67/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "3b3a5f0d6663155a568c8c0c9794f272",
-    "filename": "3b3a5f0d6663155a568c8c0c9794f272.mp3",
-    "bytes": 34656
+    "key": "1b07552776f70fa555d839427b49d3c4",
+    "filename": "1b07552776f70fa555d839427b49d3c4.mp3",
+    "bytes": 51264
   },
   {
     "text": "শ্বাসের হার 68/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "f28cecdfe3ea169acb6b7034aa9a384d",
-    "filename": "f28cecdfe3ea169acb6b7034aa9a384d.mp3",
-    "bytes": 35616
+    "key": "f49a1afccd0316c8aedc357608b3a528",
+    "filename": "f49a1afccd0316c8aedc357608b3a528.mp3",
+    "bytes": 50496
   },
   {
     "text": "শ্বাসের হার 69/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "e3a5590ebcd5ac1a1b77a9b7c52d4753",
-    "filename": "e3a5590ebcd5ac1a1b77a9b7c52d4753.mp3",
-    "bytes": 36096
+    "key": "8e7719aea0ab16aceccf74a5e96f1b60",
+    "filename": "8e7719aea0ab16aceccf74a5e96f1b60.mp3",
+    "bytes": 51840
   },
   {
     "text": "শ্বাসের হার 70/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "d04923142cf32f05c7b62b040902ccb7",
-    "filename": "d04923142cf32f05c7b62b040902ccb7.mp3",
-    "bytes": 34368
+    "key": "aa6ba5993a2889382e78ee319ad283e9",
+    "filename": "aa6ba5993a2889382e78ee319ad283e9.mp3",
+    "bytes": 49536
   },
   {
     "text": "শ্বাসের হার 71/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "62a760533bb177c4adde12fec535175f",
-    "filename": "62a760533bb177c4adde12fec535175f.mp3",
-    "bytes": 36768
+    "key": "cb11969e502fad78ec8f0ce00d2ec067",
+    "filename": "cb11969e502fad78ec8f0ce00d2ec067.mp3",
+    "bytes": 50112
   },
   {
     "text": "শ্বাসের হার 72/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "50281f6bb576a16114cf42f2cb9b3751",
-    "filename": "50281f6bb576a16114cf42f2cb9b3751.mp3",
-    "bytes": 35808
+    "key": "dcc998f0201f1a4b0d8da0c625b82b85",
+    "filename": "dcc998f0201f1a4b0d8da0c625b82b85.mp3",
+    "bytes": 50688
   },
   {
     "text": "শ্বাসের হার 73/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "378eae2d65e23bf598ede6d7e971f6e8",
-    "filename": "378eae2d65e23bf598ede6d7e971f6e8.mp3",
-    "bytes": 37056
+    "key": "2cef4431e749706e4cda75c507e0cd45",
+    "filename": "2cef4431e749706e4cda75c507e0cd45.mp3",
+    "bytes": 50688
   },
   {
     "text": "শ্বাসের হার 74/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "6c155cf278afca02803d1ea81d4df010",
-    "filename": "6c155cf278afca02803d1ea81d4df010.mp3",
-    "bytes": 35136
+    "key": "230434ee91b04c8fcb3c264d83386fe2",
+    "filename": "230434ee91b04c8fcb3c264d83386fe2.mp3",
+    "bytes": 50688
   },
   {
     "text": "শ্বাসের হার 75/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "5e6afcff79ce467467106a7855200d7b",
-    "filename": "5e6afcff79ce467467106a7855200d7b.mp3",
-    "bytes": 35328
+    "key": "7d036c45036d4f581407747a4c16ea5b",
+    "filename": "7d036c45036d4f581407747a4c16ea5b.mp3",
+    "bytes": 51456
   },
   {
     "text": "শ্বাসের হার 76/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "7d345aa7cefb66035e563cb420d48c03",
-    "filename": "7d345aa7cefb66035e563cb420d48c03.mp3",
-    "bytes": 40512
+    "key": "450abc6521e8456243fc65dfb4b09170",
+    "filename": "450abc6521e8456243fc65dfb4b09170.mp3",
+    "bytes": 51072
   },
   {
     "text": "শ্বাসের হার 77/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "ada418c029b14f1bbad2ffe1ed865c9e",
-    "filename": "ada418c029b14f1bbad2ffe1ed865c9e.mp3",
-    "bytes": 41472
+    "key": "c6b059593a73b1c59bfbdce7695c665d",
+    "filename": "c6b059593a73b1c59bfbdce7695c665d.mp3",
+    "bytes": 50880
   },
   {
     "text": "শ্বাসের হার 78/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "2a968846753648e2e40f21bdad93b146",
-    "filename": "2a968846753648e2e40f21bdad93b146.mp3",
-    "bytes": 35616
+    "key": "d78c592d6ed752cbda54c40f059776c9",
+    "filename": "d78c592d6ed752cbda54c40f059776c9.mp3",
+    "bytes": 50688
   },
   {
     "text": "শ্বাসের হার 79/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "532fef22489a844318cf05778c72fccb",
-    "filename": "532fef22489a844318cf05778c72fccb.mp3",
-    "bytes": 36288
+    "key": "e0326301d736d01f582bea27607f86d8",
+    "filename": "e0326301d736d01f582bea27607f86d8.mp3",
+    "bytes": 50688
   },
   {
     "text": "শ্বাসের হার 80/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "9f8f4f40f25ff0179d3257dac9770475",
-    "filename": "9f8f4f40f25ff0179d3257dac9770475.mp3",
-    "bytes": 38304
+    "key": "fd8a07989aaf5855e6564a5038ff2b71",
+    "filename": "fd8a07989aaf5855e6564a5038ff2b71.mp3",
+    "bytes": 48768
   },
   {
     "text": "SpO2 70% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "f0ed4a021e25ef00cb37640089953d2e",
-    "filename": "f0ed4a021e25ef00cb37640089953d2e.mp3",
-    "bytes": 33120
+    "key": "a682d91199c70ff6363af43038c36e16",
+    "filename": "a682d91199c70ff6363af43038c36e16.mp3",
+    "bytes": 44736
   },
   {
     "text": "SpO2 71% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "802a365461f8e9b82c409358d737758d",
-    "filename": "802a365461f8e9b82c409358d737758d.mp3",
-    "bytes": 34176
+    "key": "6e43a9c90e936ee8d102b31702e39dce",
+    "filename": "6e43a9c90e936ee8d102b31702e39dce.mp3",
+    "bytes": 45312
   },
   {
     "text": "SpO2 72% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "12adc0a9b0bb95bb5ca716e87e592f24",
-    "filename": "12adc0a9b0bb95bb5ca716e87e592f24.mp3",
-    "bytes": 32640
+    "key": "10d44e98437e90a300762da0060a456e",
+    "filename": "10d44e98437e90a300762da0060a456e.mp3",
+    "bytes": 45888
   },
   {
     "text": "SpO2 73% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "99aa4eb8e8789ba521f89da33cce6fcd",
-    "filename": "99aa4eb8e8789ba521f89da33cce6fcd.mp3",
-    "bytes": 34368
+    "key": "0c79a5992bfc4e74bff70ed9021f1e60",
+    "filename": "0c79a5992bfc4e74bff70ed9021f1e60.mp3",
+    "bytes": 45312
   },
   {
     "text": "SpO2 74% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "5cadd4a87d29d2f702e6513cb84c98a7",
-    "filename": "5cadd4a87d29d2f702e6513cb84c98a7.mp3",
-    "bytes": 34656
+    "key": "74c6eefc730a8c06e56d038ef9ffd691",
+    "filename": "74c6eefc730a8c06e56d038ef9ffd691.mp3",
+    "bytes": 45312
   },
   {
     "text": "SpO2 75% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "efd20ee85dd30d5fa264d5d44b0f7d9d",
-    "filename": "efd20ee85dd30d5fa264d5d44b0f7d9d.mp3",
-    "bytes": 33600
+    "key": "cdb034bf9cc4a1905fe0b43728b2d5ff",
+    "filename": "cdb034bf9cc4a1905fe0b43728b2d5ff.mp3",
+    "bytes": 45696
   },
   {
     "text": "SpO2 76% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "d8faa0e3900bd3ba3ef6e1c733b2b06a",
-    "filename": "d8faa0e3900bd3ba3ef6e1c733b2b06a.mp3",
-    "bytes": 32160
+    "key": "155717e4ad581b46209227e9c87c587a",
+    "filename": "155717e4ad581b46209227e9c87c587a.mp3",
+    "bytes": 45504
   },
   {
     "text": "SpO2 77% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "e09d5e7d36a43d12125bfd6fbee9f0d5",
-    "filename": "e09d5e7d36a43d12125bfd6fbee9f0d5.mp3",
-    "bytes": 38976
+    "key": "74c89bcedefa6aa7b47965637a9e0fae",
+    "filename": "74c89bcedefa6aa7b47965637a9e0fae.mp3",
+    "bytes": 45696
   },
   {
     "text": "SpO2 78% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "e3814f529b6459bacd4ba9af6f46db64",
-    "filename": "e3814f529b6459bacd4ba9af6f46db64.mp3",
-    "bytes": 35616
+    "key": "0fa11b5a166e67dbdbe116605d0a19ca",
+    "filename": "0fa11b5a166e67dbdbe116605d0a19ca.mp3",
+    "bytes": 45504
   },
   {
     "text": "SpO2 79% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "bfbe3b810790ffdd8cf13100fd984f09",
-    "filename": "bfbe3b810790ffdd8cf13100fd984f09.mp3",
-    "bytes": 34656
+    "key": "bb39ac8c90d3ea75f3f45d18daeae180",
+    "filename": "bb39ac8c90d3ea75f3f45d18daeae180.mp3",
+    "bytes": 44928
   },
   {
     "text": "SpO2 80% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "968a490c113d599149519ce76040186d",
-    "filename": "968a490c113d599149519ce76040186d.mp3",
-    "bytes": 32160
+    "key": "707855e1a969d646782f3e5f51dc7d58",
+    "filename": "707855e1a969d646782f3e5f51dc7d58.mp3",
+    "bytes": 43968
   },
   {
     "text": "SpO2 81% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "d380df5869e6f45258f91f03608f0c96",
-    "filename": "d380df5869e6f45258f91f03608f0c96.mp3",
-    "bytes": 40512
+    "key": "df2502464c4282bdc2f906ec2085d5d1",
+    "filename": "df2502464c4282bdc2f906ec2085d5d1.mp3",
+    "bytes": 44736
   },
   {
     "text": "SpO2 82% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "0551ad03f3007aa83f5c43541caf5bb6",
-    "filename": "0551ad03f3007aa83f5c43541caf5bb6.mp3",
-    "bytes": 32928
+    "key": "d73f2c31e0c1c1c47bb91a3cb729c1aa",
+    "filename": "d73f2c31e0c1c1c47bb91a3cb729c1aa.mp3",
+    "bytes": 44928
   },
   {
     "text": "SpO2 83% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "df963565a094dc839d00cb91860a663b",
-    "filename": "df963565a094dc839d00cb91860a663b.mp3",
-    "bytes": 37344
+    "key": "1c474e0183df1327cffce67f4b246854",
+    "filename": "1c474e0183df1327cffce67f4b246854.mp3",
+    "bytes": 44736
   },
   {
     "text": "SpO2 84% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "e4b82d5307dafb82eb371c2eea4a2cf9",
-    "filename": "e4b82d5307dafb82eb371c2eea4a2cf9.mp3",
-    "bytes": 33408
+    "key": "251ab1a0c48db915b3f322e3ce991d93",
+    "filename": "251ab1a0c48db915b3f322e3ce991d93.mp3",
+    "bytes": 44928
   },
   {
     "text": "SpO2 85% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "f7d9a4117435258d8e628f02769116f7",
-    "filename": "f7d9a4117435258d8e628f02769116f7.mp3",
-    "bytes": 37056
+    "key": "177b586e42d933cccacff315f8d9f745",
+    "filename": "177b586e42d933cccacff315f8d9f745.mp3",
+    "bytes": 45120
   },
   {
     "text": "SpO2 86% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "9af3229bc02792219a5cb709174b9201",
-    "filename": "9af3229bc02792219a5cb709174b9201.mp3",
-    "bytes": 38304
+    "key": "cd84767a8b21dfb56fd1b47ba3bf7b16",
+    "filename": "cd84767a8b21dfb56fd1b47ba3bf7b16.mp3",
+    "bytes": 45120
   },
   {
     "text": "SpO2 87% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "ad23b46bf1db171d31774011cf7c923a",
-    "filename": "ad23b46bf1db171d31774011cf7c923a.mp3",
-    "bytes": 39744
+    "key": "117bf3be4fbdebc118bd6ad83e65df5b",
+    "filename": "117bf3be4fbdebc118bd6ad83e65df5b.mp3",
+    "bytes": 45120
   },
   {
     "text": "SpO2 88% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "ac47383921efa5d8c836938d303db2e7",
-    "filename": "ac47383921efa5d8c836938d303db2e7.mp3",
-    "bytes": 35328
+    "key": "3c28406ecf5e2764fc2165ac7dc26364",
+    "filename": "3c28406ecf5e2764fc2165ac7dc26364.mp3",
+    "bytes": 45504
   },
   {
     "text": "SpO2 89% — গুরুতর হাইপক্সিয়া! এখনই ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "f09a450b8bf7013d646c2feabb4a3de7",
-    "filename": "f09a450b8bf7013d646c2feabb4a3de7.mp3",
-    "bytes": 34656
+    "key": "6bf657f2be7a7bc5eae92949fffccc13",
+    "filename": "6bf657f2be7a7bc5eae92949fffccc13.mp3",
+    "bytes": 46080
   },
   {
     "text": "SpO2 90% — কম অক্সিজেন। FRU-তে রেফার করুন।",
     "tone": "urgent",
-    "key": "6611eb44a3cb4051e61869cddd20fd26",
-    "filename": "6611eb44a3cb4051e61869cddd20fd26.mp3",
-    "bytes": 32736
+    "key": "0808e3d57389dfc4bf80c920cb91015c",
+    "filename": "0808e3d57389dfc4bf80c920cb91015c.mp3",
+    "bytes": 41280
   },
   {
     "text": "SpO2 91% — কম অক্সিজেন। FRU-তে রেফার করুন।",
     "tone": "urgent",
-    "key": "86e0200e4ee9f44d986f1d4e8f541c22",
-    "filename": "86e0200e4ee9f44d986f1d4e8f541c22.mp3",
-    "bytes": 38976
+    "key": "ba2bbefb2086d56c5fb5f71a7e22c054",
+    "filename": "ba2bbefb2086d56c5fb5f71a7e22c054.mp3",
+    "bytes": 42624
   },
   {
     "text": "SpO2 92% — কম অক্সিজেন। FRU-তে রেফার করুন।",
     "tone": "urgent",
-    "key": "a84ea46032ba2bdf214b1a545541e3af",
-    "filename": "a84ea46032ba2bdf214b1a545541e3af.mp3",
-    "bytes": 34752
+    "key": "cf1dda6f511321a56d2b41d447085af0",
+    "filename": "cf1dda6f511321a56d2b41d447085af0.mp3",
+    "bytes": 42624
   },
   {
     "text": "SpO2 93% — কম অক্সিজেন। FRU-তে রেফার করুন।",
     "tone": "urgent",
-    "key": "9d554f9387f2d666c9e25fd0c8307162",
-    "filename": "9d554f9387f2d666c9e25fd0c8307162.mp3",
-    "bytes": 33504
+    "key": "a7bbd7c78709d9f53590554447c17829",
+    "filename": "a7bbd7c78709d9f53590554447c17829.mp3",
+    "bytes": 42624
   },
   {
     "text": "MUAC 9.0 cm — SAM (গুরুতর অপুষ্টি)! NRC-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "9e8f05b98dfa983a42ac12e9e0d0bd29",
-    "filename": "9e8f05b98dfa983a42ac12e9e0d0bd29.mp3",
-    "bytes": 39456
+    "key": "1a86a5869ef433395f011d9d61c4663d",
+    "filename": "1a86a5869ef433395f011d9d61c4663d.mp3",
+    "bytes": 54144
   },
   {
     "text": "MUAC 9.5 cm — SAM (গুরুতর অপুষ্টি)! NRC-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "8c40c6a2efaf155009720f325ee25d57",
-    "filename": "8c40c6a2efaf155009720f325ee25d57.mp3",
-    "bytes": 42624
+    "key": "93963564cab170291ef10d0b9458f158",
+    "filename": "93963564cab170291ef10d0b9458f158.mp3",
+    "bytes": 53184
   },
   {
     "text": "MUAC 10.0 cm — SAM (গুরুতর অপুষ্টি)! NRC-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "eaf77b719f4b69228a995dccb3035286",
-    "filename": "eaf77b719f4b69228a995dccb3035286.mp3",
-    "bytes": 38784
+    "key": "4332520c67d4427a5204c31abd43a12f",
+    "filename": "4332520c67d4427a5204c31abd43a12f.mp3",
+    "bytes": 54144
   },
   {
     "text": "MUAC 10.5 cm — SAM (গুরুতর অপুষ্টি)! NRC-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "c5beccd1c0ff21a1285b66f160b7fc9e",
-    "filename": "c5beccd1c0ff21a1285b66f160b7fc9e.mp3",
-    "bytes": 38304
+    "key": "3a0b567f91d7abfb84ab92755ccc423f",
+    "filename": "3a0b567f91d7abfb84ab92755ccc423f.mp3",
+    "bytes": 53376
   },
   {
     "text": "MUAC 11.0 cm — SAM (গুরুতর অপুষ্টি)! NRC-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "2f527339929cb5ebf162f612cbf183a3",
-    "filename": "2f527339929cb5ebf162f612cbf183a3.mp3",
-    "bytes": 42624
+    "key": "20cdce0130e54d8d58f9d0f510494d0b",
+    "filename": "20cdce0130e54d8d58f9d0f510494d0b.mp3",
+    "bytes": 54720
   },
   {
     "text": "MUAC 11.4 cm — SAM (গুরুতর অপুষ্টি)! NRC-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "8eaff87f9ae4709586d97e6554185304",
-    "filename": "8eaff87f9ae4709586d97e6554185304.mp3",
-    "bytes": 40032
+    "key": "6a9706197e6ce20a28994039eeb2f465",
+    "filename": "6a9706197e6ce20a28994039eeb2f465.mp3",
+    "bytes": 54528
   },
   {
     "text": "ওজন 0.9 kg — LBW (কম ওজন)। SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "c8fd0178f2743b6abf64a37b281461fd",
-    "filename": "c8fd0178f2743b6abf64a37b281461fd.mp3",
-    "bytes": 39264
+    "key": "b1f11b9031831919bad43c18eda30a9a",
+    "filename": "b1f11b9031831919bad43c18eda30a9a.mp3",
+    "bytes": 51840
   },
   {
     "text": "ওজন 1.0 kg — LBW (কম ওজন)। SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "4b7b5999d2ec866bc93d8b20b61ae4c1",
-    "filename": "4b7b5999d2ec866bc93d8b20b61ae4c1.mp3",
-    "bytes": 38496
+    "key": "679ea7d1b94e92aa0c994aec8d694310",
+    "filename": "679ea7d1b94e92aa0c994aec8d694310.mp3",
+    "bytes": 51072
   },
   {
     "text": "ওজন 1.1 kg — LBW (কম ওজন)। SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "0eeb0d29cba1362f6b213f818733ead4",
-    "filename": "0eeb0d29cba1362f6b213f818733ead4.mp3",
-    "bytes": 37824
+    "key": "84c3a406760976ff8f91bc3fe1415aaf",
+    "filename": "84c3a406760976ff8f91bc3fe1415aaf.mp3",
+    "bytes": 49728
   },
   {
     "text": "ওজন 1.2 kg — LBW (কম ওজন)। SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "8e7d10b826710651fdabc80930193621",
-    "filename": "8e7d10b826710651fdabc80930193621.mp3",
-    "bytes": 35808
+    "key": "413f15f155ca5c9ce8367e8fa8e635c3",
+    "filename": "413f15f155ca5c9ce8367e8fa8e635c3.mp3",
+    "bytes": 50496
   },
   {
     "text": "ওজন 1.3 kg — LBW (কম ওজন)। SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "adbe1953170b8400b7fb803c8f4dc332",
-    "filename": "adbe1953170b8400b7fb803c8f4dc332.mp3",
-    "bytes": 35616
+    "key": "ec30f0c9d61e1ae80be14c9c290cb424",
+    "filename": "ec30f0c9d61e1ae80be14c9c290cb424.mp3",
+    "bytes": 50112
   },
   {
     "text": "ওজন 1.4 kg — LBW (কম ওজন)। SNCU-তে রেফার করুন।",
     "tone": "emergency",
-    "key": "0c3d640901bb5ec258202bc01ccc3b39",
-    "filename": "0c3d640901bb5ec258202bc01ccc3b39.mp3",
-    "bytes": 37536
+    "key": "bf22a7c1b3f84c4792ba788bdfb6992c",
+    "filename": "bf22a7c1b3f84c4792ba788bdfb6992c.mp3",
+    "bytes": 50496
   },
   {
     "text": "BP 140.0/90 — প্রি-এক্লাম্পসিয়া! বাম কাতে শোয়ান, ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "1d085b66c7a298e8825190d82214a074",
-    "filename": "1d085b66c7a298e8825190d82214a074.mp3",
-    "bytes": 44352
+    "key": "d18176602e538542202ef30c20045ce2",
+    "filename": "d18176602e538542202ef30c20045ce2.mp3",
+    "bytes": 56064
   },
   {
     "text": "BP 140.0/95 — প্রি-এক্লাম্পসিয়া! বাম কাতে শোয়ান, ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "07f55d77ed97aa6b3ac8cba090c8673f",
-    "filename": "07f55d77ed97aa6b3ac8cba090c8673f.mp3",
-    "bytes": 42912
+    "key": "5c9a3894b7eb8f96479fdc3d19cd44a4",
+    "filename": "5c9a3894b7eb8f96479fdc3d19cd44a4.mp3",
+    "bytes": 57984
   },
   {
     "text": "BP 145.0/95 — প্রি-এক্লাম্পসিয়া! বাম কাতে শোয়ান, ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "59db8ecbac60a2a950a8159a83aa15c8",
-    "filename": "59db8ecbac60a2a950a8159a83aa15c8.mp3",
-    "bytes": 44160
+    "key": "b812763dd82ec6a44d0b614905c485b8",
+    "filename": "b812763dd82ec6a44d0b614905c485b8.mp3",
+    "bytes": 58944
   },
   {
     "text": "BP 150.0/95 — প্রি-এক্লাম্পসিয়া! বাম কাতে শোয়ান, ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "9760a0f04d39a70e06006410e96f1710",
-    "filename": "9760a0f04d39a70e06006410e96f1710.mp3",
-    "bytes": 50208
+    "key": "52bfb3613efb6bf7ea31e6b8fb6a6b5c",
+    "filename": "52bfb3613efb6bf7ea31e6b8fb6a6b5c.mp3",
+    "bytes": 58176
   },
   {
     "text": "BP 150.0/100 — প্রি-এক্লাম্পসিয়া! বাম কাতে শোয়ান, ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "236c773605956aa1007c06f7bdf1771c",
-    "filename": "236c773605956aa1007c06f7bdf1771c.mp3",
-    "bytes": 43200
+    "key": "72567f906d78b99405632dde0a2d0a3c",
+    "filename": "72567f906d78b99405632dde0a2d0a3c.mp3",
+    "bytes": 55104
   },
   {
     "text": "BP 155.0/100 — প্রি-এক্লাম্পসিয়া! বাম কাতে শোয়ান, ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "c9b8bb81c41b9ec0a1495da72d4a17f6",
-    "filename": "c9b8bb81c41b9ec0a1495da72d4a17f6.mp3",
-    "bytes": 43680
+    "key": "ff421a9fb80482e5ea47b6fae57953cf",
+    "filename": "ff421a9fb80482e5ea47b6fae57953cf.mp3",
+    "bytes": 56064
   },
   {
     "text": "BP 160.0/100 — প্রি-এক্লাম্পসিয়া! বাম কাতে শোয়ান, ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "98a4942bd42db22639d8530fb35a7861",
-    "filename": "98a4942bd42db22639d8530fb35a7861.mp3",
-    "bytes": 48480
+    "key": "1bcf19381c01ace7977661df6c9f2cef",
+    "filename": "1bcf19381c01ace7977661df6c9f2cef.mp3",
+    "bytes": 54336
   },
   {
     "text": "BP 160.0/110 — প্রি-এক্লাম্পসিয়া! বাম কাতে শোয়ান, ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "c2f0a844caf9cbac7072f1c6ab17ab2c",
-    "filename": "c2f0a844caf9cbac7072f1c6ab17ab2c.mp3",
-    "bytes": 47328
+    "key": "5210b43cdd547078e8be0086e64836f6",
+    "filename": "5210b43cdd547078e8be0086e64836f6.mp3",
+    "bytes": 56448
   },
   {
     "text": "BP 170.0/110 — প্রি-এক্লাম্পসিয়া! বাম কাতে শোয়ান, ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "62310f40d1bc4dbcb2b3b126ab7aaa7c",
-    "filename": "62310f40d1bc4dbcb2b3b126ab7aaa7c.mp3",
-    "bytes": 52224
+    "key": "b2c458b4b4fdbdaab9e2db9a11fb6e23",
+    "filename": "b2c458b4b4fdbdaab9e2db9a11fb6e23.mp3",
+    "bytes": 57408
   },
   {
     "text": "BP 180.0/120 — প্রি-এক্লাম্পসিয়া! বাম কাতে শোয়ান, ১০৮ কল করুন।",
     "tone": "emergency",
-    "key": "6a35e76a09cbebab186a6c26aaefd63a",
-    "filename": "6a35e76a09cbebab186a6c26aaefd63a.mp3",
-    "bytes": 44160
+    "key": "e3a9ee7fa8f7b89814185b76cc76b7b9",
+    "filename": "e3a9ee7fa8f7b89814185b76cc76b7b9.mp3",
+    "bytes": 56256
   },
   {
     "text": "Home care. Routine follow-up per module schedule. Counsel on warning signs. Record visit on ANMOL.",
     "tone": "question",
-    "key": "b381fda4cc7f24c3913deb0299baeb59",
-    "filename": "b381fda4cc7f24c3913deb0299baeb59.mp3",
-    "bytes": 37632
+    "key": "7d7a933c91ca93ad8b8ebd6b9a63f92a",
+    "filename": "7d7a933c91ca93ad8b8ebd6b9a63f92a.mp3",
+    "bytes": 62208
   },
   {
     "text": "Refer to PHC within 24 h. Follow up in 2 days. Counsel on escalation signs. Record on ANMOL.",
     "tone": "question",
-    "key": "4c54a4883b569d43f7e55d4c8f14872a",
-    "filename": "4c54a4883b569d43f7e55d4c8f14872a.mp3",
-    "bytes": 37920
+    "key": "77ec2ddcf63499d30e7e23068b8a372e",
+    "filename": "77ec2ddcf63499d30e7e23068b8a372e.mp3",
+    "bytes": 72960
   },
   {
     "text": "Refer FRU/SNCU/DH immediately (≤ 30–60 min). Call 108. Bengali action card displayed. Decision trace locked and stored. MDSR hook triggered if applicable.",
     "tone": "question",
-    "key": "8c03b8fb58e3dbf569b60adfa5e2100d",
-    "filename": "8c03b8fb58e3dbf569b60adfa5e2100d.mp3",
-    "bytes": 62976
+    "key": "c6a84f16225cdca30a85974c4bd7bff1",
+    "filename": "c6a84f16225cdca30a85974c4bd7bff1.mp3",
+    "bytes": 118080
   },
   {
     "text": "শিশু বুকের দুধ খেতে পারছে না?",
     "tone": "question",
-    "key": "25166b728813c326cd93beee5582cbf7",
-    "filename": "25166b728813c326cd93beee5582cbf7.mp3",
-    "bytes": 11136
+    "key": "e0ed5ec512fab1bff7e62169e31b0b8e",
+    "filename": "e0ed5ec512fab1bff7e62169e31b0b8e.mp3",
+    "bytes": 21120
   },
   {
     "text": "PSBI hard-stop. Refer to SNCU/FRU immediately (≤ 30 min). Do not delay for any reason.",
     "tone": "question",
-    "key": "5123f0864b80017982e6681e493d39d9",
-    "filename": "5123f0864b80017982e6681e493d39d9.mp3",
-    "bytes": 36192
+    "key": "7c8e1fe2898b6f422b89b72bcce82916",
+    "filename": "7c8e1fe2898b6f422b89b72bcce82916.mp3",
+    "bytes": 72576
   },
   {
     "text": "শিশুর শরীরে জ্বর আছে?",
     "tone": "question",
-    "key": "6fbd3f7e4e74fa30b658e0ac33d808e6",
-    "filename": "6fbd3f7e4e74fa30b658e0ac33d808e6.mp3",
-    "bytes": 10368
+    "key": "317cd0817cfe548df0326ae6483b3083",
+    "filename": "317cd0817cfe548df0326ae6483b3083.mp3",
+    "bytes": 18624
   },
   {
     "text": "PSBI hard-stop. Refer to SNCU/FRU immediately. Any fever in a newborn is a danger sign.",
     "tone": "question",
-    "key": "6d85c7021fcc51cf5540b61ee7dcf32c",
-    "filename": "6d85c7021fcc51cf5540b61ee7dcf32c.mp3",
-    "bytes": 34464
+    "key": "22747a0cd6a9b69be5a58366384c1b69",
+    "filename": "22747a0cd6a9b69be5a58366384c1b69.mp3",
+    "bytes": 57216
   },
   {
     "text": "শ্বাস-প্রশ্বাস দ্রুত বা কষ্টকর?",
     "tone": "question",
-    "key": "e4c61023f4ca7cdd95a2143f47cd00b6",
-    "filename": "e4c61023f4ca7cdd95a2143f47cd00b6.mp3",
-    "bytes": 12864
+    "key": "6813ac2eacf12cb0a96106dec41d7f4f",
+    "filename": "6813ac2eacf12cb0a96106dec41d7f4f.mp3",
+    "bytes": 23232
   },
   {
     "text": "PSBI hard-stop. Refer to SNCU/FRU immediately. Count RR — if ≥ 60/min = severe.",
     "tone": "question",
-    "key": "d52ef26f39d4d5353bde05dbaaa0ef38",
-    "filename": "d52ef26f39d4d5353bde05dbaaa0ef38.mp3",
-    "bytes": 73344
+    "key": "e8f4b43fbbceb2f40ec7d3a4009bcee7",
+    "filename": "e8f4b43fbbceb2f40ec7d3a4009bcee7.mp3",
+    "bytes": 79872
   },
   {
     "text": "নাভি লাল, ফোলা বা পুঁজ আছে?",
     "tone": "question",
-    "key": "7c1e51baa030149a8ffbab913fa1469f",
-    "filename": "7c1e51baa030149a8ffbab913fa1469f.mp3",
-    "bytes": 16320
+    "key": "03c8ec1d38eeb9d4a9f1bb084f4b31bb",
+    "filename": "03c8ec1d38eeb9d4a9f1bb084f4b31bb.mp3",
+    "bytes": 23424
   },
   {
     "text": "Refer to FRU/DH immediately. Omphalitis can progress to sepsis within hours.",
     "tone": "question",
-    "key": "48a1ff80688e308827c7c40ac092fa4f",
-    "filename": "48a1ff80688e308827c7c40ac092fa4f.mp3",
-    "bytes": 23808
+    "key": "ded75d4391669bdf40e144b916cbf6e4",
+    "filename": "ded75d4391669bdf40e144b916cbf6e4.mp3",
+    "bytes": 42240
   },
   {
     "text": "শিশু অনেক কম নড়ছে বা নিস্তেজ?",
     "tone": "question",
-    "key": "f70ba52272d026cdf31f9f5ed398e698",
-    "filename": "f70ba52272d026cdf31f9f5ed398e698.mp3",
-    "bytes": 13344
+    "key": "04a565aad1201a069ab1f585286c341f",
+    "filename": "04a565aad1201a069ab1f585286c341f.mp3",
+    "bytes": 23616
   },
   {
     "text": "PSBI hard-stop. Refer to SNCU/FRU immediately. Lethargy = severe systemic illness.",
     "tone": "question",
-    "key": "0310356d95bd52bfff600c92830eaabc",
-    "filename": "0310356d95bd52bfff600c92830eaabc.mp3",
-    "bytes": 27264
+    "key": "b9a284444e6296dec5832a0300c86743",
+    "filename": "b9a284444e6296dec5832a0300c86743.mp3",
+    "bytes": 57408
   },
   {
     "text": "ত্বক হলুদ বা নীলাভ দেখাচ্ছে?",
     "tone": "question",
-    "key": "5ac25ce45230fc7c00de76c340d95dcb",
-    "filename": "5ac25ce45230fc7c00de76c340d95dcb.mp3",
-    "bytes": 12864
+    "key": "23d91a4a3213b5622a2fcb0414b57722",
+    "filename": "23d91a4a3213b5622a2fcb0414b57722.mp3",
+    "bytes": 21504
   },
   {
     "text": "Cyanosis or jaundice within 24 h = refer SNCU immediately. Jaundice day 2–14 without palm/sole involvement = refer PHC within 24 h for bilirubin check.",
     "tone": "question",
-    "key": "c47671ed25ef409864b02d275550b689",
-    "filename": "c47671ed25ef409864b02d275550b689.mp3",
-    "bytes": 58464
+    "key": "70d6fd8a5d5cab98c974f4982f2beefc",
+    "filename": "70d6fd8a5d5cab98c974f4982f2beefc.mp3",
+    "bytes": 116736
   },
   {
     "text": "সব প্রশ্নের উত্তর না — কোনো বিপদচিহ্ন নেই?",
     "tone": "question",
-    "key": "7ffebc618b452badf2f6e2de4e6f9822",
-    "filename": "7ffebc618b452badf2f6e2de4e6f9822.mp3",
-    "bytes": 25248
+    "key": "094adff23cdbd8c64b59d286eca81680",
+    "filename": "094adff23cdbd8c64b59d286eca81680.mp3",
+    "bytes": 30912
   },
   {
     "text": "HBNC home visit schedule: day 1, 3, 7, 14, 28. Counsel on exclusive breastfeeding, warmth, cord care, danger sign recognition.",
     "tone": "question",
-    "key": "3f1d8a6e3d5cb11355d5f6320ef7054d",
-    "filename": "3f1d8a6e3d5cb11355d5f6320ef7054d.mp3",
-    "bytes": 65184
+    "key": "0c48a255d41f5012f5249300a990bc40",
+    "filename": "0c48a255d41f5012f5249300a990bc40.mp3",
+    "bytes": 104640
   },
   {
     "text": "পাঁচ দিনের বেশি জ্বর চলছে?",
     "tone": "question",
-    "key": "b6710bc3615b55462e519934cdf665ab",
-    "filename": "b6710bc3615b55462e519934cdf665ab.mp3",
-    "bytes": 11616
+    "key": "fac9552325c385566fc8808807d91fb0",
+    "filename": "fac9552325c385566fc8808807d91fb0.mp3",
+    "bytes": 19584
   },
   {
     "text": "Refer to PHC/DH same day. Rule out malaria, typhoid, dengue. Do not give antipyretics and send home.",
     "tone": "question",
-    "key": "82ee1a019acb374ee789ceab2bb83ae8",
-    "filename": "82ee1a019acb374ee789ceab2bb83ae8.mp3",
-    "bytes": 43872
+    "key": "bce14220f8fe0778ab355f1e359e0bfd",
+    "filename": "bce14220f8fe0778ab355f1e359e0bfd.mp3",
+    "bytes": 63360
   },
   {
     "text": "কাশি বা শ্বাসকষ্ট আছে?",
     "tone": "question",
-    "key": "91236c0caa0d366405d7b61ee0e60910",
-    "filename": "91236c0caa0d366405d7b61ee0e60910.mp3",
-    "bytes": 11616
+    "key": "18215733cc41dd7a72bd2484f5753472",
+    "filename": "18215733cc41dd7a72bd2484f5753472.mp3",
+    "bytes": 19200
   },
   {
     "text": "Count respiratory rate. RR ≥ 50 (2–12 m) or ≥ 40 (1–5 y) = pneumonia → PHC within 24 h. Chest indrawing or stridor = severe pneumonia → RED, refer FRU immediately.",
     "tone": "question",
-    "key": "4831cc5ced98262f8f772207594617da",
-    "filename": "4831cc5ced98262f8f772207594617da.mp3",
-    "bytes": 126720
+    "key": "5851c030135ee28fe42dafb6849d14bf",
+    "filename": "5851c030135ee28fe42dafb6849d14bf.mp3",
+    "bytes": 190848
   },
   {
     "text": "ডায়রিয়া বা বারবার বমি হচ্ছে?",
     "tone": "question",
-    "key": "9a28f9a481e33d261837737409b86bc6",
-    "filename": "9a28f9a481e33d261837737409b86bc6.mp3",
-    "bytes": 12864
+    "key": "ce5c724924556b72d7a7d3e8b3e2b2b3",
+    "filename": "ce5c724924556b72d7a7d3e8b3e2b2b3.mp3",
+    "bytes": 21696
   },
   {
     "text": "Assess dehydration. No dehydration = GREEN (ORS at home). Some dehydration = YELLOW (ORS at PHC). Severe dehydration (sunken eyes, skin pinch slow, unable to drink) = RED, IV fluids at FRU.",
     "tone": "question",
-    "key": "860f5c6819418cffa5e0bda380c90e48",
-    "filename": "860f5c6819418cffa5e0bda380c90e48.mp3",
-    "bytes": 106560
+    "key": "3107a611fd0580197c8ec065ee8d96ee",
+    "filename": "3107a611fd0580197c8ec065ee8d96ee.mp3",
+    "bytes": 154560
   },
   {
     "text": "শিশু খেতে একদম অস্বীকার করছে?",
     "tone": "question",
-    "key": "c6e7b111e951243d38677966bfa17098",
-    "filename": "c6e7b111e951243d38677966bfa17098.mp3",
-    "bytes": 12384
+    "key": "733b952514e12d4e4234879423bd06ac",
+    "filename": "733b952514e12d4e4234879423bd06ac.mp3",
+    "bytes": 22656
   },
   {
     "text": "Assess for illness cause. If associated with fever/diarrhoea = escalate to relevant rule. Isolated feeding refusal > 2 days = PHC referral within 24 h.",
     "tone": "question",
-    "key": "b4830736a1d78bedca7178b3d573f0ab",
-    "filename": "b4830736a1d78bedca7178b3d573f0ab.mp3",
-    "bytes": 59520
+    "key": "fdd8f935852f11b57b11ec64f141f48d",
+    "filename": "fdd8f935852f11b57b11ec64f141f48d.mp3",
+    "bytes": 111168
   },
   {
     "text": "পানিশূন্যতার লক্ষণ (চোখ গর্তে, ঠোঁট শুকনো)?",
     "tone": "question",
-    "key": "83677aa6de4dc5bb24ae4ff779c08a74",
-    "filename": "83677aa6de4dc5bb24ae4ff779c08a74.mp3",
-    "bytes": 22560
+    "key": "a0788f58ebbcff18948b8d586e80f2f7",
+    "filename": "a0788f58ebbcff18948b8d586e80f2f7.mp3",
+    "bytes": 34560
   },
   {
     "text": "Severe dehydration = RED. Start ORS immediately. Refer to FRU for IV fluids. Do not delay referral.",
     "tone": "question",
-    "key": "129e113ea1bd872573b2f1271fcbe596",
-    "filename": "129e113ea1bd872573b2f1271fcbe596.mp3",
-    "bytes": 39168
+    "key": "6b3f942e800d43ac6e300e828c10a49a",
+    "filename": "6b3f942e800d43ac6e300e828c10a49a.mp3",
+    "bytes": 75264
   },
   {
     "text": "ওজন বয়সের তুলনায় অনেক কম?",
     "tone": "question",
-    "key": "adb24fa4d629d20b4eb6cc16366caee4",
-    "filename": "adb24fa4d629d20b4eb6cc16366caee4.mp3",
-    "bytes": 11904
+    "key": "b72350b488ce29adb6e21e2a6ff71927",
+    "filename": "b72350b488ce29adb6e21e2a6ff71927.mp3",
+    "bytes": 20736
   },
   {
     "text": "Measure MUAC. MUAC < 11.5 cm or oedema = SAM → RED, refer NRC. MUAC 11.5–12.5 cm = MAM → YELLOW, refer ICDS/NRC for RUTF. MUAC > 12.5 cm = GREEN, counsel on feeding.",
     "tone": "question",
-    "key": "fc747dd7763509bc26df44afb67f49b8",
-    "filename": "fc747dd7763509bc26df44afb67f49b8.mp3",
-    "bytes": 191136
+    "key": "c205ec106b1fb3f1faf0471d5b519254",
+    "filename": "c205ec106b1fb3f1faf0471d5b519254.mp3",
+    "bytes": 212928
   },
   {
     "text": "শিশু খাওয়া-দাওয়া একদম বন্ধ করে দিয়েছে?",
     "tone": "question",
-    "key": "c87efad36744ca8b6c2430efd470bcad",
-    "filename": "c87efad36744ca8b6c2430efd470bcad.mp3",
-    "bytes": 13824
+    "key": "8e79cc3ac6d598398acb33eda31748e4",
+    "filename": "8e79cc3ac6d598398acb33eda31748e4.mp3",
+    "bytes": 26304
   },
   {
     "text": "Any feeding refusal in infant < 2 months = RED hard-stop. Refer FRU immediately.",
     "tone": "question",
-    "key": "7c2b940127288b30c0eb1a5fbfc2a6bd",
-    "filename": "7c2b940127288b30c0eb1a5fbfc2a6bd.mp3",
-    "bytes": 33408
+    "key": "0a1e71557c34ea88af8e2cec50c907b6",
+    "filename": "0a1e71557c34ea88af8e2cec50c907b6.mp3",
+    "bytes": 60672
   },
   {
     "text": "তিন দিনের বেশি জ্বর চলছে?",
     "tone": "question",
-    "key": "7257659d731ea2e75aa322b8a80c86e9",
-    "filename": "7257659d731ea2e75aa322b8a80c86e9.mp3",
-    "bytes": 11328
+    "key": "fa310dccd5cee68bd45dd867aa742cc8",
+    "filename": "fa310dccd5cee68bd45dd867aa742cc8.mp3",
+    "bytes": 19392
   },
   {
     "text": "Refer to PHC/FRU same day. Infants < 3 months with any fever = RED hard-stop.",
     "tone": "question",
-    "key": "670072a48148b1526097b90c62902c63",
-    "filename": "670072a48148b1526097b90c62902c63.mp3",
-    "bytes": 28032
+    "key": "2b6acb84c8117e900ba53b3794ffc2d7",
+    "filename": "2b6acb84c8117e900ba53b3794ffc2d7.mp3",
+    "bytes": 53568
   },
   {
     "text": "Assess dehydration. Some dehydration = YELLOW, PHC within 24 h. Severe dehydration = RED, FRU for IV fluids.",
     "tone": "question",
-    "key": "d2e02738a91f778adc798ed183e8f7bd",
-    "filename": "d2e02738a91f778adc798ed183e8f7bd.mp3",
-    "bytes": 64416
+    "key": "ea5197f7023ef0106ce2bbd7d4a2d011",
+    "filename": "ea5197f7023ef0106ce2bbd7d4a2d011.mp3",
+    "bytes": 87168
   },
   {
     "text": "শ্বাসকষ্ট বা বুকে শব্দ হচ্ছে?",
     "tone": "question",
-    "key": "c2e532055a82f2c1a7e16ca664f2445b",
-    "filename": "c2e532055a82f2c1a7e16ca664f2445b.mp3",
-    "bytes": 12864
+    "key": "7dfb4ff0f8a9c51a63d28587c27958c6",
+    "filename": "7dfb4ff0f8a9c51a63d28587c27958c6.mp3",
+    "bytes": 23040
   },
   {
     "text": "Chest indrawing or stridor in infant = RED, refer FRU immediately. Fast breathing alone (RR ≥ 50) = YELLOW, refer PHC within 24 h.",
     "tone": "question",
-    "key": "e1ca53c60e6a70723ef2cdf8707d4598",
-    "filename": "e1ca53c60e6a70723ef2cdf8707d4598.mp3",
-    "bytes": 98880
+    "key": "d177a12bf629175c447e4f42c051c566",
+    "filename": "d177a12bf629175c447e4f42c051c566.mp3",
+    "bytes": 117696
   },
   {
     "text": "Severe dehydration in infant = RED. Start ORS immediately. Refer FRU for IV fluids.",
     "tone": "question",
-    "key": "0b49e9ff3231ce8b5283e2fd9f5d01a1",
-    "filename": "0b49e9ff3231ce8b5283e2fd9f5d01a1.mp3",
-    "bytes": 28992
+    "key": "c8b6d46c592feaf37854f99be6668946",
+    "filename": "c8b6d46c592feaf37854f99be6668946.mp3",
+    "bytes": 66240
   },
   {
     "text": "ওজন বাড়ছে না বা কমে যাচ্ছে?",
     "tone": "question",
-    "key": "33c8bf0c73a9045aa077210ce00798f2",
-    "filename": "33c8bf0c73a9045aa077210ce00798f2.mp3",
-    "bytes": 13344
+    "key": "d2c693f76e72c7d11afe049f28ead274",
+    "filename": "d2c693f76e72c7d11afe049f28ead274.mp3",
+    "bytes": 21696
   },
   {
     "text": "Refer to ICDS/AWC for growth monitoring. If MUAC < 11.5 cm = RED, refer NRC. Counsel on complementary feeding after 6 months.",
     "tone": "question",
-    "key": "1ce2e994c2d20c3541670e4c7283b869",
-    "filename": "1ce2e994c2d20c3541670e4c7283b869.mp3",
-    "bytes": 58272
+    "key": "acf5ff1bb5ef7452b84124f8b0d01a4c",
+    "filename": "acf5ff1bb5ef7452b84124f8b0d01a4c.mp3",
+    "bytes": 102144
   },
   {
     "text": "রক্তচাপ বেশি বা মাথা ব্যথা হচ্ছে?",
     "tone": "question",
-    "key": "4c49367c13be7a346d257b134879aafe",
-    "filename": "4c49367c13be7a346d257b134879aafe.mp3",
-    "bytes": 13824
+    "key": "30be27baa3417223648d5ea3e0944cf9",
+    "filename": "30be27baa3417223648d5ea3e0944cf9.mp3",
+    "bytes": 25152
   },
   {
     "text": "Pre-eclampsia/eclampsia hard-stop. Refer to FRU/DH immediately. Do not give food/water. Lay on left side during transport.",
     "tone": "question",
-    "key": "13dc6abb682bbf97f1c761429ad80d36",
-    "filename": "13dc6abb682bbf97f1c761429ad80d36.mp3",
-    "bytes": 42336
+    "key": "7319ddad73b63dc27b6b38c32be61a05",
+    "filename": "7319ddad73b63dc27b6b38c32be61a05.mp3",
+    "bytes": 81408
   },
   {
     "text": "পা বা মুখ ফুলে যাচ্ছে?",
     "tone": "question",
-    "key": "88aba1debb17481e8e6583d03630a9d5",
-    "filename": "88aba1debb17481e8e6583d03630a9d5.mp3",
-    "bytes": 10656
+    "key": "fe2c7114c99d91037a480c1c169273d5",
+    "filename": "fe2c7114c99d91037a480c1c169273d5.mp3",
+    "bytes": 17472
   },
   {
     "text": "If oedema + headache + BP high = RED (pre-eclampsia). Isolated leg oedema = YELLOW, refer PHC within 24 h for BP check and urine protein.",
     "tone": "question",
-    "key": "8238223dafdde0d3187d0590b1a7be88",
-    "filename": "8238223dafdde0d3187d0590b1a7be88.mp3",
-    "bytes": 73632
+    "key": "f02418c1f853ece69b7f9e3773fa64ca",
+    "filename": "f02418c1f853ece69b7f9e3773fa64ca.mp3",
+    "bytes": 101568
   },
   {
     "text": "রক্তপাত বা তীব্র পেট ব্যথা?",
     "tone": "question",
-    "key": "b03e9d7bebb134615c72b86eac9e3f12",
-    "filename": "b03e9d7bebb134615c72b86eac9e3f12.mp3",
-    "bytes": 13632
+    "key": "6716b3e5c769ecb58d08320e98671934",
+    "filename": "6716b3e5c769ecb58d08320e98671934.mp3",
+    "bytes": 21696
   },
   {
     "text": "APH hard-stop. Refer to FRU/DH immediately. Any bleeding after 20 weeks = emergency. Do not do vaginal examination.",
     "tone": "question",
-    "key": "480612d213aae7153e9d8cc2d00dfc23",
-    "filename": "480612d213aae7153e9d8cc2d00dfc23.mp3",
-    "bytes": 40896
+    "key": "62b7d9c8ad2f05316f10c085c55000b7",
+    "filename": "62b7d9c8ad2f05316f10c085c55000b7.mp3",
+    "bytes": 80640
   },
   {
     "text": "শিশুর নড়াচড়া কমে গেছে?",
     "tone": "question",
-    "key": "b634ca7eeda48e94f755115d240410f6",
-    "filename": "b634ca7eeda48e94f755115d240410f6.mp3",
-    "bytes": 11616
+    "key": "65f4d60819992e8d357d1c5c8e53fe44",
+    "filename": "65f4d60819992e8d357d1c5c8e53fe44.mp3",
+    "bytes": 19776
   },
   {
     "text": "Refer to FRU/DH same day for fetal monitoring (CTG/Doppler). Absent fetal movement = emergency.",
     "tone": "question",
-    "key": "656ea3d0a851d6337ef44477ac7d7efc",
-    "filename": "656ea3d0a851d6337ef44477ac7d7efc.mp3",
-    "bytes": 27744
+    "key": "522ed75d22d7487f26a837cf90cdf93c",
+    "filename": "522ed75d22d7487f26a837cf90cdf93c.mp3",
+    "bytes": 66240
   },
   {
     "text": "তিন মাসের বেশি ANC চেকআপ বাদ গেছে?",
     "tone": "question",
-    "key": "d184247b57f47d241ac06081aca65ae6",
-    "filename": "d184247b57f47d241ac06081aca65ae6.mp3",
-    "bytes": 14880
+    "key": "4d5d52b0d232bc7c3b8972e37ab90d0c",
+    "filename": "4d5d52b0d232bc7c3b8972e37ab90d0c.mp3",
+    "bytes": 24000
   },
   {
     "text": "Schedule ANC visit at PHC within 7 days. Check MCP card. Ensure TT, IFA, calcium supplementation are up to date. Flag for PMSMA if HRP.",
     "tone": "question",
-    "key": "a9c423f2091afeecd059b4d2eee4fcf6",
-    "filename": "a9c423f2091afeecd059b4d2eee4fcf6.mp3",
-    "bytes": 71136
+    "key": "a9e938d0206ccaf60b0bec9962b1b0e2",
+    "filename": "a9e938d0206ccaf60b0bec9962b1b0e2.mp3",
+    "bytes": 111360
   },
   {
     "text": "চোখে ঝাপসা বা মাথা ঘোরা হচ্ছে?",
     "tone": "question",
-    "key": "b28061d2c1668e188e1f1a1f644f6407",
-    "filename": "b28061d2c1668e188e1f1a1f644f6407.mp3",
-    "bytes": 13344
+    "key": "4d4f31e4dfa9246aee1bf76e2410ccda",
+    "filename": "4d4f31e4dfa9246aee1bf76e2410ccda.mp3",
+    "bytes": 23616
   },
   {
     "text": "Eclampsia prodrome hard-stop. Refer to FRU/DH immediately. Blurred vision + headache + oedema = imminent eclampsia.",
     "tone": "question",
-    "key": "37ee61cdf069f5d0c0fb0c4974f7fdb4",
-    "filename": "37ee61cdf069f5d0c0fb0c4974f7fdb4.mp3",
-    "bytes": 39936
+    "key": "57e493cecbe3ab9ca2c45e9b022ef6a2",
+    "filename": "57e493cecbe3ab9ca2c45e9b022ef6a2.mp3",
+    "bytes": 70080
   },
   {
     "text": "Routine ANC follow-up. Ensure 4 ANC visits (8, 14, 28, 36 weeks). Counsel on IFA (180 tabs), calcium (360 tabs), TT2, diet, birth preparedness. Register on ANMOL.",
     "tone": "question",
-    "key": "0b9f5a8e1afc63ceaf88d9f53b242b48",
-    "filename": "0b9f5a8e1afc63ceaf88d9f53b242b48.mp3",
-    "bytes": 104352
+    "key": "929aad3d64f8adf8b8335090569c1253",
+    "filename": "929aad3d64f8adf8b8335090569c1253.mp3",
+    "bytes": 149184
   },
   {
     "text": "অতিরিক্ত রক্তপাত বা দুর্গন্ধযুক্ত স্রাব?",
     "tone": "question",
-    "key": "110d7407ba2141f2e63184887ad94ed2",
-    "filename": "110d7407ba2141f2e63184887ad94ed2.mp3",
-    "bytes": 15360
+    "key": "34993a1c8ecc6e370edc6eccce03a0b1",
+    "filename": "34993a1c8ecc6e370edc6eccce03a0b1.mp3",
+    "bytes": 28032
   },
   {
     "text": "PPH hard-stop. Refer to FRU/DH immediately. If trained: bimanual uterine compression. Misoprostol 600 mcg sublingual if within ASHA scope (confirm at sign-off). Do not delay transport.",
     "tone": "question",
-    "key": "ddc207f6e9f4669c47a33112c7aa7084",
-    "filename": "ddc207f6e9f4669c47a33112c7aa7084.mp3",
-    "bytes": 88704
+    "key": "545f30e3b63d3b9eddab6231751cf45b",
+    "filename": "545f30e3b63d3b9eddab6231751cf45b.mp3",
+    "bytes": 151296
   },
   {
     "text": "জ্বর বা ঠান্ডা লাগছে?",
     "tone": "question",
-    "key": "999cfcb7ca313a3e8b4b61039fc385de",
-    "filename": "999cfcb7ca313a3e8b4b61039fc385de.mp3",
-    "bytes": 10368
+    "key": "3d5673c3c48a55dfa936f728b6e4a7c2",
+    "filename": "3d5673c3c48a55dfa936f728b6e4a7c2.mp3",
+    "bytes": 18240
   },
   {
     "text": "Puerperal sepsis risk. Fever + foul discharge = RED. Isolated fever day 1–2 = YELLOW, refer PHC within 24 h. Fever > 38°C after day 2 = RED.",
     "tone": "question",
-    "key": "24f14d7953dcdbcc2fad775a818183cd",
-    "filename": "24f14d7953dcdbcc2fad775a818183cd.mp3",
-    "bytes": 81792
+    "key": "1ea5ac0882cc2a82e556dc7383f8c6fc",
+    "filename": "1ea5ac0882cc2a82e556dc7383f8c6fc.mp3",
+    "bytes": 136704
   },
   {
     "text": "স্তনে ব্যথা, ফোলা বা লাল দাগ?",
     "tone": "question",
-    "key": "b9de774bfd0e651c3ed2d0c7679374a3",
-    "filename": "b9de774bfd0e651c3ed2d0c7679374a3.mp3",
-    "bytes": 16320
+    "key": "71bbc2d8f130c2188b5ed66520bce266",
+    "filename": "71bbc2d8f130c2188b5ed66520bce266.mp3",
+    "bytes": 24000
   },
   {
     "text": "Mastitis: continue breastfeeding, warm compress, refer PHC within 24 h for antibiotics. If abscess (fluctuant swelling) = RED, refer FRU for I&D.",
     "tone": "question",
-    "key": "e8e3e3ce9669297c538fb5e5502cbb00",
-    "filename": "e8e3e3ce9669297c538fb5e5502cbb00.mp3",
-    "bytes": 75648
+    "key": "e1da94a02931380282f48631a8ea5ec0",
+    "filename": "e1da94a02931380282f48631a8ea5ec0.mp3",
+    "bytes": 112896
   },
   {
     "text": "পেটে তীব্র ব্যথা বা সেলাইয়ে সমস্যা?",
     "tone": "question",
-    "key": "7b17beb3bc8ca2eb3572c38673a5a4bd",
-    "filename": "7b17beb3bc8ca2eb3572c38673a5a4bd.mp3",
-    "bytes": 13344
+    "key": "53171cf55ddbd2c6761889c62cee7486",
+    "filename": "53171cf55ddbd2c6761889c62cee7486.mp3",
+    "bytes": 24768
   },
   {
     "text": "Wound infection = YELLOW, refer PHC within 24 h. Wound dehiscence or severe pain = RED, refer FRU. Peritonitis signs (rigid abdomen, rebound tenderness) = RED hard-stop.",
     "tone": "question",
-    "key": "934976eb7850d26fcec9211bd6a1c10d",
-    "filename": "934976eb7850d26fcec9211bd6a1c10d.mp3",
-    "bytes": 106080
+    "key": "1bf43418308326091bf34dceec2b1cfa",
+    "filename": "1bf43418308326091bf34dceec2b1cfa.mp3",
+    "bytes": 129408
   },
   {
     "text": "প্রস্রাবে জ্বালা বা কষ্ট হচ্ছে?",
     "tone": "question",
-    "key": "bedbd337445742cbaff6fec0b5b25720",
-    "filename": "bedbd337445742cbaff6fec0b5b25720.mp3",
-    "bytes": 12864
+    "key": "f6ed2c2d4dda28598a52fe6e9535ea9f",
+    "filename": "f6ed2c2d4dda28598a52fe6e9535ea9f.mp3",
+    "bytes": 21696
   },
   {
     "text": "UTI: refer PHC within 24 h for urine culture and antibiotics. If fever + flank pain = pyelonephritis → RED, refer FRU.",
     "tone": "question",
-    "key": "b561f67de871cf915add873f7fba2b98",
-    "filename": "b561f67de871cf915add873f7fba2b98.mp3",
-    "bytes": 64224
+    "key": "2bf27fb1a426e4c83ed706341ba8fd22",
+    "filename": "2bf27fb1a426e4c83ed706341ba8fd22.mp3",
+    "bytes": 101760
   },
   {
     "text": "খুব দুর্বল বা মাথা ঘোরা হচ্ছে?",
     "tone": "question",
-    "key": "c7a91e0add7fb0381becfee295ff72fa",
-    "filename": "c7a91e0add7fb0381becfee295ff72fa.mp3",
-    "bytes": 12864
+    "key": "3cdff56f90472f1a41acbfc52500b744",
+    "filename": "3cdff56f90472f1a41acbfc52500b744.mp3",
+    "bytes": 22656
   },
   {
     "text": "Assess pallor (conjunctiva, palms). Severe pallor = anaemia → YELLOW, refer PHC for Hb check. Hb < 7 g/dL or fainting = RED, refer FRU for transfusion.",
     "tone": "question",
-    "key": "5a506771edbe3520990f8a71d34cddfa",
-    "filename": "5a506771edbe3520990f8a71d34cddfa.mp3",
-    "bytes": 126912
+    "key": "915add093cdb122b57960629ed3bbf4e",
+    "filename": "915add093cdb122b57960629ed3bbf4e.mp3",
+    "bytes": 159936
   },
   {
     "text": "শিশুর বয়স কত মাস?",
     "tone": "question",
-    "key": "7e2d0844284ed00a1db1f79401991069",
-    "filename": "7e2d0844284ed00a1db1f79401991069.mp3",
-    "bytes": 10176
+    "key": "044278f4adae725b26261bbd0d9abcf8",
+    "filename": "044278f4adae725b26261bbd0d9abcf8.mp3",
+    "bytes": 18240
   },
   {
     "text": "Schedule catch-up at nearest session site within 7 days. BCG can be given up to 1 year. OPV/IPV/Pentavalent: give missed dose, continue schedule. Do not restart series.",
     "tone": "question",
-    "key": "3d7a210af1c1a4bba6f7a29ef900c921",
-    "filename": "3d7a210af1c1a4bba6f7a29ef900c921.mp3",
-    "bytes": 53568
+    "key": "37a6142ccbe7ff71940f7ed8dbb15ff9",
+    "filename": "37a6142ccbe7ff71940f7ed8dbb15ff9.mp3",
+    "bytes": 101760
   },
   {
     "text": "কোন টিকা মিস হয়েছে?",
     "tone": "question",
-    "key": "41d9f18ec417b60ce289499cf5d903d1",
-    "filename": "41d9f18ec417b60ce289499cf5d903d1.mp3",
-    "bytes": 9408
+    "key": "6bd41553a6e987fdea50c566a5563911",
+    "filename": "6bd41553a6e987fdea50c566a5563911.mp3",
+    "bytes": 16320
   },
   {
     "text": "Schedule catch-up within 7 days. Measles-1 at 9 months, Vitamin A 1 lakh IU at 9 months. If > 12 months, give MMR instead of measles.",
     "tone": "question",
-    "key": "ef30c0de004a097fb1b6747a71c55f39",
-    "filename": "ef30c0de004a097fb1b6747a71c55f39.mp3",
-    "bytes": 78816
+    "key": "c151711acaa9da7d33c4896d2edf1643",
+    "filename": "c151711acaa9da7d33c4896d2edf1643.mp3",
+    "bytes": 101184
   },
   {
     "text": "কতদিন আগে টিকা দেওয়ার কথা ছিল?",
     "tone": "question",
-    "key": "a5f1d7e03ba5c479af3458767914c1cb",
-    "filename": "a5f1d7e03ba5c479af3458767914c1cb.mp3",
-    "bytes": 13344
+    "key": "2eed1439ee55e053a00157134b5e4b14",
+    "filename": "2eed1439ee55e053a00157134b5e4b14.mp3",
+    "bytes": 21888
   },
   {
     "text": "Catch-up immunisation. Do not restart series. Give missed dose and continue from where left off. Refer to PHC for catch-up session. Flag on ANMOL for tracking.",
     "tone": "question",
-    "key": "a60249c92702fbd681e0396fe56531ba",
-    "filename": "a60249c92702fbd681e0396fe56531ba.mp3",
-    "bytes": 49344
+    "key": "dc2ea65a036b4db4ac582208ddafc23a",
+    "filename": "dc2ea65a036b4db4ac582208ddafc23a.mp3",
+    "bytes": 100992
   },
   {
     "text": "শিশুর কি কোনো অসুস্থতা আছে এখন?",
     "tone": "question",
-    "key": "a601c24dc985fa191cd0db244f8bc7df",
-    "filename": "a601c24dc985fa191cd0db244f8bc7df.mp3",
-    "bytes": 13344
+    "key": "92c4d2ccb211000879e9bd7c092da59d",
+    "filename": "92c4d2ccb211000879e9bd7c092da59d.mp3",
+    "bytes": 24000
   },
   {
     "text": "Mild illness (mild fever, cold) = vaccinate as scheduled. Moderate/severe illness = defer vaccination until recovered. Reschedule within 7 days of recovery. Do not miss opportunity for mild illness.",
     "tone": "question",
-    "key": "b5df693324041810bee5344d4c8f1f30",
-    "filename": "b5df693324041810bee5344d4c8f1f30.mp3",
-    "bytes": 72864
+    "key": "1d5e87f948803edaa94dc9bb7e713e92",
+    "filename": "1d5e87f948803edaa94dc9bb7e713e92.mp3",
+    "bytes": 132672
   },
   {
     "text": "১-৫ বছর বয়সী শিশুর বুস্টার ডোজ মিস হয়েছে?",
     "tone": "question",
-    "key": "20346987a15a158507c1b6aa1ed44269",
-    "filename": "20346987a15a158507c1b6aa1ed44269.mp3",
-    "bytes": 20064
+    "key": "08d4918c59d3b0a167d66343bca54dbc",
+    "filename": "08d4918c59d3b0a167d66343bca54dbc.mp3",
+    "bytes": 35328
   },
   {
     "text": "DPT booster at 16–24 months. OPV booster at 16–24 months. MMR at 15–18 months. Vitamin A 6-monthly up to 5 years. Schedule catch-up at next session.",
     "tone": "question",
-    "key": "37c6ea2d61f20fa507b10af0141edd34",
-    "filename": "37c6ea2d61f20fa507b10af0141edd34.mp3",
-    "bytes": 71616
+    "key": "2d847dd9527613a192c503ef8a8fe4a3",
+    "filename": "2d847dd9527613a192c503ef8a8fe4a3.mp3",
+    "bytes": 129408
   },
   {
     "text": "অতিরিক্ত রক্তপাত হচ্ছে?",
     "tone": "question",
-    "key": "83e4b7dfc258b9078be5e15fc76397b3",
-    "filename": "83e4b7dfc258b9078be5e15fc76397b3.mp3",
-    "bytes": 11328
+    "key": "8c079823961ce16534420443f6100380",
+    "filename": "8c079823961ce16534420443f6100380.mp3",
+    "bytes": 19200
   },
   {
     "text": "Hard-stop. Call 108 immediately. Refer FRU/DH ≤ 30 min. Apply uterine compression if postpartum. Do not leave patient alone.",
     "tone": "question",
-    "key": "a1f14e76488d48e6b53d93563edcc5ae",
-    "filename": "a1f14e76488d48e6b53d93563edcc5ae.mp3",
-    "bytes": 47616
+    "key": "3346b2fb83209643a63a3c9b86650713",
+    "filename": "3346b2fb83209643a63a3c9b86650713.mp3",
+    "bytes": 96576
   },
   {
     "text": "খিঁচুনি বা অজ্ঞান হয়েছে?",
     "tone": "question",
-    "key": "c3aead7309b0b5ad25f98ef799feab76",
-    "filename": "c3aead7309b0b5ad25f98ef799feab76.mp3",
-    "bytes": 10848
+    "key": "c36383af71bf37f8a89c6eb200c22da4",
+    "filename": "c36383af71bf37f8a89c6eb200c22da4.mp3",
+    "bytes": 18816
   },
   {
     "text": "Hard-stop. Lay on left side, protect airway. Call 108. Refer FRU/DH immediately. If eclampsia: MgSO4 loading dose if within ANM/MO scope. ASHA: do not delay transport.",
     "tone": "question",
-    "key": "f58d4950f5a05822226c08daa8702ecc",
-    "filename": "f58d4950f5a05822226c08daa8702ecc.mp3",
-    "bytes": 72864
+    "key": "ea3654833e62d9caa76a4283b0e38f0c",
+    "filename": "ea3654833e62d9caa76a4283b0e38f0c.mp3",
+    "bytes": 116928
   },
   {
     "text": "শ্বাস নিতে খুব কষ্ট হচ্ছে?",
     "tone": "question",
-    "key": "dadeb3c90e399b24b4a46210a66564a5",
-    "filename": "dadeb3c90e399b24b4a46210a66564a5.mp3",
-    "bytes": 11136
+    "key": "e23ad7977cad13e4405383c69e727523",
+    "filename": "e23ad7977cad13e4405383c69e727523.mp3",
+    "bytes": 20544
   },
   {
     "text": "Hard-stop. Call 108. Refer FRU/DH ≤ 30 min. Keep airway clear. If newborn: stimulate, clear airway, bag-mask if available.",
     "tone": "question",
-    "key": "b8102311b807182b57469f260279017c",
-    "filename": "b8102311b807182b57469f260279017c.mp3",
-    "bytes": 61248
+    "key": "3f4a1cbbdc01e57476331e91837981da",
+    "filename": "3f4a1cbbdc01e57476331e91837981da.mp3",
+    "bytes": 100608
   },
   {
     "text": "রোগী সাড়া দিচ্ছে না বা জ্ঞান নেই?",
     "tone": "question",
-    "key": "d0bedb7ad291b4509a662c1777ca4fd1",
-    "filename": "d0bedb7ad291b4509a662c1777ca4fd1.mp3",
-    "bytes": 13824
+    "key": "c1803db7e2e5e98666bff67ea238e3c5",
+    "filename": "c1803db7e2e5e98666bff67ea238e3c5.mp3",
+    "bytes": 22272
   },
   {
     "text": "Hard-stop. Call 108 immediately. Check airway, breathing, circulation. Recovery position. Refer FRU/DH ≤ 30 min. MDSR audit trigger if death occurs.",
     "tone": "question",
-    "key": "88197653faed40bf2b2cee7d8bbe93c6",
-    "filename": "88197653faed40bf2b2cee7d8bbe93c6.mp3",
-    "bytes": 78624
+    "key": "46f4171963f044973106b1c3071268e7",
+    "filename": "46f4171963f044973106b1c3071268e7.mp3",
+    "bytes": 117312
   },
   {
     "text": "উপরের যেকোনো একটি বিপদচিহ্ন আছে?",
     "tone": "question",
-    "key": "20947ba36c74f448b1edc9d95205ed25",
-    "filename": "20947ba36c74f448b1edc9d95205ed25.mp3",
-    "bytes": 14304
+    "key": "0234d5211429add608dc7e76d9adc119",
+    "filename": "0234d5211429add608dc7e76d9adc119.mp3",
+    "bytes": 24768
   },
   {
     "text": "System invariant: RED band locked. No GREEN or YELLOW answer can downgrade a fired RED. Re-sweep confirms RED on every state update.",
     "tone": "question",
-    "key": "f0ec9f5f092b903f27ee4b8b6e33eab2",
-    "filename": "f0ec9f5f092b903f27ee4b8b6e33eab2.mp3",
-    "bytes": 74592
+    "key": "61753b4662fe6c4a5491bfbe0a9a6057",
+    "filename": "61753b4662fe6c4a5491bfbe0a9a6057.mp3",
+    "bytes": 83328
   },
   {
     "text": "বুঝেছি।",
     "tone": "empathy",
-    "key": "5f3c841c78628c1432949c32250453c5",
-    "filename": "5f3c841c78628c1432949c32250453c5.mp3",
-    "bytes": 6432
+    "key": "d6609321e2c4f8d4beebc8b30ce4b426",
+    "filename": "d6609321e2c4f8d4beebc8b30ce4b426.mp3",
+    "bytes": 10368
   },
   {
     "text": "ভালো খবর।",
     "tone": "empathy",
-    "key": "4d382f6f30474b1a2b5490bb643216be",
-    "filename": "4d382f6f30474b1a2b5490bb643216be.mp3",
-    "bytes": 8640
+    "key": "852bfa2aa2e81789368c28586ed9c3da",
+    "filename": "852bfa2aa2e81789368c28586ed9c3da.mp3",
+    "bytes": 11904
   },
   {
     "text": "ধন্যবাদ।",
     "tone": "empathy",
-    "key": "061bacde465004b8ce326f41f2a4ef1b",
-    "filename": "061bacde465004b8ce326f41f2a4ef1b.mp3",
-    "bytes": 6912
+    "key": "c486776e1635849052cb14d39aa391b5",
+    "filename": "c486776e1635849052cb14d39aa391b5.mp3",
+    "bytes": 10944
   },
   {
     "text": "আপনি ভালো করেছেন জানিয়েছেন।",
     "tone": "empathy",
-    "key": "b357b35662485f3d171fd99f8bd686cf",
-    "filename": "b357b35662485f3d171fd99f8bd686cf.mp3",
-    "bytes": 11520
+    "key": "90c0bfafbf169e83c3dfbec0d6edd514",
+    "filename": "90c0bfafbf169e83c3dfbec0d6edd514.mp3",
+    "bytes": 20928
   },
   {
     "text": "এটা গুরুত্বপূর্ণ।",
     "tone": "empathy",
-    "key": "2245885108f5db357901ddb5047aaa15",
-    "filename": "2245885108f5db357901ddb5047aaa15.mp3",
-    "bytes": 9600
+    "key": "b035df66a47921a3626a700f8aaa9f4b",
+    "filename": "b035df66a47921a3626a700f8aaa9f4b.mp3",
+    "bytes": 14592
   },
   {
     "text": "চিন্তা করবেন না।",
     "tone": "empathy",
-    "key": "3a8e1be7be88be94b61ecef65c5519bf",
-    "filename": "3a8e1be7be88be94b61ecef65c5519bf.mp3",
-    "bytes": 8352
+    "key": "a9f7235cd0f546cedc752f27758c0794",
+    "filename": "a9f7235cd0f546cedc752f27758c0794.mp3",
+    "bytes": 13632
   },
   {
     "text": "আরেকটু জানতে চাই।",
     "tone": "empathy",
-    "key": "5811c009673628f0efde628b2b24a169",
-    "filename": "5811c009673628f0efde628b2b24a169.mp3",
-    "bytes": 9312
+    "key": "43c1ce51a576a2a5ddb0ac909f0e3aee",
+    "filename": "43c1ce51a576a2a5ddb0ac909f0e3aee.mp3",
+    "bytes": 15552
   },
   {
     "text": "একটু অপেক্ষা করুন।",
     "tone": "empathy",
-    "key": "ed9d361088d807aa916b2ae383311c8f",
-    "filename": "ed9d361088d807aa916b2ae383311c8f.mp3",
-    "bytes": 9792
+    "key": "4b81687fd78daa0d7e5928c9df6a3730",
+    "filename": "4b81687fd78daa0d7e5928c9df6a3730.mp3",
+    "bytes": 15744
   },
   {
     "text": "অনুগ্রহ করে আবার বলুন।",
     "tone": "empathy",
-    "key": "de9dc85147e6ed80963c33496bc15c52",
-    "filename": "de9dc85147e6ed80963c33496bc15c52.mp3",
-    "bytes": 11040
+    "key": "2738cf490bafe0dca9c684431448bcb9",
+    "filename": "2738cf490bafe0dca9c684431448bcb9.mp3",
+    "bytes": 18432
   },
   {
     "text": "সব ঠিক হয়ে যাবে।",
     "tone": "empathy",
-    "key": "28ec712195dceee6105146891228fd6b",
-    "filename": "28ec712195dceee6105146891228fd6b.mp3",
-    "bytes": 9600
+    "key": "1cabda748e78a6f358d4f1504eb4571e",
+    "filename": "1cabda748e78a6f358d4f1504eb4571e.mp3",
+    "bytes": 15360
   },
   {
     "text": "নিরাপদ থাকুন।",
     "tone": "empathy",
-    "key": "4289a1835e9635ad592247daf9d0c8bd",
-    "filename": "4289a1835e9635ad592247daf9d0c8bd.mp3",
-    "bytes": 8832
+    "key": "28d88423b36e23714ae680743b3a3a44",
+    "filename": "28d88423b36e23714ae680743b3a3a44.mp3",
+    "bytes": 13824
   },
   {
     "text": "আপনার পরিশ্রমের জন্য ধন্যবাদ।",
     "tone": "empathy",
-    "key": "cdd4f8f7a03b8ebb1c9e855058e66ffb",
-    "filename": "cdd4f8f7a03b8ebb1c9e855058e66ffb.mp3",
-    "bytes": 13632
+    "key": "9d07049a203e7ce010e47795502b012c",
+    "filename": "9d07049a203e7ce010e47795502b012c.mp3",
+    "bytes": 22080
   }
 ]
