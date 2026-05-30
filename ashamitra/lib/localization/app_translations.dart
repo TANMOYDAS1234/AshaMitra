@@ -352,6 +352,27 @@ class AppTranslations extends Translations {
     "case_label_other": "Other",
     "attach_to_patient": "Attach to patient",
     "pdf_save_open_failed": "PDF saved — open via file manager: @name",
+    // ── Triage result card (band-coloured summary at top of result) ───
+    "result_reason": "Reason",
+    "result_next_step": "Next step",
+    "result_safe_subtitle": "No danger signs",
+    "result_safe_referral": "Care at home",
+    "result_attention_subtitle": "Moderate risk — go to PHC",
+    "result_attention_referral": "PHC within 24 h",
+    "result_emergency_subtitle": "Refer immediately",
+    // ── Notifications / greeting header ──────────────────────────────
+    "no_notifications": "No notifications",
+    "no_notifications_sub": "Urgent cases will show up here",
+    "just_now": "now",
+    // ── Delete report error reasons (the snackbar messages) ──────────
+    "delete_err_network": "Server slow / network issue — try again",
+    "delete_err_session": "Session expired — please log in again",
+    "delete_err_not_found": "Report not on server — reload",
+    "delete_err_server": "Server error (@status) — try again",
+    "delete_err_other": "Couldn't delete (HTTP @status) — try again",
+    "delete_err_generic": "Server not responding — try again",
+    "pdf_saved_open_msg": "Open @name from file manager.",
+    "pdf_saved": "PDF saved",
   };
 
   static const _bn = {
@@ -705,6 +726,24 @@ class AppTranslations extends Translations {
     "case_label_other": "অন্যান্য",
     "attach_to_patient": "রোগীর সাথে যুক্ত করুন",
     "pdf_save_open_failed": "PDF সংরক্ষিত — ফাইল ম্যানেজার থেকে খুলুন: @name",
+    "result_reason": "কারণ",
+    "result_next_step": "পরবর্তী পদক্ষেপ",
+    "result_safe_subtitle": "কোনো বিপদচিহ্ন নেই",
+    "result_safe_referral": "বাড়িতে যত্ন",
+    "result_attention_subtitle": "মাঝারি ঝুঁকি — PHC-তে যান",
+    "result_attention_referral": "২৪ ঘণ্টার মধ্যে PHC",
+    "result_emergency_subtitle": "এখনই রেফার করুন",
+    "no_notifications": "কোনো নোটিফিকেশন নেই",
+    "no_notifications_sub": "জরুরি কেস তৈরি হলে এখানে দেখাবে",
+    "just_now": "এখন",
+    "delete_err_network": "সার্ভার এখন ধীর / নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন",
+    "delete_err_session": "লগইন মেয়াদ শেষ — আবার লগইন করুন",
+    "delete_err_not_found": "রিপোর্টটি সার্ভারে পাওয়া যায়নি — পুনরায় লোড করুন",
+    "delete_err_server": "সার্ভার ত্রুটি (@status) — আবার চেষ্টা করুন",
+    "delete_err_other": "মুছে ফেলা যায়নি (HTTP @status) — আবার চেষ্টা করুন",
+    "delete_err_generic": "সার্ভার সাড়া দিচ্ছে না — আবার চেষ্টা করুন",
+    "pdf_saved_open_msg": "ফাইল ম্যানেজার থেকে @name খুলুন।",
+    "pdf_saved": "PDF সংরক্ষিত",
   };
 
   static const _hi = {
@@ -1058,6 +1097,24 @@ class AppTranslations extends Translations {
     "case_label_other": "अन्य",
     "attach_to_patient": "मरीज़ से जोड़ें",
     "pdf_save_open_failed": "PDF सहेजी गई — फ़ाइल मैनेजर से खोलें: @name",
+    "result_reason": "कारण",
+    "result_next_step": "अगला कदम",
+    "result_safe_subtitle": "कोई खतरे का संकेत नहीं",
+    "result_safe_referral": "घर में देखभाल",
+    "result_attention_subtitle": "मध्यम जोखिम — PHC जाएं",
+    "result_attention_referral": "24 घंटे में PHC",
+    "result_emergency_subtitle": "अभी रेफर करें",
+    "no_notifications": "कोई सूचना नहीं",
+    "no_notifications_sub": "आपातकालीन केस यहाँ दिखेंगे",
+    "just_now": "अभी",
+    "delete_err_network": "सर्वर धीमा / नेटवर्क समस्या — फिर कोशिश करें",
+    "delete_err_session": "लॉगिन समाप्त — फिर लॉगिन करें",
+    "delete_err_not_found": "रिपोर्ट सर्वर पर नहीं — फिर लोड करें",
+    "delete_err_server": "सर्वर त्रुटि (@status) — फिर कोशिश करें",
+    "delete_err_other": "हटाया नहीं जा सका (HTTP @status) — फिर कोशिश करें",
+    "delete_err_generic": "सर्वर जवाब नहीं दे रहा — फिर कोशिश करें",
+    "pdf_saved_open_msg": "फ़ाइल मैनेजर से @name खोलें।",
+    "pdf_saved": "PDF सहेजी गई",
   };
 
   @override

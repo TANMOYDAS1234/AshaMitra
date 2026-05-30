@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../core/theme/app_colors.dart';
 
 enum TriageOutcome { safe, attention, emergency }
@@ -133,7 +134,7 @@ class TriageResultCard extends StatelessWidget {
                 children: [
                   _BodyRow(
                     icon: Icons.info_outline_rounded,
-                    label: 'কারণ',
+                    label: 'result_reason'.tr,
                     value: reason,
                     color: cfg.color,
                   ),
@@ -142,7 +143,7 @@ class TriageResultCard extends StatelessWidget {
                   const SizedBox(height: 16),
                   _BodyRow(
                     icon: Icons.arrow_forward_ios_rounded,
-                    label: 'পরবর্তী পদক্ষেপ',
+                    label: 'result_next_step'.tr,
                     value: nextStep,
                     color: cfg.color,
                   ),
@@ -160,21 +161,21 @@ class TriageResultCard extends StatelessWidget {
             color: AppColors.safeGreen,
             bg: const Color(0xFFECFDF5),
             bandLabel: '🟢 সবুজ — নিরাপদ',
-            subtitle: 'কোনো বিপদচিহ্ন নেই',
-            referralLevel: 'বাড়িতে যত্ন',
+            subtitle: 'result_safe_subtitle'.tr,
+            referralLevel: 'result_safe_referral'.tr,
           ),
         TriageOutcome.attention => _BandConfig(
             color: const Color(0xFFD97706),
             bg: const Color(0xFFFFFBEB),
             bandLabel: '🟡 হলুদ — মনোযোগ দরকার',
-            subtitle: 'মাঝারি ঝুঁকি — PHC-তে যান',
-            referralLevel: '২৪ ঘণ্টার মধ্যে PHC',
+            subtitle: 'result_attention_subtitle'.tr,
+            referralLevel: 'result_attention_referral'.tr,
           ),
         TriageOutcome.emergency => _BandConfig(
             color: AppColors.emergencyRed,
             bg: const Color(0xFFFFEBEB),
             bandLabel: '🔴 লাল — জরুরি অবস্থা',
-            subtitle: 'এখনই রেফার করুন',
+            subtitle: 'result_emergency_subtitle'.tr,
             referralLevel: 'FRU / SNCU / DH',
           ),
       };

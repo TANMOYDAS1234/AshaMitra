@@ -205,7 +205,7 @@ class _NotificationTile extends StatelessWidget {
 
   String _relativeTime() {
     final diff = DateTime.now().difference(n.createdAt);
-    if (diff.inMinutes < 1) return 'এখন';
+    if (diff.inMinutes < 1) return 'just_now'.tr;
     if (diff.inMinutes < 60) return '${diff.inMinutes} মিনিট আগে';
     if (diff.inHours   < 24) return '${diff.inHours} ঘণ্টা আগে';
     if (diff.inDays    < 7)  return '${diff.inDays} দিন আগে';
@@ -306,10 +306,10 @@ class _EmptyNotifications extends StatelessWidget {
                 size: 32, color: AppColors.primary),
           ),
           const SizedBox(height: 14),
-          Text('কোনো নোটিফিকেশন নেই', style: AppTextStyles.h3),
+          Text('no_notifications'.tr, style: AppTextStyles.h3),
           const SizedBox(height: 4),
           Text(
-            'জরুরি কেস তৈরি হলে এখানে দেখাবে',
+            'no_notifications_sub'.tr,
             style: AppTextStyles.bodySm,
             textAlign: TextAlign.center,
           ),

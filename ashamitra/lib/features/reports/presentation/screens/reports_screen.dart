@@ -688,24 +688,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
       final String msg;
       switch (status) {
         case 0:
-          msg = 'সার্ভার এখন ধীর / নেটওয়ার্ক সমস্যা — আবার চেষ্টা করুন';
+          msg = 'delete_err_network'.tr;
           break;
         case 401:
-          msg = 'লগইন মেয়াদ শেষ — আবার লগইন করুন';
+          msg = 'delete_err_session'.tr;
           break;
         case 404:
-          msg = 'রিপোর্টটি সার্ভারে পাওয়া যায়নি — পুনরায় লোড করুন';
+          msg = 'delete_err_not_found'.tr;
           break;
         case 500:
         case 502:
         case 503:
         case 504:
-          msg = 'সার্ভার ত্রুটি ($status) — আবার চেষ্টা করুন';
+          msg = 'delete_err_server'.trParams({'status': '$status'});
           break;
         default:
           msg = status != null
-              ? 'মুছে ফেলা যায়নি (HTTP $status) — আবার চেষ্টা করুন'
-              : 'সার্ভার সাড়া দিচ্ছে না — আবার চেষ্টা করুন';
+              ? 'delete_err_other'.trParams({'status': '$status'})
+              : 'delete_err_generic'.tr;
       }
       messenger.showSnackBar(
         SnackBar(
@@ -876,8 +876,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
         // ignore: avoid_print
         print('[PDF] saveAndOpen timed out — file probably saved but viewer hung');
         Get.snackbar(
-          'PDF সংরক্ষিত',
-          'ফাইল ম্যানেজার থেকে $fileName খুলুন।',
+          'pdf_saved'.tr,
+          'pdf_saved_open_msg'.trParams({'name': fileName}),
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.warningYellow,
           colorText: Colors.white,
