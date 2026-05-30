@@ -651,13 +651,32 @@ class PatientController extends GetxController {
       rethrow;
     }
     if (!result.ok) {
-      // Stash the status code on the snapshot so the UI can surface a
-      // specific message instead of generic "server not responding".
       // ignore: avoid_print
-      print('[deleteReport] failed status=${result.status} reason=${result.reason} — restoring');
-      await restore();
+      print('[deleteReport] failed status=${result.status} reason=${result.reason}');
       _lastDeleteFailureStatus = result.status;
       _lastDeleteFailureReason = result.reason;
+
+      // 404 = server doesn't have this doc for this worker (was already
+      // deleted, admin permanently erased it, or local cache is stale
+      // from a previous account). The row in local storage is a ghost
+      // — auto-refresh from server so the worker sees the actual list,
+      // and don't restore the snapshot (it's not really there).
+      if (result.status == 404) {
+        try {
+          await syncFromServer();
+          // ignore: avoid_print
+          print('[deleteReport] 404 → auto-refreshed local from server');
+        } catch (_) {
+          // sync failed too — at least the row stays removed locally
+        }
+        // The snapshot was a phantom. Reporting null tells UI to show
+        // "report not on server — reload" but the list is already
+        // accurate now after the auto-sync, so the worker doesn't see
+        // the row reappear.
+        return null;
+      }
+
+      await restore();
       return null;
     }
     _lastDeleteFailureStatus = null;

@@ -40,11 +40,54 @@ Future<List<int>> _buildPdfBytes(
   final attention = reports.where((r) => r['outcome'] == 'attention').length;
   final safe = reports.where((r) => r['outcome'] == 'safe').length;
 
-  final caseBreakdown = <String, int>{};
+  // Date range covered (earliest → latest createdAt) for the cover.
+  final dates = reports
+      .map((r) => DateTime.tryParse(r['createdAt']?.toString() ?? ''))
+      .where((d) => d != null)
+      .cast<DateTime>()
+      .toList();
+  dates.sort();
+  String rangeFmt(DateTime d) =>
+      '${d.day}/${d.month}/${d.year}';
+  final dateRange = dates.isEmpty
+      ? '—'
+      : (dates.length == 1 || dates.first.day == dates.last.day &&
+              dates.first.month == dates.last.month &&
+              dates.first.year == dates.last.year
+          ? rangeFmt(dates.first)
+          : '${rangeFmt(dates.first)}  →  ${rangeFmt(dates.last)}');
+
+  // Average risk score across all reports.
+  final scores = reports
+      .map((r) => (r['riskScore'] as int?) ?? 0)
+      .where((s) => s > 0)
+      .toList();
+  final avgRiskScore = scores.isEmpty
+      ? 0
+      : (scores.reduce((a, b) => a + b) / scores.length).round();
+
+  // Patients attached (distinct patientIds, excluding empty/anonymous).
+  final patientIds = <String>{};
+  for (final r in reports) {
+    final pid = r['patientId']?.toString() ?? '';
+    if (pid.isNotEmpty) patientIds.add(pid);
+  }
+  final patientsTriaged = patientIds.length;
+  final anonymousCount = total - reports.where((r) =>
+      (r['patientId']?.toString() ?? '').isNotEmpty).length;
+
+  // Case-type breakdown — sorted by count desc so most-frequent shows
+  // first instead of in arbitrary insertion order.
+  final caseBreakdownRaw = <String, int>{};
   for (final r in reports) {
     final label = r['caseLabel']?.toString() ?? 'অন্যান্য';
-    caseBreakdown[label] = (caseBreakdown[label] ?? 0) + 1;
+    caseBreakdownRaw[label] = (caseBreakdownRaw[label] ?? 0) + 1;
   }
+  final caseBreakdown = Map.fromEntries(
+    caseBreakdownRaw.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value)),
+  );
+
   final dangerFreq = <String, int>{};
   for (final r in reports) {
     for (final s in (r['dangerSigns'] as List? ?? []).cast<String>()) {
@@ -122,73 +165,154 @@ Future<List<int>> _buildPdfBytes(
         ),
       );
 
-  // Cover page
+  // ── Cover page ──────────────────────────────────────────────────
+  // Cleaner / more professional than the heavy edge-to-edge indigo
+  // block: a slim accent bar on the left, plenty of whitespace,
+  // larger numbers, and date-range / patient metadata at a glance.
+  pw.Widget metaRow(String label, String value) => pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(vertical: 3),
+        child: pw.Row(children: [
+          pw.SizedBox(
+              width: 130,
+              child: pw.Text(label,
+                  style: pw.TextStyle(
+                      fontSize: 9,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey600,
+                      letterSpacing: 0.6))),
+          pw.Expanded(
+              child: pw.Text(value,
+                  style: const pw.TextStyle(
+                      fontSize: 11, color: PdfColors.grey900))),
+        ]),
+      );
+
   doc.addPage(pw.Page(
     pageFormat: PdfPageFormat.a4,
     margin: const pw.EdgeInsets.all(0),
-    build: (ctx) => pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: [
-        pw.Container(
-          color: const PdfColor.fromInt(0xFF4F46E5),
-          padding: const pw.EdgeInsets.fromLTRB(40, 48, 40, 40),
-          child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+    build: (ctx) => pw.Stack(children: [
+      // Left accent bar — branded but understated.
+      pw.Positioned(
+        left: 0, top: 0, bottom: 0,
+        child: pw.Container(width: 8, color: const PdfColor.fromInt(0xFF4F46E5)),
+      ),
+      pw.Padding(
+        padding: const pw.EdgeInsets.fromLTRB(48, 56, 48, 48),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Hero
             pw.Text('আশামিত্র',
-                style: pw.TextStyle(fontSize: 32, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                style: pw.TextStyle(
+                    fontSize: 40,
+                    fontWeight: pw.FontWeight.bold,
+                    color: const PdfColor.fromInt(0xFF1E1B4B))),
             pw.SizedBox(height: 4),
-            pw.Text('ASHA Mitra — Clinical Triage Report',
-                style: const pw.TextStyle(fontSize: 14, color: PdfColors.white)),
-            pw.SizedBox(height: 20),
-            pw.Text('Generated: $generatedAt',
-                style: const pw.TextStyle(fontSize: 10, color: PdfColors.white)),
-            pw.Text('Total Sessions: $total',
-                style: const pw.TextStyle(fontSize: 10, color: PdfColors.white)),
-          ]),
-        ),
-        pw.Container(
-          color: const PdfColor.fromInt(0xFFF8F9FF),
-          padding: const pw.EdgeInsets.fromLTRB(36, 32, 36, 0),
-          child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-            pw.Text('SUMMARY',
-                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.grey600, letterSpacing: 1.5)),
+            pw.Text('Clinical Triage Report',
+                style: pw.TextStyle(
+                    fontSize: 14,
+                    color: PdfColors.grey700,
+                    fontWeight: pw.FontWeight.bold,
+                    letterSpacing: 0.5)),
+            pw.SizedBox(height: 22),
+            pw.Container(
+                height: 1,
+                color: PdfColors.grey300),
+            pw.SizedBox(height: 18),
+            // Meta block
+            metaRow('Generated', generatedAt),
+            metaRow('Date range', dateRange),
+            metaRow('Total sessions', '$total'),
+            metaRow('Patients triaged',
+                '$patientsTriaged'
+                '${anonymousCount > 0 ? "  (+ $anonymousCount anonymous)" : ""}'),
+            if (avgRiskScore > 0)
+              metaRow('Avg risk score', '$avgRiskScore'),
+            pw.SizedBox(height: 32),
+
+            // Band stat row (bigger numbers, more breathing room)
+            pw.Text('OUTCOME DISTRIBUTION',
+                style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.grey600,
+                    letterSpacing: 1.5)),
             pw.SizedBox(height: 12),
             pw.Row(children: [
               statBox('মোট কেস', '$total', const PdfColor.fromInt(0xFF4F46E5)),
-              statBox('জরুরি (RED)', '$emergency', const PdfColor.fromInt(0xFFDC2626)),
-              statBox('মনোযোগ (YELLOW)', '$attention', const PdfColor.fromInt(0xFFD97706)),
-              statBox('নিরাপদ (GREEN)', '$safe', const PdfColor.fromInt(0xFF16A34A)),
+              statBox('RED', '$emergency', const PdfColor.fromInt(0xFFDC2626)),
+              statBox('YELLOW', '$attention', const PdfColor.fromInt(0xFFD97706)),
+              statBox('GREEN', '$safe', const PdfColor.fromInt(0xFF16A34A)),
             ]),
             pw.SizedBox(height: 28),
+
+            // Case-type breakdown (sorted by count desc)
             pw.Text('CASE TYPE BREAKDOWN',
-                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.grey600, letterSpacing: 1.5)),
+                style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfColors.grey600,
+                    letterSpacing: 1.5)),
             pw.SizedBox(height: 10),
             pw.TableHelper.fromTextArray(
-              headers: ['Case Type', 'Count', '% of Total'],
-              data: caseBreakdown.entries.map((e) => [e.key, '${e.value}', '${(e.value / total * 100).toStringAsFixed(1)}%']).toList(),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF4F46E5)),
+              headers: ['Case type', 'Count', '% of total'],
+              data: caseBreakdown.entries
+                  .map((e) => [
+                        e.key,
+                        '${e.value}',
+                        '${(e.value / total * 100).toStringAsFixed(1)}%',
+                      ])
+                  .toList(),
+              headerStyle: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 10,
+                  color: PdfColors.white),
+              headerDecoration:
+                  const pw.BoxDecoration(color: PdfColor.fromInt(0xFF4F46E5)),
               cellStyle: const pw.TextStyle(fontSize: 10),
-              cellAlignments: {0: pw.Alignment.centerLeft, 1: pw.Alignment.center, 2: pw.Alignment.center},
-              oddRowDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF0F0FF)),
+              cellAlignments: {
+                0: pw.Alignment.centerLeft,
+                1: pw.Alignment.center,
+                2: pw.Alignment.center,
+              },
+              oddRowDecoration:
+                  const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF0F0FF)),
             ),
+
             if (topDangerSigns.isNotEmpty) ...[
               pw.SizedBox(height: 24),
               pw.Text('TOP DANGER SIGNS DETECTED',
-                  style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.grey600, letterSpacing: 1.5)),
+                  style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey600,
+                      letterSpacing: 1.5)),
               pw.SizedBox(height: 10),
               pw.TableHelper.fromTextArray(
-                headers: ['Danger Sign', 'Frequency'],
-                data: topDangerSigns.take(8).map((e) => [e.key, '${e.value} cases']).toList(),
-                headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.white),
-                headerDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFDC2626)),
+                headers: ['Danger sign', 'Cases'],
+                data: topDangerSigns
+                    .take(8)
+                    .map((e) => [e.key, '${e.value}'])
+                    .toList(),
+                headerStyle: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10,
+                    color: PdfColors.white),
+                headerDecoration: const pw.BoxDecoration(
+                    color: PdfColor.fromInt(0xFFDC2626)),
                 cellStyle: const pw.TextStyle(fontSize: 10),
-                oddRowDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFFFF0F0)),
+                cellAlignments: {
+                  0: pw.Alignment.centerLeft,
+                  1: pw.Alignment.center,
+                },
+                oddRowDecoration: const pw.BoxDecoration(
+                    color: PdfColor.fromInt(0xFFFFF0F0)),
               ),
             ],
-          ]),
+          ],
         ),
-      ],
-    ),
+      ),
+    ]),
   ));
 
   // Detail pages — single MultiPage, no batching needed (off UI thread)
