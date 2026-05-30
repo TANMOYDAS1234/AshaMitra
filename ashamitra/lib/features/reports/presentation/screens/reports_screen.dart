@@ -501,9 +501,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       };
 
   String _outcomeLabel(String outcome) => switch (outcome) {
-        'emergency' => 'জরুরি',
-        'attention' => 'মনোযোগ দরকার',
-        _ => 'নিরাপদ',
+        'emergency' => 'outcome_emergency'.tr,
+        'attention' => 'outcome_attention'.tr,
+        _ => 'outcome_safe'.tr,
       };
 
   String _formatDate(String iso) {
@@ -1242,7 +1242,7 @@ class _ReportCardState extends State<_ReportCard> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            r['patientName']?.toString().isNotEmpty == true ? r['patientName'].toString() : 'অজ্ঞাত রোগী',
+                            r['patientName']?.toString().isNotEmpty == true ? r['patientName'].toString() : 'unknown_patient'.tr,
                             style: AppTextStyles.bodySm,
                           ),
                           Text(
@@ -1325,7 +1325,7 @@ class _ReportCardState extends State<_ReportCard> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'রোগীর সাথে যুক্ত করুন',
+                                  'attach_to_patient'.tr,
                                   style: TextStyle(
                                     fontSize: 12, fontWeight: FontWeight.w700,
                                     color: AppColors.primary,
@@ -1344,7 +1344,7 @@ class _ReportCardState extends State<_ReportCard> {
 
                   // Danger signs
                   if (dangerSigns.isNotEmpty) ...[
-                    _sectionLabel('বিপদচিহ্ন', Icons.warning_amber_rounded, AppColors.emergencyRed),
+                    _sectionLabel('section_danger_signs'.tr, Icons.warning_amber_rounded, AppColors.emergencyRed),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 4, runSpacing: 4,
@@ -1355,7 +1355,7 @@ class _ReportCardState extends State<_ReportCard> {
 
                   // Suspected conditions
                   if (suspectedConditions.isNotEmpty) ...[
-                    _sectionLabel('সম্ভাব্য অবস্থা', Icons.medical_information_rounded, AppColors.warningYellow),
+                    _sectionLabel('section_suspected'.tr, Icons.medical_information_rounded, AppColors.warningYellow),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 4, runSpacing: 4,
@@ -1366,7 +1366,7 @@ class _ReportCardState extends State<_ReportCard> {
 
                   // Clinical decision
                   if (reason.isNotEmpty) ...[
-                    _sectionLabel('ক্লিনিক্যাল সিদ্ধান্ত', Icons.assignment_rounded, AppColors.primary),
+                    _sectionLabel('section_clinical_decision'.tr, Icons.assignment_rounded, AppColors.primary),
                     const SizedBox(height: 6),
                     _infoBox(reason, AppColors.primary),
                     const SizedBox(height: 12),
@@ -1374,7 +1374,7 @@ class _ReportCardState extends State<_ReportCard> {
 
                   // Next step
                   if (nextStep.isNotEmpty) ...[
-                    _sectionLabel('পরবর্তী পদক্ষেপ', Icons.arrow_forward_rounded, outcomeColor),
+                    _sectionLabel('section_next_step'.tr, Icons.arrow_forward_rounded, outcomeColor),
                     const SizedBox(height: 6),
                     _infoBox(nextStep, outcomeColor),
                     const SizedBox(height: 12),
@@ -1382,7 +1382,7 @@ class _ReportCardState extends State<_ReportCard> {
 
                   // Situation
                   if (situation.isNotEmpty) ...[
-                    _sectionLabel('পরিস্থিতি', Icons.notes_rounded, AppColors.textSecondary),
+                    _sectionLabel('section_situation'.tr, Icons.notes_rounded, AppColors.textSecondary),
                     const SizedBox(height: 6),
                     _infoBox(situation, AppColors.textSecondary),
                     const SizedBox(height: 12),
@@ -1390,7 +1390,7 @@ class _ReportCardState extends State<_ReportCard> {
 
                   // Facility & recheck
                   if (facilityType.isNotEmpty && facilityType != 'None') ...[
-                    _sectionLabel('রেফার কেন্দ্র', Icons.local_hospital_rounded, AppColors.sky),
+                    _sectionLabel('section_referral'.tr, Icons.local_hospital_rounded, AppColors.sky),
                     const SizedBox(height: 6),
                     Row(
                       children: [
@@ -1404,7 +1404,7 @@ class _ReportCardState extends State<_ReportCard> {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: AppColors.sky.withValues(alpha: 0.3)),
                             ),
-                            child: Text('ফলো-আপ\n${recheckHours}h',
+                            child: Text('section_followup_hours'.trParams({'hours': '$recheckHours'}),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(fontSize: 10, color: AppColors.sky, fontWeight: FontWeight.w700)),
                           ),
@@ -1416,7 +1416,7 @@ class _ReportCardState extends State<_ReportCard> {
 
                   // Transport action
                   if (transportAction.isNotEmpty && transportAction != 'None') ...[
-                    _sectionLabel('পরিবহন', Icons.directions_car_rounded, AppColors.purple),
+                    _sectionLabel('section_transport'.tr, Icons.directions_car_rounded, AppColors.purple),
                     const SizedBox(height: 6),
                     _infoBox(transportAction, AppColors.purple),
                     const SizedBox(height: 12),
@@ -1424,7 +1424,7 @@ class _ReportCardState extends State<_ReportCard> {
 
                   // Triggered rules
                   if (triggeredRules.isNotEmpty) ...[
-                    _sectionLabel('ট্রিগার্ড রুলস', Icons.rule_rounded, AppColors.textSecondary),
+                    _sectionLabel('section_triggered_rules'.tr, Icons.rule_rounded, AppColors.textSecondary),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 4, runSpacing: 4,
@@ -1435,7 +1435,7 @@ class _ReportCardState extends State<_ReportCard> {
 
                   // Q&A history
                   if (qaHistory.isNotEmpty) ...[
-                    _sectionLabel('প্রশ্নোত্তর', Icons.chat_bubble_outline_rounded, AppColors.primary),
+                    _sectionLabel('section_qa'.tr, Icons.chat_bubble_outline_rounded, AppColors.primary),
                     const SizedBox(height: 8),
                     ...qaHistory.map((qa) {
                       final m = qa is Map ? qa : {};
@@ -1520,8 +1520,8 @@ class _ReportCardState extends State<_ReportCard> {
 
     if (patients.isEmpty) {
       Get.snackbar(
-        'কোনো রোগী নেই',
-        'প্রথমে রোগী যোগ করুন, তারপর এই রিপোর্টে যুক্ত করুন।',
+        'no_patients_yet'.tr,
+        'no_patients_add_first'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.warningYellow,
         colorText: Colors.white,
@@ -1571,28 +1571,28 @@ class _ReportCardState extends State<_ReportCard> {
                       ),
                     ),
                   ),
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('রোগী নির্বাচন করুন',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    child: Text('select_patient'.tr,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     autofocus: false,
                     onChanged: (v) => setSheetState(() => query = v),
-                    decoration: const InputDecoration(
-                      hintText: 'নাম, গ্রাম বা মোবাইল দিয়ে খুঁজুন',
-                      prefixIcon: Icon(Icons.search_rounded,
+                    decoration: InputDecoration(
+                      hintText: 'search_patients_hint'.tr,
+                      prefixIcon: const Icon(Icons.search_rounded,
                           color: AppColors.primary, size: 22),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Expanded(
                     child: filtered.isEmpty
-                        ? const Center(
+                        ? Center(
                             child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 32),
-                              child: Text('কোনো ফলাফল পাওয়া যায়নি'),
+                              padding: const EdgeInsets.symmetric(vertical: 32),
+                              child: Text('no_matches_found'.tr),
                             ),
                           )
                         : ListView.separated(
@@ -1615,7 +1615,7 @@ class _ReportCardState extends State<_ReportCard> {
                                       patientType: p.type,
                                     );
                                     Get.snackbar(
-                                      ok ? 'যুক্ত হয়েছে' : 'যুক্ত হয়েছে (অফলাইন)',
+                                      ok ? 'patient_attached'.tr : 'patient_attached_local'.tr,
                                       ok
                                           ? '${p.name} এই রিপোর্টের সাথে যুক্ত করা হয়েছে।'
                                           : '${p.name} স্থানীয়ভাবে যুক্ত — সার্ভারে পরে সিঙ্ক হবে।',
@@ -1721,7 +1721,7 @@ class _CaseBreakdown extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('কেস ধরন বিভাজন', style: AppTextStyles.h3),
+          Text('case_breakdown_heading'.tr, style: AppTextStyles.h3),
           const SizedBox(height: 14),
           ...counts.entries.toList().asMap().entries.map((entry) {
             final i = entry.key;

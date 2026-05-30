@@ -333,6 +333,25 @@ class AppTranslations extends Translations {
     "pick_month": "Pick a month",
     "pick_year": "Pick a year",
     "total_n": "Total @count",
+    // ── Report-card sections (visible inside the expanded card) ────────
+    "outcome_emergency": "Urgent",
+    "outcome_attention": "Needs attention",
+    "outcome_safe": "Safe",
+    "section_danger_signs": "Danger signs",
+    "section_suspected": "Suspected conditions",
+    "section_clinical_decision": "Clinical decision",
+    "section_next_step": "Next step",
+    "section_situation": "Situation",
+    "section_referral": "Referral facility",
+    "section_followup_hours": "Follow-up\\n@hours h",
+    "section_transport": "Transport",
+    "section_triggered_rules": "Triggered rules",
+    "section_qa": "Q & A",
+    "case_breakdown_heading": "Case-type breakdown",
+    "unknown_patient": "Anonymous",
+    "case_label_other": "Other",
+    "attach_to_patient": "Attach to patient",
+    "pdf_save_open_failed": "PDF saved — open via file manager: @name",
   };
 
   static const _bn = {
@@ -667,6 +686,25 @@ class AppTranslations extends Translations {
     "pick_month": "মাস বেছে নিন",
     "pick_year": "বছর বেছে নিন",
     "total_n": "মোট @count",
+    // ── Report-card sections ─────────────────────────────────────────
+    "outcome_emergency": "জরুরি",
+    "outcome_attention": "মনোযোগ দরকার",
+    "outcome_safe": "নিরাপদ",
+    "section_danger_signs": "বিপদচিহ্ন",
+    "section_suspected": "সম্ভাব্য অবস্থা",
+    "section_clinical_decision": "ক্লিনিক্যাল সিদ্ধান্ত",
+    "section_next_step": "পরবর্তী পদক্ষেপ",
+    "section_situation": "পরিস্থিতি",
+    "section_referral": "রেফার কেন্দ্র",
+    "section_followup_hours": "ফলো-আপ\\n@hours ঘণ্টা",
+    "section_transport": "পরিবহন",
+    "section_triggered_rules": "ট্রিগার্ড রুলস",
+    "section_qa": "প্রশ্নোত্তর",
+    "case_breakdown_heading": "কেস ধরন বিভাজন",
+    "unknown_patient": "অজ্ঞাত রোগী",
+    "case_label_other": "অন্যান্য",
+    "attach_to_patient": "রোগীর সাথে যুক্ত করুন",
+    "pdf_save_open_failed": "PDF সংরক্ষিত — ফাইল ম্যানেজার থেকে খুলুন: @name",
   };
 
   static const _hi = {
@@ -1001,6 +1039,25 @@ class AppTranslations extends Translations {
     "pick_month": "महीना चुनें",
     "pick_year": "साल चुनें",
     "total_n": "कुल @count",
+    // ── Report-card sections ─────────────────────────────────────────
+    "outcome_emergency": "आपातकाल",
+    "outcome_attention": "ध्यान दें",
+    "outcome_safe": "सुरक्षित",
+    "section_danger_signs": "खतरे के संकेत",
+    "section_suspected": "संभावित स्थिति",
+    "section_clinical_decision": "क्लिनिकल निर्णय",
+    "section_next_step": "अगला कदम",
+    "section_situation": "स्थिति",
+    "section_referral": "रेफरल केंद्र",
+    "section_followup_hours": "फॉलो-अप\\n@hours घंटे",
+    "section_transport": "परिवहन",
+    "section_triggered_rules": "ट्रिगर हुए नियम",
+    "section_qa": "प्रश्नोत्तर",
+    "case_breakdown_heading": "केस प्रकार विभाजन",
+    "unknown_patient": "अनाम मरीज़",
+    "case_label_other": "अन्य",
+    "attach_to_patient": "मरीज़ से जोड़ें",
+    "pdf_save_open_failed": "PDF सहेजी गई — फ़ाइल मैनेजर से खोलें: @name",
   };
 
   @override

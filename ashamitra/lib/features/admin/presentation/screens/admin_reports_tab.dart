@@ -254,57 +254,226 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
   }
 
   Future<void> _downloadPdf(List<dynamic> reports) async {
+    if (reports.isEmpty) {
+      Get.snackbar('No reports', 'Nothing to export', snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    // Cap at 100 so the file stays openable on low-RAM admin tablets.
+    final wasCapped = reports.length > 100;
+    if (wasCapped) reports = reports.take(100).toList();
+
     try {
       final theme = await PdfHelper.bengaliTheme();
       final doc = pw.Document(theme: theme);
-      doc.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
-          build: (ctx) => [
-            pw.Text('ASHA Mitra — Admin Reports',
-                style: pw.TextStyle(
-                    fontSize: 18, fontWeight: pw.FontWeight.bold)),
-            pw.SizedBox(height: 4),
-            pw.Text(
-                'Generated: ${DateTime.now().toString().substring(0, 16)}',
-                style: const pw.TextStyle(
-                    fontSize: 10, color: PdfColors.grey600)),
-            pw.Text('Total: ${reports.length}',
-                style: const pw.TextStyle(
-                    fontSize: 11, color: PdfColors.grey700)),
-            pw.Divider(height: 20),
-            pw.TableHelper.fromTextArray(
-              headers: ['Date', 'Patient', 'Case', 'Band', 'Facility'],
-              data: reports.map((item) {
-                final Map<String, dynamic> r = item is Map
-                    ? Map<String, dynamic>.from(item)
-                    : {};
-                return [
-                  _fmtDate(r['createdAt']?.toString() ?? ''),
-                  r['patientName']?.toString() ?? '',
-                  r['caseLabel']?.toString() ?? '',
-                  r['finalBand']?.toString() ?? '',
-                  r['facilityType']?.toString() ?? '',
-                ];
-              }).toList(),
-              headerStyle:
-                  pw.TextStyle(fontWeight: pw.FontWeight.bold),
-              headerDecoration:
-                  const pw.BoxDecoration(color: PdfColors.indigo100),
-              cellAlignment: pw.Alignment.centerLeft,
-              cellStyle: const pw.TextStyle(fontSize: 9),
+      final maps = reports.map((e) => e is Map ? Map<String, dynamic>.from(e) : <String, dynamic>{}).toList();
+
+      // Stats
+      final total = maps.length;
+      final red = maps.where((r) => (r['finalBand']?.toString() ?? '').toUpperCase() == 'RED').length;
+      final yellow = maps.where((r) => (r['finalBand']?.toString() ?? '').toUpperCase() == 'YELLOW').length;
+      final green = maps.where((r) => (r['finalBand']?.toString() ?? '').toUpperCase() == 'GREEN').length;
+
+      // Per-worker breakdown
+      final byWorker = <String, int>{};
+      for (final r in maps) {
+        final w = (r['ashaName']?.toString().trim().isNotEmpty == true)
+            ? r['ashaName'].toString()
+            : (r['ashaId']?.toString() ?? '—');
+        byWorker[w] = (byWorker[w] ?? 0) + 1;
+      }
+      final workerList = byWorker.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      // Per-case-type breakdown
+      final byCase = <String, int>{};
+      for (final r in maps) {
+        final c = r['caseLabel']?.toString() ?? r['caseType']?.toString() ?? '—';
+        byCase[c] = (byCase[c] ?? 0) + 1;
+      }
+
+      PdfColor bandColor(String b) => switch (b.toUpperCase()) {
+            'RED'    => const PdfColor.fromInt(0xFFDC2626),
+            'YELLOW' => const PdfColor.fromInt(0xFFD97706),
+            'GREEN'  => const PdfColor.fromInt(0xFF16A34A),
+            _        => PdfColors.grey500,
+          };
+
+      pw.Widget statBox(String label, String value, PdfColor color) =>
+          pw.Expanded(
+            child: pw.Container(
+              margin: const pw.EdgeInsets.symmetric(horizontal: 4),
+              padding: const pw.EdgeInsets.symmetric(vertical: 10),
+              decoration: pw.BoxDecoration(
+                color: color,
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+              ),
+              child: pw.Column(children: [
+                pw.Text(value,
+                    style: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfColors.white)),
+                pw.SizedBox(height: 2),
+                pw.Text(label,
+                    style: const pw.TextStyle(fontSize: 9, color: PdfColors.white)),
+              ]),
             ),
-          ],
+          );
+
+      doc.addPage(pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(28),
+        maxPages: 200,
+        header: (ctx) => pw.Container(
+          padding: const pw.EdgeInsets.only(bottom: 6),
+          decoration: const pw.BoxDecoration(
+              border: pw.Border(bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF4F46E5), width: 1.5))),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Text('ASHA Mitra — Admin Reports',
+                  style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF4F46E5))),
+              pw.Text('Page ${ctx.pageNumber}/${ctx.pagesCount}',
+                  style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500)),
+            ],
+          ),
         ),
-      );
-      final bytes = await doc.save();
-      await PdfHelper.saveAndOpen(
-          bytes,
-          'admin_reports_${DateTime.now().millisecondsSinceEpoch}.pdf');
+        footer: (ctx) => pw.Container(
+          padding: const pw.EdgeInsets.only(top: 6),
+          decoration: const pw.BoxDecoration(
+              border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300, width: 0.5))),
+          child: pw.Text(
+              'Confidential clinical record  ·  Generated ${DateTime.now().toString().substring(0, 16)}',
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+              textAlign: pw.TextAlign.center),
+        ),
+        build: (ctx) => [
+          // ── Cover summary ─────────────────────────────────────
+          pw.SizedBox(height: 8),
+          pw.Text('ADMIN SUMMARY',
+              style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.grey600,
+                  letterSpacing: 1.5)),
+          pw.SizedBox(height: 10),
+          pw.Row(children: [
+            statBox('Total', '$total', const PdfColor.fromInt(0xFF4F46E5)),
+            statBox('RED', '$red', const PdfColor.fromInt(0xFFDC2626)),
+            statBox('YELLOW', '$yellow', const PdfColor.fromInt(0xFFD97706)),
+            statBox('GREEN', '$green', const PdfColor.fromInt(0xFF16A34A)),
+          ]),
+          if (wasCapped) ...[
+            pw.SizedBox(height: 6),
+            pw.Text(
+                'Showing newest 100 of ${reports.length}. Use date / band filters to scope older sessions.',
+                style: const pw.TextStyle(fontSize: 9, color: PdfColors.orange700)),
+          ],
+          pw.SizedBox(height: 18),
+
+          // ── Per-worker breakdown ──────────────────────────────
+          pw.Text('BY WORKER',
+              style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.grey600,
+                  letterSpacing: 1.5)),
+          pw.SizedBox(height: 8),
+          pw.TableHelper.fromTextArray(
+            headers: ['ASHA worker', 'Reports', '% of total'],
+            data: workerList
+                .map((e) => [e.key, '${e.value}', '${(e.value / total * 100).toStringAsFixed(1)}%'])
+                .toList(),
+            headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.white),
+            headerDecoration:
+                const pw.BoxDecoration(color: PdfColor.fromInt(0xFF4F46E5)),
+            cellStyle: const pw.TextStyle(fontSize: 10),
+            cellAlignments: {0: pw.Alignment.centerLeft, 1: pw.Alignment.center, 2: pw.Alignment.center},
+            oddRowDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF0F0FF)),
+          ),
+          pw.SizedBox(height: 18),
+
+          // ── Per-case-type breakdown ───────────────────────────
+          pw.Text('BY CASE TYPE',
+              style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.grey600,
+                  letterSpacing: 1.5)),
+          pw.SizedBox(height: 8),
+          pw.TableHelper.fromTextArray(
+            headers: ['Case type', 'Count', '% of total'],
+            data: byCase.entries
+                .map((e) => [e.key, '${e.value}', '${(e.value / total * 100).toStringAsFixed(1)}%'])
+                .toList(),
+            headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold, fontSize: 10, color: PdfColors.white),
+            headerDecoration:
+                const pw.BoxDecoration(color: PdfColor.fromInt(0xFF6366F1)),
+            cellStyle: const pw.TextStyle(fontSize: 10),
+            cellAlignments: {0: pw.Alignment.centerLeft, 1: pw.Alignment.center, 2: pw.Alignment.center},
+            oddRowDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFF5F5FF)),
+          ),
+          pw.SizedBox(height: 20),
+
+          // ── Per-report detail table ───────────────────────────
+          pw.Text('SESSION DETAILS  ($total records)',
+              style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfColors.grey600,
+                  letterSpacing: 1.5)),
+          pw.SizedBox(height: 8),
+          pw.TableHelper.fromTextArray(
+            headers: ['Date', 'Worker', 'Patient', 'Case', 'Band', 'Risk', 'Facility'],
+            data: maps.map((r) => [
+              _fmtDate(r['createdAt']?.toString() ?? ''),
+              r['ashaName']?.toString() ?? '—',
+              r['patientName']?.toString().isNotEmpty == true
+                  ? r['patientName'].toString()
+                  : 'Anonymous',
+              r['caseLabel']?.toString() ?? r['caseType']?.toString() ?? '—',
+              r['finalBand']?.toString() ?? '—',
+              '${r['riskScore'] ?? 0}',
+              r['facilityType']?.toString() ?? '—',
+            ]).toList(),
+            headerStyle: pw.TextStyle(
+                fontWeight: pw.FontWeight.bold, fontSize: 9, color: PdfColors.white),
+            headerDecoration:
+                const pw.BoxDecoration(color: PdfColor.fromInt(0xFF4F46E5)),
+            cellStyle: const pw.TextStyle(fontSize: 8),
+            cellAlignments: {
+              0: pw.Alignment.centerLeft,
+              1: pw.Alignment.centerLeft,
+              2: pw.Alignment.centerLeft,
+              3: pw.Alignment.centerLeft,
+              4: pw.Alignment.center,
+              5: pw.Alignment.center,
+              6: pw.Alignment.centerLeft,
+            },
+            cellDecoration: (i, data, j) => i == 0
+                ? const pw.BoxDecoration()
+                : (j == 4 && data is String && data.isNotEmpty)
+                    ? pw.BoxDecoration(color: bandColor(data).shade(0.85))
+                    : const pw.BoxDecoration(),
+            oddRowDecoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFFAFAFF)),
+          ),
+        ],
+      ));
+
+      final bytes = await doc.save().timeout(const Duration(seconds: 60));
+      final fileName =
+          'asha_mitra_admin_reports_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      await PdfHelper.saveAndOpen(bytes, fileName)
+          .timeout(const Duration(seconds: 15));
     } catch (e) {
-      Get.snackbar('Error', 'Could not generate PDF: $e',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('PDF generation failed', 'Could not generate PDF: $e',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.emergencyRed,
+          colorText: AppColors.onPrimary,
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 5));
     }
   }
 
