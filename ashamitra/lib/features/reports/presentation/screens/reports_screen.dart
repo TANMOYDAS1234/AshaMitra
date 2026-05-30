@@ -625,13 +625,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
           '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}  '
           '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
-      // 3. Build the whole PDF in a background isolate. The closure captures
-      // only the serializable tuple — no `this`, no Flutter framework objects.
-      final bytes = await Isolate.run(
-        () => _buildPdfBytes((regularBytes, boldBytes, reports, generatedAt)),
-      );
+      // 3. Build the PDF. Try the isolate first (off-UI, won't ANR) but
+      // with a 90-sec timeout: pilot devices have hit cases where
+      // Isolate.run hangs silently when the pdf library trips over a
+      // specific font / Unicode combo, leaving the loading dialog up
+      // forever. If we hit the timeout we fall back to a UI-thread
+      // build — slower but always terminates.
+      List<int> bytes;
+      try {
+        bytes = await Isolate.run(
+          () => _buildPdfBytes((regularBytes, boldBytes, reports, generatedAt)),
+        ).timeout(const Duration(seconds: 90));
+        // ignore: avoid_print
+        print('[PDF] isolate returned ${bytes.length} bytes');
+      } catch (e) {
+        // ignore: avoid_print
+        print('[PDF] isolate failed/timeout ($e) — falling back to UI-thread build');
+        bytes = await _buildPdfBytes(
+          (regularBytes, boldBytes, reports, generatedAt),
+        );
+        // ignore: avoid_print
+        print('[PDF] UI-thread build returned ${bytes.length} bytes');
+      }
       // ignore: avoid_print
-      print('[PDF] isolate returned ${bytes.length} bytes — dismissing dialog');
+      print('[PDF] dismissing dialog');
 
       // Dismiss the dialog BEFORE saveAndOpen so the success snackbar isn't
       // covered by the modal overlay and OpenFile's viewer can take focus.

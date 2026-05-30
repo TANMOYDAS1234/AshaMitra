@@ -424,6 +424,70 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
     );
   }
 
+  /// Maps the triage caseId to the add-patient form's case-type chip
+  /// label. Matches the same logic in PatientContextSheet so the worker
+  /// gets a consistent default whichever entry point they used.
+  String _caseTypeForForm() {
+    switch (_caseType) {
+      case 'pregnancy':
+      case 'postpartum':
+        return 'Pregnancy';
+      case 'newborn':
+        return 'Newborn';
+      case 'infant':
+      case 'child':
+        return 'Child';
+      default:
+        return 'Other';
+    }
+  }
+
+  /// Pushes the Add Patient form with the case-type pre-filled, then
+  /// detects whether a new patient was created (patients list grew by 1)
+  /// and attaches it to the just-saved report. Same id-swap delay
+  /// handling as the picker — if the upload hasn't returned the real
+  /// Mongo _id yet, the local attach still works and the patient info
+  /// rides up with the eventual upload payload.
+  Future<void> _addNewPatientAndAttach(BuildContext context) async {
+    final ctrl = Get.find<PatientController>();
+    final beforeCount = ctrl.patients.length;
+    await Get.toNamed(AppRoutes.addPatient, arguments: {
+      'caseType': _caseTypeForForm(),
+    });
+    if (!mounted) return;
+    if (ctrl.patients.length <= beforeCount) {
+      // User cancelled the add-patient form — nothing to attach.
+      return;
+    }
+    // New patient was added: it's the most recent in the list.
+    // PatientController.addPatient inserts at index 0.
+    final newPatient = ctrl.patients.first;
+    final report = ctrl.reports.isNotEmpty ? ctrl.reports[0] : null;
+    final reportId = report?['id']?.toString() ?? '';
+    if (reportId.isEmpty) return;
+    final ok = await ctrl.attachPatientToReport(
+      reportId:    reportId,
+      patientId:   newPatient.id,
+      patientName: newPatient.name,
+      patientType: newPatient.type,
+    );
+    if (mounted) {
+      setState(() => _attachedPatientName = newPatient.name);
+    }
+    Get.snackbar(
+      ok ? 'যুক্ত হয়েছে' : 'যুক্ত হয়েছে (অফলাইন)',
+      ok
+          ? '${newPatient.name} এই রিপোর্টের সাথে যুক্ত করা হয়েছে।'
+          : '${newPatient.name} স্থানীয়ভাবে যুক্ত — সার্ভারে পরে সিঙ্ক হবে।',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: ok ? AppColors.safeGreen : AppColors.warningYellow,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+      duration: const Duration(seconds: 3),
+    );
+  }
+
   /// Opens a searchable bottom sheet of the worker's existing patients
   /// and attaches the picked one to the most recent report (the one
   /// _autoSaveReport just created). Mirrors the Reports-tab attach flow
@@ -489,6 +553,58 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                   ),
                   const SizedBox(height: 12),
+                  // ── Quick "register a new patient" entry ───────────────
+                  // The urgent flow originally only let the worker pick from
+                  // existing patients. Now they can also create one on the
+                  // spot with the case-type pre-filled. After the form pops
+                  // we detect the new patient (by patients-count growth) and
+                  // attach it to the just-saved report automatically.
+                  Material(
+                    color: AppColors.accent.withValues(alpha: 0.10),
+                    borderRadius: AppRadius.lgR,
+                    child: InkWell(
+                      borderRadius: AppRadius.lgR,
+                      onTap: () async {
+                        Navigator.of(sheetCtx).pop();
+                        await _addNewPatientAndAttach(context);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person_add_alt_1_rounded,
+                                color: AppColors.accent, size: 22),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'নতুন রোগী যোগ করুন',
+                                    style: AppTextStyles.label.copyWith(
+                                      color: AppColors.accent,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  Text(
+                                    'কেসের ধরন আগে থেকেই বেছে নেওয়া আছে',
+                                    style: AppTextStyles.caption,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded,
+                                color: AppColors.accent),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
                   TextField(
                     onChanged: (v) => setSheetState(() => query = v),
                     decoration: const InputDecoration(
