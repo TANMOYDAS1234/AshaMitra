@@ -1109,10 +1109,27 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isAsha) ...[
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-              child: Text('আ', style: AppTextStyles.label.copyWith(color: AppColors.primary)),
+            // AshaMitra logo as the assistant avatar — matches the
+            // chat bubble in the AshaMitra Voice Assistant tab so the
+            // worker sees the same brand mark in both surfaces.
+            Container(
+              width: 32, height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.6),
+                  width: 1.5,
+                ),
+                boxShadow: AppShadows.tinted(AppColors.primary),
+              ),
+              padding: const EdgeInsets.all(3),
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/ashalogo.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
             ),
             const SizedBox(width: 8),
           ],
@@ -1157,10 +1174,24 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          CircleAvatar(
-            radius: 16,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-            child: Text('আ', style: AppTextStyles.label.copyWith(color: AppColors.primary)),
+          Container(
+            width: 32, height: 32,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.6),
+                width: 1.5,
+              ),
+              boxShadow: AppShadows.tinted(AppColors.primary),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/ashalogo.png',
+                fit: BoxFit.contain,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           Flexible(
