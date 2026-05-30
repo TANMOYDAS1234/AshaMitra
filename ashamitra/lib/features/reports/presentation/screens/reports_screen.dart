@@ -21,9 +21,18 @@ import '../../../../shared/widgets/skeleton.dart';
 import '../../../patients/controller/patient_controller.dart';
 
 // Top-level so Isolate.run can capture it. Receives only plain-data args.
+// labels: pre-resolved translation strings (GetX `.tr` doesn't work
+// across isolate boundaries — the translations map lives on the main
+// isolate only). UI thread builds this map via .tr before spawning.
 Future<List<int>> _buildPdfBytes(
-    (Uint8List, Uint8List, List<Map<String, dynamic>>, String) args) async {
-  final (regularBytes, boldBytes, reports, generatedAt) = args;
+    (Uint8List, Uint8List, List<Map<String, dynamic>>, String, Map<String, String>) args) async {
+  final (regularBytes, boldBytes, reports, generatedAt, labels) = args;
+  String t(String key) => labels[key] ?? key;
+  String tp(String key, Map<String, String> vars) {
+    var s = labels[key] ?? key;
+    vars.forEach((k, v) => s = s.replaceAll('@$k', v));
+    return s;
+  }
 
   pw.Font makeFont(Uint8List b) =>
       b.isNotEmpty ? pw.Font.ttf(b.buffer.asByteData()) : pw.Font.helvetica();
@@ -80,7 +89,7 @@ Future<List<int>> _buildPdfBytes(
   // first instead of in arbitrary insertion order.
   final caseBreakdownRaw = <String, int>{};
   for (final r in reports) {
-    final label = r['caseLabel']?.toString() ?? 'অন্যান্য';
+    final label = r['caseLabel']?.toString() ?? t('case_label_other');
     caseBreakdownRaw[label] = (caseBreakdownRaw[label] ?? 0) + 1;
   }
   final caseBreakdown = Map.fromEntries(
@@ -103,9 +112,9 @@ Future<List<int>> _buildPdfBytes(
         _ => const PdfColor.fromInt(0xFF16A34A),
       };
   String bl(String o) => switch (o) {
-        'emergency' => 'RED — জরুরি',
-        'attention' => 'YELLOW — মনোযোগ দরকার',
-        _ => 'GREEN — নিরাপদ',
+        'emergency' => t('pdf_band_red'),
+        'attention' => t('pdf_band_yellow'),
+        _ => t('pdf_band_green'),
       };
   String fmtDate(String iso) {
     try {
@@ -202,13 +211,13 @@ Future<List<int>> _buildPdfBytes(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             // Hero
-            pw.Text('আশামিত্র',
+            pw.Text(t('app_name'),
                 style: pw.TextStyle(
                     fontSize: 40,
                     fontWeight: pw.FontWeight.bold,
                     color: const PdfColor.fromInt(0xFF1E1B4B))),
             pw.SizedBox(height: 4),
-            pw.Text('Clinical Triage Report',
+            pw.Text(t('pdf_subtitle'),
                 style: pw.TextStyle(
                     fontSize: 14,
                     color: PdfColors.grey700,
@@ -220,18 +229,16 @@ Future<List<int>> _buildPdfBytes(
                 color: PdfColors.grey300),
             pw.SizedBox(height: 18),
             // Meta block
-            metaRow('Generated', generatedAt),
-            metaRow('Date range', dateRange),
-            metaRow('Total sessions', '$total'),
-            metaRow('Patients triaged',
-                '$patientsTriaged'
-                '${anonymousCount > 0 ? "  (+ $anonymousCount anonymous)" : ""}'),
+            metaRow(t('pdf_meta_generated'), generatedAt),
+            metaRow(t('pdf_meta_date_range'), dateRange),
+            metaRow(t('pdf_meta_total'), '$total'),
+            metaRow(t('pdf_meta_patients'), anonymousCount > 0 ? '$patientsTriaged  ' + tp('pdf_anonymous_count_suffix', {'n': '$anonymousCount'}) : '$patientsTriaged'),
             if (avgRiskScore > 0)
-              metaRow('Avg risk score', '$avgRiskScore'),
+              metaRow(t('pdf_meta_avg_risk'), '$avgRiskScore'),
             pw.SizedBox(height: 32),
 
             // Band stat row (bigger numbers, more breathing room)
-            pw.Text('OUTCOME DISTRIBUTION',
+            pw.Text(t('pdf_section_outcome'),
                 style: pw.TextStyle(
                     fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
@@ -239,7 +246,7 @@ Future<List<int>> _buildPdfBytes(
                     letterSpacing: 1.5)),
             pw.SizedBox(height: 12),
             pw.Row(children: [
-              statBox('মোট কেস', '$total', const PdfColor.fromInt(0xFF4F46E5)),
+              statBox(t('pdf_stat_total'), '$total', const PdfColor.fromInt(0xFF4F46E5)),
               statBox('RED', '$emergency', const PdfColor.fromInt(0xFFDC2626)),
               statBox('YELLOW', '$attention', const PdfColor.fromInt(0xFFD97706)),
               statBox('GREEN', '$safe', const PdfColor.fromInt(0xFF16A34A)),
@@ -247,7 +254,7 @@ Future<List<int>> _buildPdfBytes(
             pw.SizedBox(height: 28),
 
             // Case-type breakdown (sorted by count desc)
-            pw.Text('CASE TYPE BREAKDOWN',
+            pw.Text(t('pdf_section_case_breakdown'),
                 style: pw.TextStyle(
                     fontSize: 10,
                     fontWeight: pw.FontWeight.bold,
@@ -255,7 +262,7 @@ Future<List<int>> _buildPdfBytes(
                     letterSpacing: 1.5)),
             pw.SizedBox(height: 10),
             pw.TableHelper.fromTextArray(
-              headers: ['Case type', 'Count', '% of total'],
+              headers: [t('pdf_col_case_type'), t('pdf_col_count'), t('pdf_col_percent')],
               data: caseBreakdown.entries
                   .map((e) => [
                         e.key,
@@ -281,7 +288,7 @@ Future<List<int>> _buildPdfBytes(
 
             if (topDangerSigns.isNotEmpty) ...[
               pw.SizedBox(height: 24),
-              pw.Text('TOP DANGER SIGNS DETECTED',
+              pw.Text(t('pdf_section_danger_signs'),
                   style: pw.TextStyle(
                       fontSize: 10,
                       fontWeight: pw.FontWeight.bold,
@@ -289,7 +296,7 @@ Future<List<int>> _buildPdfBytes(
                       letterSpacing: 1.5)),
               pw.SizedBox(height: 10),
               pw.TableHelper.fromTextArray(
-                headers: ['Danger sign', 'Cases'],
+                headers: [t('pdf_col_danger_sign'), t('pdf_col_cases')],
                 data: topDangerSigns
                     .take(8)
                     .map((e) => [e.key, '${e.value}'])
@@ -327,9 +334,9 @@ Future<List<int>> _buildPdfBytes(
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
-          pw.Text('আশামিত্র — Triage Session Details',
+          pw.Text(t('app_name') + ' — ' + t('pdf_header_session_details'),
               style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF4F46E5))),
-          pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
+          pw.Text(tp('pdf_page_of', {'n': '${ctx.pageNumber}', 'total': '${ctx.pagesCount}'}),
               style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey500)),
         ],
       ),
@@ -339,7 +346,7 @@ Future<List<int>> _buildPdfBytes(
       decoration: const pw.BoxDecoration(
           border: pw.Border(top: pw.BorderSide(color: PdfColors.grey300, width: 0.5))),
       child: pw.Text(
-        'ASHA Mitra — Confidential Clinical Record  |  Generated $generatedAt',
+        tp('pdf_footer', {'date': generatedAt}),
         style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey400),
         textAlign: pw.TextAlign.center,
       ),
@@ -352,7 +359,7 @@ Future<List<int>> _buildPdfBytes(
           color: PdfColor.fromInt(0xFFEEF2FF),
           borderRadius: pw.BorderRadius.all(pw.Radius.circular(4)),
         ),
-        child: pw.Text('SESSION DETAILS  ($total records)',
+        child: pw.Text(t('pdf_section_session_details') + '  (' + tp('pdf_session_records', {'n': '$total'}) + ')',
             style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFF3730A3))),
       ),
       ...reports.asMap().entries.map((entry) {
@@ -406,15 +413,15 @@ Future<List<int>> _buildPdfBytes(
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    kvRow('Date / Time', fmtDate(r['createdAt']?.toString() ?? '')),
-                    kvRow('Patient Name', r['patientName']?.toString().isNotEmpty == true ? r['patientName'].toString() : 'Not recorded'),
-                    kvRow('Risk Score', riskScore > 0 ? '$riskScore / 100' : '—'),
-                    kvRow('Risk Level', r['riskLevel']?.toString().toUpperCase() ?? '—'),
-                    kvRow('Facility Referral', r['facilityType']?.toString().isNotEmpty == true ? r['facilityType'].toString() : '—'),
-                    if (recheckHours > 0) kvRow('Follow-up In', '$recheckHours hours'),
+                    kvRow(t('pdf_kv_date'), fmtDate(r['createdAt']?.toString() ?? '')),
+                    kvRow(t('pdf_kv_patient'), r['patientName']?.toString().isNotEmpty == true ? r['patientName'].toString() : t('pdf_kv_not_recorded')),
+                    kvRow(t('pdf_kv_risk_score'), riskScore > 0 ? '$riskScore / 100' : '—'),
+                    kvRow(t('pdf_kv_risk_level'), r['riskLevel']?.toString().toUpperCase() ?? '—'),
+                    kvRow(t('pdf_kv_facility'), r['facilityType']?.toString().isNotEmpty == true ? r['facilityType'].toString() : '—'),
+                    if (recheckHours > 0) kvRow(t('pdf_kv_followup'), tp('pdf_kv_hours', {'n': '$recheckHours'})),
                     if ((r['situation']?.toString() ?? '').isNotEmpty) ...[
                       pw.SizedBox(height: 8),
-                      pw.Text('Situation Reported',
+                      pw.Text(t('pdf_situation_label'),
                           style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
                       pw.SizedBox(height: 3),
                       pw.Container(
@@ -430,7 +437,7 @@ Future<List<int>> _buildPdfBytes(
                       ),
                     ],
                     pw.SizedBox(height: 8),
-                    pw.Text('Clinical Decision',
+                    pw.Text(t('pdf_clinical_decision_label'),
                         style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
                     pw.SizedBox(height: 3),
                     pw.Container(
@@ -450,7 +457,7 @@ Future<List<int>> _buildPdfBytes(
                               style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey900)),
                           if ((r['nextStep']?.toString() ?? '').isNotEmpty) ...[
                             pw.SizedBox(height: 4),
-                            pw.Text('Next Step: ${r['nextStep']}',
+                            pw.Text(t('pdf_next_step_label') + ' ' + (r['nextStep']?.toString() ?? ''),
                                 style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: bandColor)),
                           ],
                         ],
@@ -458,7 +465,7 @@ Future<List<int>> _buildPdfBytes(
                     ),
                     if (dangerSigns.isNotEmpty) ...[
                       pw.SizedBox(height: 8),
-                      pw.Text('Danger Signs Detected',
+                      pw.Text(t('pdf_danger_signs_label'),
                           style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFFDC2626))),
                       pw.SizedBox(height: 4),
                       pw.Wrap(spacing: 6, runSpacing: 4,
@@ -471,7 +478,7 @@ Future<List<int>> _buildPdfBytes(
                     ],
                     if (suspectedConditions.isNotEmpty) ...[
                       pw.SizedBox(height: 8),
-                      pw.Text('Suspected Conditions',
+                      pw.Text(t('pdf_suspected_label'),
                           style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: const PdfColor.fromInt(0xFFD97706))),
                       pw.SizedBox(height: 4),
                       pw.Wrap(spacing: 6, runSpacing: 4,
@@ -484,7 +491,7 @@ Future<List<int>> _buildPdfBytes(
                     ],
                     if (triggeredRules.isNotEmpty) ...[
                       pw.SizedBox(height: 8),
-                      pw.Text('Triggered Rules',
+                      pw.Text(t('pdf_triggered_rules_label'),
                           style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
                       pw.SizedBox(height: 3),
                       pw.Text(triggeredRules.join('  •  '),
@@ -493,11 +500,11 @@ Future<List<int>> _buildPdfBytes(
                     if (qaHistory.isNotEmpty) ...[
                       pw.SizedBox(height: 8),
                       pw.Text(
-                          qaHistory.length > 8 ? 'Conversation Q&A  (first 8 of ${qaHistory.length})' : 'Conversation Q&A',
+                          qaHistory.length > 8 ? tp('pdf_qa_label_truncated', {'n': '${qaHistory.length}'}) : t('pdf_qa_label'),
                           style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.grey700)),
                       pw.SizedBox(height: 4),
                       pw.TableHelper.fromTextArray(
-                        headers: ['Question', 'Answer'],
+                        headers: [t('pdf_qa_col_question'), t('pdf_qa_col_answer')],
                         data: qaHistory.take(8).map((qa) {
                           final m = qa is Map ? qa : {};
                           String trim(String s) => s.length > 300 ? '${s.substring(0, 300)}...' : s;
@@ -821,6 +828,35 @@ class _ReportsScreenState extends State<ReportsScreen> {
           '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}  '
           '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
 
+      // Pre-resolve every translatable string the PDF needs on the UI
+      // thread — `.tr` walks GetX's translations map which lives on
+      // the main isolate only. Inside the spawned isolate the lookup
+      // would fall back to the raw key (the bug pilot users hit when
+      // the PDF wasn't following the language toggle).
+      final labels = <String, String>{
+        for (final k in const [
+          'app_name', 'case_label_other',
+          'pdf_subtitle', 'pdf_meta_generated', 'pdf_meta_date_range',
+          'pdf_meta_total', 'pdf_meta_patients', 'pdf_meta_avg_risk',
+          'pdf_anonymous_count_suffix',
+          'pdf_section_outcome', 'pdf_section_case_breakdown',
+          'pdf_section_danger_signs', 'pdf_section_session_details',
+          'pdf_col_case_type', 'pdf_col_count', 'pdf_col_percent',
+          'pdf_col_danger_sign', 'pdf_col_cases',
+          'pdf_stat_total', 'pdf_session_records',
+          'pdf_kv_date', 'pdf_kv_patient', 'pdf_kv_risk_score',
+          'pdf_kv_risk_level', 'pdf_kv_facility', 'pdf_kv_followup',
+          'pdf_kv_hours', 'pdf_kv_not_recorded',
+          'pdf_situation_label', 'pdf_clinical_decision_label',
+          'pdf_next_step_label', 'pdf_danger_signs_label',
+          'pdf_suspected_label', 'pdf_triggered_rules_label',
+          'pdf_qa_label', 'pdf_qa_label_truncated',
+          'pdf_qa_col_question', 'pdf_qa_col_answer',
+          'pdf_footer', 'pdf_header_session_details', 'pdf_page_of',
+          'pdf_band_red', 'pdf_band_yellow', 'pdf_band_green',
+        ]) k: k.tr,
+      };
+
       // 3. Build the PDF with layered timeouts so the loading dialog can
       // never hang forever:
       //   a) Isolate path, 90 sec — fast, off-UI, won't ANR
@@ -832,7 +868,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       List<int> bytes;
       try {
         bytes = await Isolate.run(
-          () => _buildPdfBytes((regularBytes, boldBytes, reports, generatedAt)),
+          () => _buildPdfBytes((regularBytes, boldBytes, reports, generatedAt, labels)),
         ).timeout(const Duration(seconds: 90));
         // ignore: avoid_print
         print('[PDF] isolate returned ${bytes.length} bytes');
@@ -841,7 +877,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         print('[PDF] isolate failed ($e) — trying UI-thread fancy build');
         try {
           bytes = await _buildPdfBytes(
-            (regularBytes, boldBytes, reports, generatedAt),
+            (regularBytes, boldBytes, reports, generatedAt, labels),
           ).timeout(const Duration(seconds: 60));
           // ignore: avoid_print
           print('[PDF] UI-thread fancy returned ${bytes.length} bytes');
@@ -1819,7 +1855,7 @@ class _CaseBreakdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final counts = <String, int>{};
     for (final r in reports) {
-      final label = r['caseLabel']?.toString() ?? 'অন্যান্য';
+      final label = r['caseLabel']?.toString() ?? 'case_label_other'.tr;
       counts[label] = (counts[label] ?? 0) + 1;
     }
     if (counts.isEmpty) return const SizedBox.shrink();
