@@ -152,7 +152,18 @@ class AssistantChatService {
         return await _offlineFallback(userInput, appLanguage);
       }
       if (res.statusCode != 200) {
-        return await _offlineFallback(userInput, appLanguage);
+        // Peek at errorCode so we can surface a distinct "quota
+        // exhausted" message instead of the generic "server is slow".
+        String? errorCode;
+        try {
+          final errBody = jsonDecode(res.body) as Map<String, dynamic>;
+          errorCode = errBody['errorCode']?.toString();
+        } catch (_) {}
+        return await _offlineFallback(
+          userInput,
+          appLanguage,
+          serverErrorCode: errorCode,
+        );
       }
       body = jsonDecode(res.body) as Map<String, dynamic>;
     }
@@ -376,20 +387,32 @@ JSON খোলা ব্রেস `{` দিয়ে শুরু হবে, �
   }
 
   /// Returns the right fallback message based on WHY the network call
-  /// failed. Without this check, every server-side failure (cold-start,
-  /// rate-limit, 503) was reported as "no internet" — which made the
-  /// worker blame their connection even when they had full bars. Now we
-  /// actually verify connectivity first and choose the message accordingly.
+  /// failed. Three distinct cases now:
+  ///   - genuine no-internet (radio off, no signal)
+  ///   - server returned AI_QUOTA (Groq + Gemini both rate-limited)
+  ///   - server slow / unreachable for some other reason
+  /// Without this distinction, all three got the misleading "no internet"
+  /// message, making pilot workers blame their connection.
   Future<AssistantResponse> _offlineFallback(
-      String input, AssistantLang appLanguage) async {
+    String input,
+    AssistantLang appLanguage, {
+    String? serverErrorCode,
+  }) async {
     final detected = _heuristicLang(input, appLanguage);
     final connectivity = await Connectivity().checkConnectivity();
     final hasNetwork =
         connectivity.any((c) => c != ConnectivityResult.none);
+
+    final String text;
+    if (!hasNetwork) {
+      text = _offlineMessage(detected);
+    } else if (serverErrorCode == 'AI_QUOTA') {
+      text = _aiQuotaMessage(detected);
+    } else {
+      text = _serverSlowMessage(detected);
+    }
     return AssistantResponse(
-      text: hasNetwork
-          ? _serverSlowMessage(detected)
-          : _offlineMessage(detected),
+      text: text,
       detectedLanguage: detected,
       isClinical: false,
       shouldOfferSave: false,
@@ -412,6 +435,15 @@ JSON খোলা ব্রেস `{` দিয়ে শুরু হবে, �
           'सर्वर अभी थोड़ा धीमा है, थोड़ी देर बाद फिर पूछें।',
         AssistantLang.en =>
           'The server is slow right now, please try again in a moment.',
+      };
+
+  String _aiQuotaMessage(AssistantLang l) => switch (l) {
+        AssistantLang.bn =>
+          'AI সেবা এখন সর্বোচ্চ সীমায় পৌঁছেছে। কিছুক্ষণ পরে আবার চেষ্টা করুন (সাধারণত প্রতিদিন রাতে রিসেট হয়)।',
+        AssistantLang.hi =>
+          'AI सेवा अभी पूरी क्षमता पर है। थोड़ी देर बाद फिर पूछें (आमतौर पर हर रात रीसेट हो जाती है)।',
+        AssistantLang.en =>
+          'AI service is at capacity right now. Please try again in a while (the daily limit usually resets at night UTC).',
       };
 
   String _genericReply(AssistantLang l) => switch (l) {
