@@ -211,26 +211,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Future<void> _speakGreeting() async {
     final greeting = _greetingFor(_activeLang);
     setState(() => _statusLine = _greetingStatus(_activeLang));
-    await _tts.speak(_humanize(greeting), tone: TtsTone.empathy);
-  }
-
-  /// Pre-process text before TTS to remove robotic comma pauses.
-  /// Device TTS (and Google Cloud TTS at default settings) inserts a
-  /// noticeable pause at every comma, which turns "নমস্কার দিদি, আমি
-  /// আশামিত্র" into "নমস্কার দিদি … [beat] … আমি আশামিত্র" — a
-  /// stilted phone-tree cadence rather than a conversational one.
-  ///
-  /// Stripping ALL commas (but keeping periods / Bengali daanda as
-  /// sentence boundaries) lets the engine derive prosody from sentence
-  /// structure alone, which sounds more like a real person speaking.
-  /// The chat bubble still displays the original text with commas
-  /// intact — only the spoken stream is cleaned.
-  String _humanize(String text) {
-    if (text.isEmpty) return text;
-    var s = text;
-    s = s.replaceAll(',', ' ');
-    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return s;
+    // TtsService.speak() now strips commas universally, so we no longer
+    // need a local _humanize() here. Triage and every other consumer
+    // gets the same humanization for free.
+    await _tts.speak(greeting, tone: TtsTone.empathy);
   }
 
   // ── STT control ────────────────────────────────────────────────────────
@@ -351,7 +335,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
             await _tts.stop();
           } catch (_) {}
           await _tts.speak(
-            _humanize(result.spokenConfirmation),
+            result.spokenConfirmation,
             tone: TtsTone.normal,
           );
         }
@@ -404,7 +388,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
           tone: TtsTone.normal,
         );
       } else {
-        await _tts.speak(_humanize(response.text), tone: TtsTone.normal);
+        await _tts.speak(response.text, tone: TtsTone.normal);
       }
     }
   }

@@ -69,9 +69,38 @@ class TtsService {
   /// next to the rendered text so the worker isn't surprised by silence.
   Future<bool> speak(String text, {TtsTone tone = TtsTone.normal}) async {
     if (text.trim().isEmpty) return false;
-    final played = await _vapiTts.speak(text, tone: tone.name);
+    final played = await _vapiTts.speak(_humanize(text), tone: tone.name);
     audioReady.value = played;
     return played;
+  }
+
+  /// Strip commas before TTS. The voice engine (both Google Cloud and
+  /// device TTS) inserts a noticeable beat at every comma, which turns
+  /// short phrases like "নমস্কার দিদি, আমি আশামিত্র" into a phone-tree
+  /// cadence instead of a conversational one. Removing commas (but
+  /// keeping periods / Bengali daanda as natural sentence boundaries)
+  /// lets the engine derive prosody from sentence structure alone.
+  ///
+  /// Applied to every speech path that goes through this service —
+  /// triage prompts, assistant replies, emergency callouts, all of it —
+  /// so the "robotic didi pause" is fixed app-wide, not just in the
+  /// assistant screen. The backend's ttsToSsml() does the same strip
+  /// server-side; doing it here too means device-TTS paths and any
+  /// future direct-device fallback also stay humanized.
+  ///
+  /// Bundled-MP3 implication: existing assets/voices/*.mp3 were
+  /// generated with comma-containing keys (md5 of original text +
+  /// voice + tone). After this change, lookups use the comma-less
+  /// text so the bundled-asset cache may miss until the bundle is
+  /// regenerated. The disk cache rebuilds automatically on first
+  /// online use; pure-offline first-launch may briefly fall back to
+  /// "audio offline" for a few phrases until that happens.
+  String _humanize(String text) {
+    if (text.isEmpty) return text;
+    return text
+        .replaceAll(',', ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
   }
 
   /// Convenience: speak with tone auto-derived from a clinical risk level.
@@ -84,7 +113,7 @@ class TtsService {
   /// audio actually played.
   Future<bool> speakEmergency(String text) async {
     if (text.trim().isEmpty) return false;
-    final played = await _vapiTts.speak(text, tone: TtsTone.emergency.name)
+    final played = await _vapiTts.speak(_humanize(text), tone: TtsTone.emergency.name)
         .timeout(const Duration(seconds: 5), onTimeout: () => false);
     audioReady.value = played;
     return played;
@@ -105,9 +134,13 @@ class TtsService {
     TtsTone tone = TtsTone.normal,
   }) async {
     if (audioBytes.isEmpty || text.trim().isEmpty) return false;
+    // Bytes are already humanized server-side (server.js strips commas
+    // in ttsToSsml). But the cache key here is hashed from [text], so
+    // pass the humanized variant so the cached MP3 lookup in subsequent
+    // speak() calls — which also humanize — hits the same key.
     final played = await _vapiTts.speakBytes(
       audioBytes,
-      text: text,
+      text: _humanize(text),
       tone: tone.name,
     );
     audioReady.value = played;
