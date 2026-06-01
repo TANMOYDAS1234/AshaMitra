@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../core/constants/api_constants.dart';
 import '../../../core/theme/app_colors.dart';
 
 class _Place {
@@ -154,7 +155,67 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
     });
   }
 
+  /// Resolution order:
+  ///   1. Backend /api/directions — proxies Google Directions API,
+  ///      live-traffic-aware, key stays server-side.
+  ///   2. OSRM public — free, no key, OSM-based (no live traffic).
+  ///   3. Null — caller draws the straight-line placeholder.
+  ///
+  /// Backend is tried first so a deployment with a Google Maps key
+  /// gets the real-traffic numbers (and matching polyline), while a
+  /// deployment without one falls through to OSRM automatically —
+  /// no client-side config flag needed.
   Future<_Route?> _fetchRoute(LatLng origin, LatLng dest) async {
+    final google = await _fetchGoogleRoute(origin, dest);
+    if (google != null) return google;
+    return _fetchOsrmRoute(origin, dest);
+  }
+
+  /// Backend proxy to Google Directions API (see server.js
+  /// /api/directions). Returns null on any failure: not configured
+  /// (503), no route (404), backend down, slow network, etc. The
+  /// caller then tries OSRM.
+  Future<_Route?> _fetchGoogleRoute(LatLng o, LatLng d) async {
+    final url = Uri.parse(
+      '${ApiConstants.baseUrl}/directions'
+      '?olat=${o.latitude}&olng=${o.longitude}'
+      '&dlat=${d.latitude}&dlng=${d.longitude}',
+    );
+    try {
+      final resp = await http.get(url).timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) return null;
+      final json = jsonDecode(resp.body) as Map<String, dynamic>;
+      if (json['success'] != true) return null;
+      final raw = json['points'] as List?;
+      if (raw == null || raw.isEmpty) return null;
+      final pts = <LatLng>[];
+      for (final pair in raw) {
+        if (pair is List && pair.length >= 2) {
+          final lat = (pair[0] as num).toDouble();
+          final lng = (pair[1] as num).toDouble();
+          pts.add(LatLng(lat, lng));
+        }
+      }
+      if (pts.isEmpty) return null;
+      final distM = (json['distanceM'] as num?)?.toDouble() ?? 0;
+      // Prefer live-traffic duration if backend returned it.
+      final durS = ((json['durationInTrafficS'] ?? json['durationS']) as num?)
+              ?.toDouble() ??
+          0;
+      return _Route(
+        points: pts,
+        distanceKm: distM / 1000.0,
+        durationMin: (durS / 60).round(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Public OSRM demo server — same OSM data we render on tiles, no
+  /// key, no live traffic. Used as a fallback when the backend Google
+  /// proxy isn't configured or unreachable.
+  Future<_Route?> _fetchOsrmRoute(LatLng origin, LatLng dest) async {
     // OSRM coordinate order is lon,lat (not lat,lon).
     final url = Uri.parse(
       'https://router.project-osrm.org/route/v1/driving/'
