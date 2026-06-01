@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -16,6 +17,22 @@ class _Place {
   final bool isGovt; // PHC/CHC/DH/SNCU are government verified
   _Place({required this.name, required this.pos, required this.type, required this.distanceKm})
       : isGovt = ['PHC', 'CHC', 'DH', 'SNCU'].contains(type);
+}
+
+/// Road-routed polyline + drive distance/duration for a single
+/// (origin, destination) pair, fetched from OSRM. The straight-line
+/// distance on [_Place] remains the sort key (used to rank facilities)
+/// — but anything visible to the worker (the drawn line on the map,
+/// the chips, the summary card) uses these routed values when set.
+class _Route {
+  final List<LatLng> points;
+  final double distanceKm; // actual road distance, not haversine
+  final int durationMin;   // driving time at typical 30-50 km/h, per OSRM
+  const _Route({
+    required this.points,
+    required this.distanceKm,
+    required this.durationMin,
+  });
 }
 
 class ReferralMapWidget extends StatefulWidget {
@@ -42,6 +59,15 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
   _Place? _selected;
   bool _loading = true;
   String? _error;
+
+  /// Routed-path cache, keyed by Place. Populated lazily — only the
+  /// currently-selected facility's route is fetched (and the previous
+  /// selection's stays cached if the worker switches back). Avoids
+  /// hammering OSRM with one request per place on map load.
+  final Map<_Place, _Route> _routes = {};
+  /// True while OSRM is in flight for the current selection; surfaces
+  /// a faint "calculating route..." hint without blocking the map.
+  bool _routingInFlight = false;
 
   static const _radii = [25000, 50000, 100000, 200000];
 
@@ -72,11 +98,99 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
         _userPos = pos;
         _places = places;
         _selected = places.isNotEmpty ? places.first : null;
+        _routes.clear();
         _loading = false;
       });
+      // Kick off road-routing for the nearest place. Background fetch
+      // so the map renders immediately with a straight line, then
+      // upgrades to the actual road path when the route arrives.
+      if (_selected != null) {
+        unawaited(_ensureRoute(_selected!));
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() { _error = 'ডেটা লোড হয়নি'; _loading = false; });
+    }
+  }
+
+  /// Selects [place], moves the camera to fit it, and fetches the
+  /// driving route from the user's position. Used by both the marker-
+  /// tap and the list-tap paths so behaviour stays consistent.
+  void _selectAndFitTo(_Place place) {
+    setState(() => _selected = place);
+    if (_userPos != null) {
+      _mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: LatLngBounds.fromPoints([
+            LatLng(_userPos!.latitude, _userPos!.longitude),
+            place.pos,
+          ]),
+          padding: const EdgeInsets.all(60),
+        ),
+      );
+    }
+    unawaited(_ensureRoute(place));
+  }
+
+  /// Fetches the OSRM road-route for [place] if not already cached and
+  /// updates the polyline + distance/time chips. The public OSRM demo
+  /// endpoint (router.project-osrm.org) is free, has no API key, and
+  /// uses the same OpenStreetMap data we already render — so the
+  /// polyline visually traces the same roads the worker can see on the
+  /// map tiles. Falls back silently to the straight line on any
+  /// error: missing route, OSRM down, slow rural network, etc.
+  Future<void> _ensureRoute(_Place place) async {
+    if (_routes.containsKey(place)) return;
+    if (_userPos == null) return;
+    setState(() => _routingInFlight = true);
+    final route = await _fetchRoute(
+      LatLng(_userPos!.latitude, _userPos!.longitude),
+      place.pos,
+    );
+    if (!mounted) return;
+    setState(() {
+      if (route != null) _routes[place] = route;
+      _routingInFlight = false;
+    });
+  }
+
+  Future<_Route?> _fetchRoute(LatLng origin, LatLng dest) async {
+    // OSRM coordinate order is lon,lat (not lat,lon).
+    final url = Uri.parse(
+      'https://router.project-osrm.org/route/v1/driving/'
+      '${origin.longitude},${origin.latitude};'
+      '${dest.longitude},${dest.latitude}'
+      '?overview=full&geometries=geojson',
+    );
+    try {
+      final resp = await http
+          .get(url, headers: {'User-Agent': 'AshamItraApp/1.0'})
+          .timeout(const Duration(seconds: 12));
+      if (resp.statusCode != 200) return null;
+      final json = jsonDecode(resp.body) as Map<String, dynamic>;
+      final routes = json['routes'] as List?;
+      if (routes == null || routes.isEmpty) return null;
+      final r = routes.first as Map<String, dynamic>;
+      final geom = (r['geometry'] as Map?)?['coordinates'] as List?;
+      if (geom == null || geom.isEmpty) return null;
+      final pts = <LatLng>[];
+      for (final pair in geom) {
+        if (pair is List && pair.length >= 2) {
+          final lon = (pair[0] as num).toDouble();
+          final lat = (pair[1] as num).toDouble();
+          pts.add(LatLng(lat, lon));
+        }
+      }
+      if (pts.isEmpty) return null;
+      final distM = (r['distance'] as num?)?.toDouble() ?? 0;
+      final durS = (r['duration'] as num?)?.toDouble() ?? 0;
+      return _Route(
+        points: pts,
+        distanceKm: distM / 1000.0,
+        durationMin: (durS / 60).round(),
+      );
+    } catch (_) {
+      return null;
     }
   }
 
@@ -261,6 +375,31 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
     return '${km.round()} কিমি';
   }
 
+  /// Distance preferring the OSRM-routed value (real road distance)
+  /// over the haversine straight-line. The two can differ by 30-80%
+  /// in rural West Bengal where roads wind around fields, so the
+  /// routed number is meaningfully more accurate for the worker.
+  String _routedDistanceLabel(_Place p) {
+    final r = _routes[p];
+    if (r != null) return _distanceLabel(r.distanceKm);
+    return _distanceLabel(p.distanceKm);
+  }
+
+  String _routedTravelTime(_Place p) {
+    final r = _routes[p];
+    if (r != null) {
+      // OSRM's duration is computed from per-road speed limits — already
+      // accounts for highway vs. village road. Just format it.
+      final mins = r.durationMin;
+      if (mins < 1) return '১ মিনিট';
+      if (mins < 60) return '$mins মিনিট';
+      final hrs = mins ~/ 60;
+      final rem = mins % 60;
+      return rem == 0 ? '$hrs ঘণ্টা' : '$hrs ঘণ্টা $rem মিনিট';
+    }
+    return _travelTime(p.distanceKm);
+  }
+
   String _travelTime(double km) {
     if (km < 0.05) return '১ মিনিট';
     if (km < 2) {
@@ -383,11 +522,18 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                           spacing: 4,
                           runSpacing: 4,
                           children: [
-                            _InfoChip(icon: Icons.straighten_rounded, label: _distanceLabel(_selected!.distanceKm)),
+                            _InfoChip(icon: Icons.straighten_rounded, label: _routedDistanceLabel(_selected!)),
                             _InfoChip(
-                              icon: _selected!.distanceKm < 2 ? Icons.directions_walk_rounded : Icons.directions_car_rounded,
-                              label: _travelTime(_selected!.distanceKm),
+                              icon: (_routes[_selected!]?.distanceKm ?? _selected!.distanceKm) < 2
+                                  ? Icons.directions_walk_rounded
+                                  : Icons.directions_car_rounded,
+                              label: _routedTravelTime(_selected!),
                             ),
+                            if (_routingInFlight && _routes[_selected!] == null)
+                              const _InfoChip(
+                                icon: Icons.route_rounded,
+                                label: 'রাস্তা গণনা…',
+                              ),
                             if (_selected!.isGovt)
                               _InfoChip(icon: Icons.verified_rounded, label: 'সরকারি', iconColor: const Color(0xFF059669)),
                           ],
@@ -469,13 +615,26 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                             PolylineLayer(
                               polylines: [
                                 Polyline(
-                                  points: [
-                                    LatLng(_userPos!.latitude, _userPos!.longitude),
-                                    _selected!.pos,
-                                  ],
-                                  strokeWidth: 3.5,
-                                  color: AppColors.primary.withValues(alpha: 0.8),
-                                  pattern: StrokePattern.dashed(segments: [12, 6]),
+                                  // Use the routed road polyline when
+                                  // available. Until the OSRM call
+                                  // returns (~500-2000 ms) we still
+                                  // render the dashed straight line as
+                                  // a placeholder so the worker isn't
+                                  // looking at an empty map.
+                                  points: _routes[_selected!]?.points ??
+                                      [
+                                        LatLng(_userPos!.latitude,
+                                            _userPos!.longitude),
+                                        _selected!.pos,
+                                      ],
+                                  strokeWidth:
+                                      _routes[_selected!] != null ? 4.5 : 3.5,
+                                  color: AppColors.primary
+                                      .withValues(alpha: 0.85),
+                                  pattern: _routes[_selected!] != null
+                                      ? const StrokePattern.solid()
+                                      : StrokePattern.dashed(
+                                          segments: [12, 6]),
                                 ),
                               ],
                             ),
@@ -503,18 +662,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                                   width: isSelected ? 46 : (recommended ? 40 : 34),
                                   height: isSelected ? 46 : (recommended ? 40 : 34),
                                   child: GestureDetector(
-                                    onTap: () {
-                                      setState(() => _selected = p);
-                                      _mapController.fitCamera(
-                                        CameraFit.bounds(
-                                          bounds: LatLngBounds.fromPoints([
-                                            LatLng(_userPos!.latitude, _userPos!.longitude),
-                                            p.pos,
-                                          ]),
-                                          padding: const EdgeInsets.all(60),
-                                        ),
-                                      );
-                                    },
+                                    onTap: () => _selectAndFitTo(p),
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: isSelected ? color : color.withValues(alpha: 0.85),
@@ -643,20 +791,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
               final isSelected = _selected == p;
               final recommended = _isRecommended(p.type);
               return GestureDetector(
-                onTap: () {
-                setState(() => _selected = p);
-                if (_userPos != null) {
-                  _mapController.fitCamera(
-                    CameraFit.bounds(
-                      bounds: LatLngBounds.fromPoints([
-                        LatLng(_userPos!.latitude, _userPos!.longitude),
-                        p.pos,
-                      ]),
-                      padding: const EdgeInsets.all(60),
-                    ),
-                  );
-                }
-              },
+                onTap: () => _selectAndFitTo(p),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
@@ -725,13 +860,18 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                               ],
                             ]),
                             const SizedBox(height: 4),
-                            // distance + time always on own row — never overflows
+                            // distance + time always on own row — never overflows.
+                            // Routed values used when cached (selected row only —
+                            // we don't pre-fetch routes for every list item, so
+                            // unselected rows still show haversine).
                             Row(children: [
-                              _InfoChip(icon: Icons.straighten_rounded, label: _distanceLabel(p.distanceKm)),
+                              _InfoChip(icon: Icons.straighten_rounded, label: _routedDistanceLabel(p)),
                               const SizedBox(width: 6),
                               _InfoChip(
-                                icon: p.distanceKm < 2 ? Icons.directions_walk_rounded : Icons.directions_car_rounded,
-                                label: _travelTime(p.distanceKm),
+                                icon: (_routes[p]?.distanceKm ?? p.distanceKm) < 2
+                                    ? Icons.directions_walk_rounded
+                                    : Icons.directions_car_rounded,
+                                label: _routedTravelTime(p),
                               ),
                             ]),
                           ],
