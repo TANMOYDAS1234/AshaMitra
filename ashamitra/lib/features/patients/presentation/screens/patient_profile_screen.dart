@@ -30,14 +30,27 @@ class PatientProfileScreen extends StatelessWidget {
 
   /// Map the patient's stored type string ('Pregnancy'/'Newborn'/'Child'
   /// /'Other', plus Bengali variants from triage-created patients) to
-  /// the lowercase case id used by the triage engine (see
-  /// assets/data/triage_cases.json). Returns null when no engine case
-  /// matches — caller should fall back to the case picker.
-  String? _caseIdFor(String type) {
+  /// the (caseId, caseTitle) tuple used by the triage engine (see
+  /// assets/data/triage_cases.json — same wording as the case picker).
+  /// Returns null when no engine case matches — caller should fall back
+  /// to the case picker.
+  ///
+  /// Titles are hardcoded here intentionally: the patient profile is
+  /// touched on every Voice Checkup tap and reading assets/data/
+  /// triage_cases.json just to look up a 3-string mapping would add a
+  /// noticeable disk-read latency. The titles must stay in sync with
+  /// the JSON if you ever rename them.
+  (String id, String title)? _caseFor(String type) {
     final t = type.toLowerCase();
-    if (t.contains('pregnan') || type.contains('গর্ভ')) return 'pregnancy';
-    if (t.contains('newborn') || type.contains('নবজাতক')) return 'newborn';
-    if (t.contains('child') || type.contains('শিশু')) return 'child';
+    if (t.contains('pregnan') || type.contains('গর্ভ')) {
+      return ('pregnancy', '🤰 গর্ভবতী মায়ের চেকআপ');
+    }
+    if (t.contains('newborn') || type.contains('নবজাতক')) {
+      return ('newborn', '👶 নবজাতক চেকআপ (০-২৮ দিন)');
+    }
+    if (t.contains('child') || type.contains('শিশু')) {
+      return ('child', '🧒 শিশু স্বাস্থ্য যাচাই (১-৫ বছর)');
+    }
     return null;
   }
 
@@ -247,12 +260,18 @@ class PatientProfileScreen extends StatelessWidget {
                         // from the patient's stored type. Only the 'Other'
                         // bucket (no engine case) falls back to selectCase.
                         onPressed: () {
-                          final caseId = _caseIdFor(type);
-                          if (caseId != null) {
+                          final c = _caseFor(type);
+                          if (c != null) {
                             Get.toNamed(
                               AppRoutes.voiceTriage,
                               arguments: {
-                                'caseId': caseId,
+                                'caseId': c.$1,
+                                // Without caseTitle the screen defaults to
+                                // pregnancy's title, which made every case
+                                // look like a pregnancy checkup even when
+                                // caseId was correct. Pass the matching
+                                // title so the UI header reads right.
+                                'caseTitle': c.$2,
                                 if (patientId.isNotEmpty)
                                   'patientId': patientId,
                                 'patientName': name,

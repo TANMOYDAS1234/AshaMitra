@@ -226,19 +226,23 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _orbState = OrbState.listening;
       _statusLine = _listeningStatus(_activeLang);
     });
-    // listenFor extended 30s → 45s and pauseFor 4s → 6s so ASHA workers
-    // get more thinking-time between phrases. They often pause mid-
-    // sentence to recall a number or look up a register; 4 sec was
-    // committing too early and cutting them off.
+    // listenFor 30s — covers long clinical descriptions; the worker can
+    // tap-pause if they need more.
+    // pauseFor 2.5s — short, command-style replies ("রিপোর্ট দেখাও",
+    // "অ্যাম্বুলেন্স ডাকো") otherwise made the worker wait 6 sec of
+    // silence before the plugin even finalized. Pilot reported the
+    // delay as the worst part of the experience. 2.5s still gives
+    // breathing room mid-sentence for the clinical-question path but
+    // makes single-command actions feel near-instant.
     //
-    // cancelOnError: true (was false) — let errors propagate through the
-    // onError callback to the self-recovery counter rather than silently
+    // cancelOnError: true — let errors propagate through the onError
+    // callback to the self-recovery counter rather than silently
     // swallow them. Silent swallowing was the root cause of the "mic
     // stuck on listening forever, no audio captured" state.
     await _stt.listen(
       localeId: _activeLang.sttLocale,
-      listenFor: const Duration(seconds: 45),
-      pauseFor: const Duration(seconds: 6),
+      listenFor: const Duration(seconds: 30),
+      pauseFor: const Duration(milliseconds: 2500),
       listenOptions: SpeechListenOptions(
         listenMode: ListenMode.dictation,
         partialResults: true,
