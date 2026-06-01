@@ -160,24 +160,30 @@ class TriageResultCard extends StatelessWidget {
   }
 
   static _BandConfig _config(TriageOutcome outcome) => switch (outcome) {
+        // Colour-word prefix dropped from each label per pilot feedback —
+        // the band colour of the card itself already communicates the
+        // band (green/yellow/red), and the worker shouldn't have to read
+        // "সবুজ" or "লাল" to figure out which state they're in. Keep the
+        // state-only phrase ("নিরাপদ" / "মনোযোগ দরকার" / "জরুরি অবস্থা")
+        // so the label still reads as a human sentence.
         TriageOutcome.safe => _BandConfig(
             color: AppColors.safeGreen,
             bg: const Color(0xFFECFDF5),
-            bandLabel: '🟢 সবুজ — নিরাপদ',
+            bandLabel: 'নিরাপদ',
             subtitle: 'result_safe_subtitle'.tr,
             referralLevel: 'result_safe_referral'.tr,
           ),
         TriageOutcome.attention => _BandConfig(
             color: const Color(0xFFD97706),
             bg: const Color(0xFFFFFBEB),
-            bandLabel: '🟡 হলুদ — মনোযোগ দরকার',
+            bandLabel: 'মনোযোগ দরকার',
             subtitle: 'result_attention_subtitle'.tr,
             referralLevel: 'result_attention_referral'.tr,
           ),
         TriageOutcome.emergency => _BandConfig(
             color: AppColors.emergencyRed,
             bg: const Color(0xFFFFEBEB),
-            bandLabel: '🔴 লাল — জরুরি অবস্থা',
+            bandLabel: 'জরুরি অবস্থা',
             subtitle: 'result_emergency_subtitle'.tr,
             referralLevel: 'FRU / SNCU / DH',
           ),

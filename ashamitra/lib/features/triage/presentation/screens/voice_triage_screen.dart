@@ -67,7 +67,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   bool _isProcessing = false;
   String _transcript = '';
   String _statusText = '';
-  double _confidence = 0.0;
+  // _confidence removed — STT confidence score is no longer shown.
   OrbState _orbState = OrbState.idle;
   // ── Continuous-listen state ────────────────────────────────────
   // When true (the default), the mic auto-restarts after each TTS
@@ -289,7 +289,6 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       _transcript = '';
       _orbState = OrbState.listening;
       _statusText = _isOffline ? '🔴 অফলাইন — বলুন...' : '🟢 শুনছি — বলুন...';
-      _confidence = 0.0;
     });
 
     final opts = SpeechListenOptions(
@@ -335,7 +334,6 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     if (text.isEmpty) return;
     setState(() {
       _transcript = text;
-      _confidence = result.confidence;
     });
     if (result.finalResult) {
       _stt.stop();
@@ -1046,23 +1044,12 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
                           borderRadius: AppRadius.mdR,
                           border: Border.all(color: AppColors.primary.withValues(alpha: 0.20)),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '"$_transcript"',
-                                style: AppTextStyles.bodySm.copyWith(color: AppColors.onBackground),
-                              ),
-                            ),
-                            if (_confidence > 0)
-                              Text(
-                                '${(_confidence * 100).toStringAsFixed(0)}%',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: _confidence > 0.7 ? AppColors.safeGreen : AppColors.warningYellow,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                          ],
+                        // STT confidence number used to render here next
+                        // to the live transcript. Hidden per pilot
+                        // feedback — the spoken text alone is enough.
+                        child: Text(
+                          '"$_transcript"',
+                          style: AppTextStyles.bodySm.copyWith(color: AppColors.onBackground),
                         ),
                       ),
                     const SizedBox(height: 8),
