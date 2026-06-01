@@ -211,7 +211,26 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Future<void> _speakGreeting() async {
     final greeting = _greetingFor(_activeLang);
     setState(() => _statusLine = _greetingStatus(_activeLang));
-    await _tts.speak(greeting, tone: TtsTone.empathy);
+    await _tts.speak(_humanize(greeting), tone: TtsTone.empathy);
+  }
+
+  /// Pre-process text before TTS to remove robotic comma pauses.
+  /// Device TTS (and Google Cloud TTS at default settings) inserts a
+  /// noticeable pause at every comma, which turns "নমস্কার দিদি, আমি
+  /// আশামিত্র" into "নমস্কার দিদি … [beat] … আমি আশামিত্র" — a
+  /// stilted phone-tree cadence rather than a conversational one.
+  ///
+  /// Stripping ALL commas (but keeping periods / Bengali daanda as
+  /// sentence boundaries) lets the engine derive prosody from sentence
+  /// structure alone, which sounds more like a real person speaking.
+  /// The chat bubble still displays the original text with commas
+  /// intact — only the spoken stream is cleaned.
+  String _humanize(String text) {
+    if (text.isEmpty) return text;
+    var s = text;
+    s = s.replaceAll(',', ' ');
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return s;
   }
 
   // ── STT control ────────────────────────────────────────────────────────
@@ -331,7 +350,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
           try {
             await _tts.stop();
           } catch (_) {}
-          await _tts.speak(result.spokenConfirmation, tone: TtsTone.normal);
+          await _tts.speak(
+            _humanize(result.spokenConfirmation),
+            tone: TtsTone.normal,
+          );
         }
         return;
       }
@@ -371,7 +393,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
       } catch (_) {}
       // Prefer pre-synthesized bytes from /chat-with-voice — one fewer
       // network round-trip, voice arrives with the text instead of a
-      // beat behind. Falls back to /tts via _tts.speak otherwise.
+      // beat behind. The backend already de-commas the spoken-text
+      // path (see server.js), so prefetchedAudio is humanized at
+      // source. Device TTS path goes through _humanize() locally.
       if (response.prefetchedAudio != null &&
           response.prefetchedAudio!.isNotEmpty) {
         await _tts.speakBytes(
@@ -380,7 +404,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
           tone: TtsTone.normal,
         );
       } else {
-        await _tts.speak(response.text, tone: TtsTone.normal);
+        await _tts.speak(_humanize(response.text), tone: TtsTone.normal);
       }
     }
   }

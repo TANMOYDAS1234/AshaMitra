@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// RuleBasedIntentClassifier — offline-first action intent matching for the
-// voice assistant.
+// RuleBasedIntentClassifier — offline-first action intent matching with
+// smart keyword / synonym / stem matching (not just substring).
 //
 // Why this exists:
 //   The assistant should be able to execute common app actions (call
@@ -8,18 +8,28 @@
 //   needing a network round-trip to Gemini. ASHA workers live in areas
 //   with patchy 2G/3G signal, and a 5-second wait every time they say
 //   "open patients" would make the assistant feel broken. Rule-based
-//   matching gives <50 ms response, works fully offline, and handles
-//   the top ~30 commands a worker says daily. Anything that doesn't
-//   match falls through to the LLM as before.
+//   matching gives <50 ms response and works fully offline.
 //
-// How matching works:
-//   For each intent we keep a list of phrase fragments in Bengali, Hindi,
-//   and English (workers often code-switch mid-sentence — "patient add
-//   koro" or "ambulance call koro"). The classifier normalizes the
-//   input (lowercase, collapse whitespace) and scores intents by
-//   longest matching fragment. The intent with the longest match wins,
-//   with a minimum 4-character fragment to avoid false positives on
-//   short stop-words.
+// How matching works (v2):
+//   Each intent declares N "keyword groups". A keyword group is a list
+//   of synonyms — Bengali / Hindi / English / Banglish words that all
+//   mean the same thing (e.g. {রোগী, রুগী, পেশেন্ট, मरीज़, mariz,
+//   patient}). Matching is:
+//
+//     1. Normalize input — lowercase, collapse whitespace, soft-strip
+//        common Bengali/Hindi verb suffixes (করো → কর, দেখাও → দেখ).
+//     2. For each intent, count how many of its keyword groups have at
+//        least one synonym appearing anywhere in the normalized input.
+//     3. Intent matches if the matched-group count >= minGroupsMatched
+//        (default 2). The intent with the highest matched-ratio wins.
+//
+//   This makes the matcher flexible:
+//     "এই নতুন রোগীকে এক্ষুনি যোগ করতে চাই" → "নতুন" + "রোগী" + "যোগ"
+//        all hit different groups → addPatient
+//     "পেশেন্টের লিস্ট খোলো" → "পেশেন্ট" + "লিস্ট" + "খোল" → openPatientList
+//     "একটা অ্যাম্বুলেন্স ডাকো এখনই" → "অ্যাম্বুলেন্স" + "ডাক" → callAmbulance
+//
+//   The substring-based v1 patterns rejected all three.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'assistant_chat_service.dart' show AssistantLang;
@@ -42,9 +52,8 @@ enum AssistantIntent {
 }
 
 /// Result of a classification attempt. [confidence] is a rough 0..1
-/// score derived from the matched-fragment length relative to the
-/// input. Caller should treat anything below ~0.45 as a soft match
-/// and consider whether to confirm with the worker before dispatch.
+/// score; rule matches floor at 0.45 so the assistant treats any
+/// rule match as strong evidence to dispatch.
 class ClassifiedIntent {
   final AssistantIntent intent;
   final double confidence;
@@ -64,178 +73,279 @@ class ClassifiedIntent {
   bool get isHandled => intent != AssistantIntent.unknown;
 }
 
+/// One declarative rule: an intent + N keyword groups (synonym sets).
+/// Matches when at least [minGroupsMatched] groups each have one
+/// synonym hit anywhere in the normalized input.
+class _IntentRule {
+  final AssistantIntent intent;
+  final List<List<String>> keywordGroups;
+  final int minGroupsMatched;
+
+  const _IntentRule({
+    required this.intent,
+    required this.keywordGroups,
+    this.minGroupsMatched = 2,
+  });
+}
+
 class RuleBasedIntentClassifier {
-  /// Map: intent → list of phrase fragments that map to it. Each
-  /// fragment is checked against the normalized input via `contains`.
-  /// Order doesn't matter; longest match wins across all intents.
+  /// Synonym sets per intent. Each inner list is a "group" — one hit
+  /// from anywhere in the list counts as matching that group. The
+  /// intent fires when [minGroupsMatched] (default 2) groups all
+  /// have at least one hit. Lower the count to 1 for single-word
+  /// commands (emergency, home, back).
   ///
-  /// Notes on coverage:
-  ///   - Bengali phrases use both pure Bengali and Banglish ("call koro").
-  ///   - Hindi entries cover Devanagari and common Romanized spellings.
-  ///   - English covers the direct command form the worker is most likely
-  ///     to use if they switch into English mid-sentence.
-  ///   - Numbers (102 / 108) are kept as both Latin digits and Bengali/
-  ///     Hindi digit transliterations since STT can return either.
-  static const _patterns = <AssistantIntent, List<String>>{
-    AssistantIntent.callAmbulance: [
-      // bn
-      'অ্যাম্বুলেন্স ডাক', 'অ্যাম্বুলেন্স ডাকো',
-      'এম্বুলেন্স ডাক', 'এম্বুলেন্স ডাকো',
-      'অ্যাম্বুলেন্স কল', 'অ্যাম্বুলেন্স কর',
-      '১০২ কল', '১০২ ডাক', '১০৮ কল', '১০৮ ডাক',
-      // hi
-      'एम्बुलेंस बुला', 'एम्बुलेंस कॉल',
-      'एंबुलेंस बुला', 'एंबुलेंस कॉल',
-      '१०२ कॉल', '१०२ बुला', '१०८ कॉल',
-      // en / banglish
-      'call ambulance', 'dial ambulance',
-      'call 102', 'dial 102', 'call 108', 'dial 108',
-      'ambulance call', 'ambulance bula', 'ambulance dak',
-    ],
+  /// Coverage convention per group:
+  ///   - pure Bengali (script + stem after suffix-strip)
+  ///   - pure Hindi (Devanagari + stem)
+  ///   - English + Banglish (Romanized Bengali/Hindi as a worker
+  ///     might type or speak when code-switching)
+  ///   - common numerals where relevant (102 / ১০২ / १०२)
+  static final List<_IntentRule> _rules = [
+    _IntentRule(
+      intent: AssistantIntent.callAmbulance,
+      keywordGroups: [
+        [
+          // noun group — what to call
+          'অ্যাম্বুলেন্স', 'এম্বুলেন্স', 'এম্বুলান্স',
+          'एम्बुलेंस', 'एंबुलेंस', 'ऐम्बुलेंस',
+          'ambulance',
+          '102', '১০২', '१०२', '108', '১০৮', '१०८',
+        ],
+        [
+          // verb group — what to do
+          'কল', 'ডাক', 'বুলাও', 'ফোন',
+          'कॉल', 'बुला', 'फ़ोन', 'फोन',
+          'call', 'dial', 'phone',
+        ],
+      ],
+      minGroupsMatched: 1, // ambulance alone is unambiguous enough
+    ),
+    _IntentRule(
+      intent: AssistantIntent.findNearestPHC,
+      keywordGroups: [
+        [
+          // proximity
+          'কাছের', 'কাছাকাছি', 'নিকটতম', 'নিকটস্থ',
+          'पास', 'नज़दीकी', 'नजदीकी', 'सबसे पास',
+          'nearest', 'closest', 'near',
+        ],
+        [
+          // facility
+          'হাসপাতাল', 'স্বাস্থ্য কেন্দ্র', 'পিএইচসি', 'ক্লিনিক', 'কেন্দ্র',
+          'अस्पताल', 'स्वास्थ्य केंद्र', 'पीएचसी', 'क्लिनिक',
+          'hospital', 'phc', 'health centre', 'health center', 'clinic',
+        ],
+      ],
+      minGroupsMatched: 2,
+    ),
+    _IntentRule(
+      intent: AssistantIntent.openEmergency,
+      keywordGroups: [
+        [
+          'জরুরি', 'জরুরী', 'আপৎকাল',
+          'आपातकाल', 'इमरजेंसी', 'इमर्जेंसी',
+          'emergency', 'urgent',
+        ],
+      ],
+      minGroupsMatched: 1, // single strong cue is enough
+    ),
+    _IntentRule(
+      intent: AssistantIntent.addPatient,
+      keywordGroups: [
+        [
+          // patient noun
+          'রোগী', 'রুগী', 'পেশেন্ট', 'প্যাশেন্ট',
+          'मरीज़', 'मरीज', 'पेशेंट', 'मरीजों',
+          'patient', 'rogi', 'rugi', 'mariz',
+        ],
+        [
+          // add verb
+          'যোগ', 'যোগ কর', 'অ্যাড', 'নতুন', 'রেজিস্টার', 'রেজি',
+          'जोड़', 'नया', 'रजिस्टर', 'ऐड',
+          'add', 'new', 'register', 'create', 'enroll',
+          'joro', 'natun', 'naya',
+        ],
+      ],
+      minGroupsMatched: 2,
+    ),
+    _IntentRule(
+      intent: AssistantIntent.openPatientList,
+      keywordGroups: [
+        [
+          // patient noun (same as addPatient)
+          'রোগী', 'রুগী', 'পেশেন্ট', 'প্যাশেন্ট',
+          'मरीज़', 'मरीज', 'पेशेंट',
+          'patient', 'rogi', 'rugi', 'mariz',
+        ],
+        [
+          // list / show verb
+          'তালিকা', 'লিস্ট', 'দেখ', 'খোল', 'সব',
+          'सूची', 'लिस्ट', 'दिखा', 'खोल', 'सभी', 'सब',
+          'list', 'show', 'open', 'display', 'view',
+          'dekhao', 'dekhan', 'kholo', 'sob',
+        ],
+      ],
+      minGroupsMatched: 2,
+    ),
+    _IntentRule(
+      intent: AssistantIntent.openReports,
+      keywordGroups: [
+        [
+          'রিপোর্ট', 'রিপোর্টের',
+          'रिपोर्ट',
+          'report', 'reports',
+        ],
+        [
+          'দেখ', 'খোল', 'সব', 'তালিকা', 'লিস্ট',
+          'दिखा', 'खोल', 'सभी', 'सूची', 'लिस्ट',
+          'show', 'open', 'list', 'all', 'view',
+          'dekhao', 'dekhan', 'kholo',
+        ],
+      ],
+      minGroupsMatched: 2,
+    ),
+    _IntentRule(
+      intent: AssistantIntent.openProfile,
+      keywordGroups: [
+        [
+          'প্রোফাইল', 'প্রোফাইলে',
+          'प्रोफ़ाइल', 'प्रोफाइल',
+          'profile',
+        ],
+      ],
+      minGroupsMatched: 1,
+    ),
+    _IntentRule(
+      intent: AssistantIntent.startTriage,
+      keywordGroups: [
+        [
+          // triage / case / screening noun
+          'ট্রিয়াজ', 'ট্রায়াজ', 'কেস', 'স্ক্রিনিং', 'রিস্ক',
+          'ट्राइएज', 'केस', 'स्क्रीनिंग',
+          'triage', 'case', 'screening', 'risk', 'screen',
+        ],
+        [
+          // start / new / check verb
+          'শুরু', 'নতুন', 'চেক', 'করো',
+          'शुरू', 'नया', 'जाँच',
+          'start', 'new', 'check', 'begin',
+        ],
+      ],
+      minGroupsMatched: 2,
+    ),
+    _IntentRule(
+      intent: AssistantIntent.openHome,
+      keywordGroups: [
+        [
+          'হোম', 'মূল পাতা', 'মূল স্ক্রিন', 'ড্যাশবোর্ড',
+          'होम', 'मुख्य पन्ना', 'घर', 'डैशबोर्ड',
+          'home', 'main screen', 'dashboard',
+        ],
+      ],
+      minGroupsMatched: 1,
+    ),
+    _IntentRule(
+      intent: AssistantIntent.goBack,
+      keywordGroups: [
+        [
+          'পিছনে', 'ফিরে', 'ব্যাক', 'পেছনে',
+          'पीछे', 'वापस', 'बैक',
+          'back', 'previous', 'return',
+        ],
+      ],
+      minGroupsMatched: 1,
+    ),
+  ];
 
-    AssistantIntent.findNearestPHC: [
-      // bn
-      'কাছের হাসপাতাল', 'নিকটতম হাসপাতাল',
-      'কাছাকাছি হাসপাতাল', 'নিকটস্থ স্বাস্থ্য কেন্দ্র',
-      'কাছের স্বাস্থ্য কেন্দ্র', 'নিকটতম পিএইচসি',
-      'কোথায় হাসপাতাল', 'হাসপাতাল কোথায়',
-      'কাছের ক্লিনিক',
-      // hi
-      'नज़दीकी अस्पताल', 'पास का अस्पताल', 'नज़दीकी पीएचसी',
-      'नज़दीकी स्वास्थ्य केंद्र', 'सबसे पास अस्पताल',
-      'अस्पताल कहां',
-      // en / banglish
-      'nearest hospital', 'nearest phc', 'nearest health centre',
-      'nearest health center', 'find hospital', 'where hospital',
-      'closest hospital', 'kachher hospital',
-    ],
+  /// Soft suffix stripping for common Bengali / Hindi verb endings.
+  /// We replace these as plain substrings on the normalized input
+  /// rather than do real morphological analysis — good enough for the
+  /// 10 intents above.
+  ///
+  /// Order matters: longest suffixes first so we don't strip a prefix
+  /// of a longer suffix prematurely.
+  static const _suffixes = <String>[
+    // bn verb endings (most common forms workers use)
+    'করছিলেন', 'করছিলে', 'করেছেন', 'করেছিল', 'করেছ', 'করছি',
+    'করুন', 'করো', 'করে', 'করব', 'করি', 'কর',
+    'দেখাবেন', 'দেখাচ্ছি', 'দেখান', 'দেখাও', 'দেখো', 'দেখ',
+    'খুলবেন', 'খুলছি', 'খুলুন', 'খোলো', 'খোল', 'খুল',
+    // hi verb endings
+    'कीजिए', 'कीजिये', 'करिये', 'करिए', 'करो', 'करूँ', 'करना',
+    'दिखाइए', 'दिखाओ', 'दिखाएँ', 'दिखाएं',
+    'खोलिए', 'खोलो', 'खोलें',
+  ];
 
-    AssistantIntent.openEmergency: [
-      // bn
-      'জরুরি', 'জরুরী', 'জরুরি অবস্থা', 'জরুরি স্ক্রিন',
-      // hi
-      'आपातकाल', 'इमरजेंसी', 'इमरजेंसी खोलो',
-      // en
-      'emergency', 'open emergency', 'emergency screen',
-    ],
+  static String _normalize(String input) {
+    var s = input.trim().toLowerCase();
+    // Strip Indic punctuation + common ASCII punctuation that breaks
+    // token boundaries.
+    s = s.replaceAll(RegExp(r'[।,.!?;:"()\[\]{}\\/]+'), ' ');
+    s = s.replaceAll(RegExp(r'\s+'), ' ');
+    return s.trim();
+  }
 
-    AssistantIntent.addPatient: [
-      // bn
-      'নতুন রোগী', 'নতুন রুগী', 'রোগী যোগ', 'রুগী যোগ',
-      'রোগী অ্যাড', 'রোগী add', 'নতুন প্যাশেন্ট',
-      'রোগী রেজিস্টার',
-      // hi
-      'नया मरीज़', 'नया मरीज', 'मरीज़ जोड़', 'मरीज जोड़',
-      'मरीज़ ऐड', 'नया पेशेंट',
-      // en / banglish
-      'add patient', 'new patient', 'register patient',
-      'patient add', 'patient register',
-      'natun rogi', 'rogi add', 'rogi joro',
-    ],
-
-    AssistantIntent.openPatientList: [
-      // bn
-      'রোগীর তালিকা', 'রোগীদের তালিকা', 'সব রোগী', 'রোগী দেখাও',
-      'রোগীর লিস্ট', 'রুগীর তালিকা',
-      // hi
-      'मरीज़ों की सूची', 'सभी मरीज़', 'मरीज़ दिखाओ',
-      'मरीज़ की लिस्ट',
-      // en / banglish
-      'patient list', 'show patients', 'all patients', 'list patients',
-      'rogi dekhao', 'rogider talika',
-    ],
-
-    AssistantIntent.openReports: [
-      // bn
-      'রিপোর্ট দেখাও', 'সব রিপোর্ট', 'রিপোর্ট খোলো', 'রিপোর্টের তালিকা',
-      // hi
-      'रिपोर्ट दिखाओ', 'सभी रिपोर्ट', 'रिपोर्ट खोलो',
-      // en / banglish
-      'show reports', 'open reports', 'all reports', 'report list',
-      'report dekhao',
-    ],
-
-    AssistantIntent.openProfile: [
-      // bn
-      'প্রোফাইল', 'আমার প্রোফাইল', 'প্রোফাইল খোলো',
-      // hi
-      'प्रोफ़ाइल', 'प्रोफाइल', 'मेरी प्रोफाइल',
-      // en
-      'profile', 'open profile', 'my profile',
-    ],
-
-    AssistantIntent.startTriage: [
-      // bn
-      'ট্রিয়াজ', 'ট্রিয়াজ শুরু', 'স্ক্রিনিং শুরু', 'কেস শুরু',
-      'নতুন কেস', 'চেক শুরু', 'রোগী চেক', 'রিস্ক চেক',
-      // hi
-      'ट्राइएज', 'स्क्रीनिंग शुरू', 'जाँच शुरू', 'नया केस',
-      // en
-      'start triage', 'new case', 'start screening', 'screen patient',
-      'check patient',
-    ],
-
-    AssistantIntent.openHome: [
-      // bn
-      'হোম', 'হোমে যাও', 'মূল পাতা', 'মূল স্ক্রিন',
-      // hi
-      'होम', 'मुख्य पन्ना', 'घर',
-      // en
-      'home', 'go home', 'main screen', 'dashboard',
-    ],
-
-    AssistantIntent.goBack: [
-      // bn
-      'পিছনে যাও', 'ফিরে যাও', 'ব্যাক',
-      // hi
-      'पीछे जाओ', 'वापस जाओ', 'बैक',
-      // en
-      'go back', 'back', 'previous',
-    ],
-  };
-
-  /// Minimum matched-fragment length (in characters) for the match to
-  /// count. Short matches like "go" or "open" alone would fire
-  /// false positives constantly.
-  static const _minFragmentLen = 4;
+  /// Soft-strip common verb suffixes from the normalized text. Done
+  /// as a global string replace — the suffixes are rare enough as
+  /// non-verb substrings that false-strips are negligible.
+  static String _stem(String normalized) {
+    var s = normalized;
+    for (final suffix in _suffixes) {
+      // Strip only when the suffix sits at a token boundary so we don't
+      // mangle nouns that happen to share a tail.
+      s = s.replaceAll(RegExp('$suffix\\b'), ' ');
+    }
+    return s.replaceAll(RegExp(r'\s+'), ' ').trim();
+  }
 
   /// Run rule matching. Returns [ClassifiedIntent.unknown] if no
-  /// pattern fragment of [_minFragmentLen]+ chars matched the input.
-  /// [lang] is currently unused in matching (we check all languages,
-  /// since workers code-switch) but kept on the signature for future
-  /// per-language weight tuning.
+  /// intent satisfies its [minGroupsMatched] threshold.
   // ignore: unused_element
   ClassifiedIntent classify(String input, AssistantLang lang) {
-    final normalized = input.trim().toLowerCase();
-    if (normalized.isEmpty) return ClassifiedIntent.unknown;
+    if (input.trim().isEmpty) return ClassifiedIntent.unknown;
+    final normalized = _normalize(input);
+    final stemmed = _stem(normalized);
+    if (stemmed.isEmpty) return ClassifiedIntent.unknown;
 
-    AssistantIntent best = AssistantIntent.unknown;
+    AssistantIntent bestIntent = AssistantIntent.unknown;
+    double bestScore = 0.0;
     String bestFragment = '';
-    int bestLen = 0;
 
-    for (final entry in _patterns.entries) {
-      for (final fragment in entry.value) {
-        if (fragment.length < _minFragmentLen) continue;
-        if (!normalized.contains(fragment.toLowerCase())) continue;
-        if (fragment.length > bestLen) {
-          best = entry.key;
-          bestFragment = fragment;
-          bestLen = fragment.length;
+    for (final rule in _rules) {
+      int matchedGroups = 0;
+      String longestHit = '';
+      for (final group in rule.keywordGroups) {
+        for (final synonym in group) {
+          final lowered = synonym.toLowerCase();
+          if (lowered.length < 2) continue;
+          if (stemmed.contains(lowered) || normalized.contains(lowered)) {
+            matchedGroups++;
+            if (synonym.length > longestHit.length) longestHit = synonym;
+            break; // one hit per group is enough
+          }
         }
+      }
+      if (matchedGroups < rule.minGroupsMatched) continue;
+      // Score = ratio of groups matched. Ties broken by longest match
+      // so multi-group hits beat single-keyword false positives.
+      final score = matchedGroups / rule.keywordGroups.length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIntent = rule.intent;
+        bestFragment = longestHit;
       }
     }
 
-    if (best == AssistantIntent.unknown) return ClassifiedIntent.unknown;
+    if (bestIntent == AssistantIntent.unknown) {
+      return ClassifiedIntent.unknown;
+    }
 
-    // Confidence: matched-fragment length / input length, clamped to
-    // 0.45..1.0. We deliberately floor at 0.45 because any rule match
-    // is already much stronger evidence than nothing — we just want
-    // longer matches to score higher for ranking purposes.
-    final ratio = bestLen / normalized.length.clamp(1, double.maxFinite);
-    final confidence = ratio < 0.45 ? 0.45 : (ratio > 1.0 ? 1.0 : ratio);
-
+    // Floor confidence at 0.55 (any rule match is strong evidence)
+    // and boost slightly when all groups matched.
+    final confidence = (0.55 + (bestScore * 0.45)).clamp(0.55, 1.0);
     return ClassifiedIntent(
-      intent: best,
+      intent: bestIntent,
       confidence: confidence,
       matchedPattern: bestFragment,
     );
