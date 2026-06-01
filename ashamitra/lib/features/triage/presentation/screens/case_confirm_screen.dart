@@ -144,28 +144,10 @@ class _CaseConfirmScreenState extends State<CaseConfirmScreen> {
                 ),
                 const SizedBox(height: 18),
 
-                // Confidence bar
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                        child: LinearProgressIndicator(
-                          value: _confidence,
-                          backgroundColor: AppColors.primarySoft,
-                          color: _confidenceColor,
-                          minHeight: 10,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      '${(_confidence * 100).toStringAsFixed(0)}%',
-                      style: AppTextStyles.labelLg.copyWith(color: _confidenceColor),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
+                // Confidence bar + "85%" number were here. Removed —
+                // workers found the percentage noisy and confusing.
+                // The qualitative confidence badge (high/medium/low)
+                // and the detection-method badge are enough signal.
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

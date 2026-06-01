@@ -43,7 +43,9 @@ class _DynamicTriageScreenState extends State<DynamicTriageScreen> {
   bool _isListening = false;
   bool _isSpeaking = false;
   String _transcript = '';
-  double _confidence = 0.0;
+  // _confidence removed — STT confidence score is no longer shown to
+  // the worker. The percentage display was distracting in the field;
+  // partial transcript is enough signal.
   OrbState _orbState = OrbState.idle;
   int _remainingSeconds = 90;
 
@@ -131,7 +133,6 @@ class _DynamicTriageScreenState extends State<DynamicTriageScreen> {
       setState(() {
         _isListening = true;
         _transcript = '';
-        _confidence = 0.0;
         _orbState = OrbState.listening;
         _remainingSeconds = 90;
       });
@@ -160,7 +161,7 @@ class _DynamicTriageScreenState extends State<DynamicTriageScreen> {
     if (!mounted) return;
     final text = result.recognizedWords.trim();
     if (text.isEmpty) return;
-    setState(() { _transcript = text; _confidence = result.confidence; });
+    setState(() { _transcript = text; });
     if (result.finalResult) {
       _stt.stop();
       setState(() { _isListening = false; _orbState = OrbState.processing; });
@@ -452,17 +453,11 @@ class _DynamicTriageScreenState extends State<DynamicTriageScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Worker's spoken text stays visible.
+                              // The "X% নিশ্চিত" confidence line was here
+                              // but workers found the percentage noisy
+                              // and confusing — hidden per pilot feedback.
                               Text('"$_transcript"', style: AppTextStyles.body),
-                              if (_confidence > 0) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${(_confidence * 100).toStringAsFixed(0)}% নিশ্চিত',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: _confidence > 0.7 ? AppColors.safeGreen : AppColors.warningYellow,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
                             ],
                           ),
                         ),
