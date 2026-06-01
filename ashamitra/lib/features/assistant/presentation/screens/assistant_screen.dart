@@ -47,6 +47,7 @@ import '../../../../shared/widgets/voice_orb.dart';
 import '../../services/assistant_chat_service.dart';
 import '../../services/intent_classifier.dart';
 import '../../services/intent_dispatcher.dart';
+import '../../services/voice_triage_engine.dart';
 
 class AssistantScreen extends StatefulWidget {
   const AssistantScreen({super.key});
@@ -66,6 +67,19 @@ class _AssistantScreenState extends State<AssistantScreen> {
   // round-trip. Anything that doesn't match falls through to Gemini.
   // This is the offline-emergency layer: actions work without signal.
   final _intentClassifier = RuleBasedIntentClassifier();
+
+  // Voice-driven triage engine — Tier 2. When the worker says "start
+  // checkup" (or similar) the assistant takes over the triage
+  // conversation itself instead of dropping the worker on the visual
+  // triage screen. Same RuleExecutor + same questions as that screen;
+  // the only thing this engine adds is iteration state + a spoken-
+  // answer → option mapping. The visual triage screen is still
+  // available as a separate entry point (home tile, bottom nav).
+  final _triageEngine = VoiceTriageEngine();
+  // True while we've asked "which case?" and are waiting for the worker
+  // to reply with newborn / child / pregnancy. One-turn state — flipped
+  // off as soon as we either start a session or give up.
+  bool _awaitingCaseChoice = false;
 
   // ── State ──────────────────────────────────────────────────────────────
   final List<AssistantTurn> _history = [];
@@ -305,7 +319,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _handleUserInput(input);
   }
 
-  // ── Main loop: rule-match → action OR LLM, then speak reply ────────────
+  // ── Main loop: triage flow → rule-match → LLM, then speak reply ────────
   Future<void> _handleUserInput(String input) async {
     HapticFeedback.lightImpact();
     setState(() {
@@ -316,6 +330,20 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _liveTranscript = '';
     });
 
+    // ── Step 0a: in-flight voice triage takes priority ──
+    // If the engine is mid-session, route every user utterance into it
+    // until it finishes. Worker's "cancel" or "stop" exits cleanly.
+    if (_triageEngine.isActive) {
+      await _continueTriage(input);
+      return;
+    }
+
+    // ── Step 0b: case selection after worker triggered startTriage ──
+    if (_awaitingCaseChoice) {
+      await _resolveCaseChoice(input);
+      return;
+    }
+
     // ── Step 1: try rule-based intent classifier first ──
     // Common app actions (call ambulance, open patients, etc.) bypass
     // the LLM entirely — instant response, works offline. If the
@@ -324,6 +352,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
     // confirmation so the LLM has context if the worker keeps talking.
     final classified = _intentClassifier.classify(input, _activeLang);
     if (classified.isHandled && classified.confidence >= 0.45) {
+      // Special-case startTriage: don't dispatch to the visual screen.
+      // Begin the inline voice-driven triage flow here instead.
+      if (classified.intent == AssistantIntent.startTriage) {
+        await _beginTriagePrompt();
+        return;
+      }
       final dispatcher = IntentDispatcher(lang: _activeLang);
       final result = await dispatcher.dispatch(classified);
       if (result.handled) {
@@ -395,6 +429,162 @@ class _AssistantScreenState extends State<AssistantScreen> {
         await _tts.speak(response.text, tone: TtsTone.normal);
       }
     }
+  }
+
+  // ── Voice-driven triage (Tier 2) ───────────────────────────────────────
+  //
+  // Flow:
+  //   1. Worker says "start checkup" / "শুরু করো ট্রিয়াজ" → intent
+  //      classifier returns startTriage → _beginTriagePrompt() asks
+  //      "which case?".
+  //   2. Worker says "newborn" / "শিশু" / "pregnancy" → _resolveCaseChoice
+  //      starts the engine on that case and speaks Q1.
+  //   3. Each subsequent utterance → _continueTriage() → engine
+  //      submitAnswer() → next question OR outcome.
+  //   4. Engine finishes (all questions or hard-stop) → speak the
+  //      band-specific summary, surface "save as report?" chips.
+  //
+  // The visual triage screen is still untouched — it's a separate
+  // entry point for workers who prefer the structured Q&A view.
+
+  /// Step 1: prompt the worker for case type.
+  Future<void> _beginTriagePrompt() async {
+    const ask = 'কোন কেস? নবজাতক, শিশু, নাকি গর্ভাবস্থা?';
+    setState(() {
+      _awaitingCaseChoice = true;
+      _isThinking = false;
+      _history.add(const AssistantTurn(role: 'assistant', text: ask));
+      _statusLine = '';
+    });
+    try {
+      await _tts.stop();
+    } catch (_) {}
+    await _tts.speak(ask, tone: TtsTone.empathy);
+  }
+
+  /// Step 2: map the worker's case-choice utterance to a caseId and
+  /// start the engine. Falls back to repeating the prompt if we can't
+  /// confidently identify which case they meant.
+  Future<void> _resolveCaseChoice(String input) async {
+    final lower = input.toLowerCase();
+    String? caseId;
+    if (lower.contains('নবজাতক') ||
+        lower.contains('newborn') ||
+        lower.contains('জন্ম') ||
+        lower.contains('সদ্যজাত')) {
+      caseId = 'newborn';
+    } else if (lower.contains('শিশু') ||
+        lower.contains('child') ||
+        lower.contains('বাচ্চা')) {
+      caseId = 'child';
+    } else if (lower.contains('গর্ভ') ||
+        lower.contains('pregnan') ||
+        lower.contains('প্রেগন') ||
+        lower.contains('মা')) {
+      caseId = 'pregnancy';
+    }
+
+    if (caseId == null) {
+      const retry =
+          'বুঝতে পারলাম না। নবজাতক, শিশু, অথবা গর্ভাবস্থা — কোনটি বলুন।';
+      setState(() {
+        _isThinking = false;
+        _history.add(const AssistantTurn(role: 'assistant', text: retry));
+      });
+      await _tts.speak(retry, tone: TtsTone.normal);
+      return;
+    }
+
+    final firstQ = await _triageEngine.start(caseId);
+    setState(() {
+      _awaitingCaseChoice = false;
+      _isThinking = false;
+    });
+    if (firstQ == null) {
+      const err =
+          'এই কেসের প্রশ্ন লোড করা গেল না। দয়া করে ট্রিয়াজ স্ক্রিন ব্যবহার করুন।';
+      setState(() =>
+          _history.add(const AssistantTurn(role: 'assistant', text: err)));
+      await _tts.speak(err, tone: TtsTone.normal);
+      return;
+    }
+    await _speakQuestion(firstQ.text);
+  }
+
+  /// Step 3: route worker's answer into the engine and either ask the
+  /// next question or speak the final outcome.
+  Future<void> _continueTriage(String input) async {
+    // "Cancel" / "stop" exits the flow cleanly without producing an
+    // outcome — worker may want to escape if they triggered triage by
+    // mistake. (Tap-to-pause works too but voice exit is faster.)
+    final lower = input.toLowerCase();
+    if (lower.contains('বাতিল') ||
+        lower.contains('cancel') ||
+        lower.contains('থামাও') ||
+        lower.contains('stop')) {
+      _triageEngine.cancel();
+      const msg = 'ট্রিয়াজ বাতিল করা হল।';
+      setState(() {
+        _isThinking = false;
+        _history.add(const AssistantTurn(role: 'assistant', text: msg));
+      });
+      await _tts.speak(msg, tone: TtsTone.normal);
+      return;
+    }
+
+    final priorQ = _triageEngine.currentQuestion();
+    final next = await _triageEngine.submitAnswer(input);
+
+    // Same question returned = answer couldn't be mapped, re-ask.
+    if (next != null && priorQ != null && next.id == priorQ.id) {
+      const retry = 'ক্ষমা করবেন, "হ্যাঁ" বা "না" বলুন।';
+      setState(() {
+        _isThinking = false;
+        _history.add(const AssistantTurn(role: 'assistant', text: retry));
+      });
+      await _tts.speak(retry, tone: TtsTone.normal);
+      return;
+    }
+
+    if (next != null) {
+      setState(() => _isThinking = false);
+      await _speakQuestion(next.text);
+      return;
+    }
+
+    // No next question → outcome is ready.
+    final outcome = _triageEngine.outcome;
+    if (outcome == null) {
+      _triageEngine.cancel();
+      setState(() => _isThinking = false);
+      return;
+    }
+    setState(() {
+      _isThinking = false;
+      _history.add(AssistantTurn(
+        role: 'assistant',
+        text: outcome.spokenSummary +
+            (outcome.action.isNotEmpty ? '\n\n${outcome.action}' : ''),
+      ));
+      // Offer save — same chip the LLM-driven save flow uses.
+      _showSaveChip = true;
+    });
+    await _tts.speak(
+      outcome.spokenSummary,
+      tone: outcome.band == 'RED' ? TtsTone.urgent : TtsTone.normal,
+    );
+  }
+
+  /// Shared: add the question to history + speak it. Centralized so
+  /// the same code runs for the first question and every follow-up.
+  Future<void> _speakQuestion(String questionText) async {
+    setState(() {
+      _history.add(AssistantTurn(role: 'assistant', text: questionText));
+    });
+    try {
+      await _tts.stop();
+    } catch (_) {}
+    await _tts.speak(questionText, tone: TtsTone.question);
   }
 
   // ── Orb tap: TRUE pause toggle ─────────────────────────────────────────
