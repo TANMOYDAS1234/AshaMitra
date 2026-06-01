@@ -14,7 +14,19 @@
 //      patient situation, or a danger sign), the assistant suggests:
 //      "Should I save this as a report?" Inline action chips appear.
 //   6. If yes → patient picker → save report. If no → conversation continues.
-//   7. Tap orb to interrupt the assistant; tap again to resume.
+//   7. Tap orb = TRUE PAUSE. Stops listening, stops speaking, stays
+//      quiet until worker taps again. Mic-off orb (grey) makes it
+//      visually obvious that nothing is being captured. Critical for
+//      privacy (patient home visits), background-noise rejection, and
+//      as an escape hatch when the state machine gets confused.
+//
+// Offline-first action layer:
+//   Before sending any user utterance to the LLM, a rule-based intent
+//   classifier checks for common app actions ("call ambulance", "open
+//   patients", "start triage" etc.) in Bengali/Hindi/English. Matches
+//   are dispatched instantly with no network round-trip. Anything that
+//   doesn't match (clinical questions, free chat) falls through to
+//   Gemini as before. See intent_classifier.dart + intent_dispatcher.dart.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import 'dart:async';
@@ -33,6 +45,8 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/voice_orb.dart';
 import '../../services/assistant_chat_service.dart';
+import '../../services/intent_classifier.dart';
+import '../../services/intent_dispatcher.dart';
 
 class AssistantScreen extends StatefulWidget {
   const AssistantScreen({super.key});
@@ -46,6 +60,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
   final _chat = AssistantChatService();
   final _stt = SpeechToText();
   final _tts = TtsService();
+  // Rule-based intent classifier runs BEFORE the LLM on every user
+  // utterance. Common app actions ("open patients", "call ambulance",
+  // "start triage") match here and execute instantly — no network
+  // round-trip. Anything that doesn't match falls through to Gemini.
+  // This is the offline-emergency layer: actions work without signal.
+  final _intentClassifier = RuleBasedIntentClassifier();
 
   // ── State ──────────────────────────────────────────────────────────────
   final List<AssistantTurn> _history = [];
@@ -59,26 +79,28 @@ class _AssistantScreenState extends State<AssistantScreen> {
   bool _isThinking = false;
   bool _showSaveChip = false;
   // True while the screen wants to stay listening between turns and even
-  // through silent pauses. Flipped off only on dispose so background
-  // STT events can't accidentally restart the mic after teardown.
+  // through silent pauses. Flipped off when the worker taps the orb to
+  // pause, and on dispose so background STT events can't accidentally
+  // restart the mic after teardown.
   bool _autoListen = true;
+  // True when the worker has explicitly paused the assistant by tapping
+  // the orb. While paused: no auto-restart, TTS stays stopped, orb shows
+  // grey/mic-off so worker can see at a glance that nothing is captured.
+  // Tap again to resume.
+  bool _isPaused = false;
+
+  // STT self-recovery: track consecutive error/status-failure events.
+  // The native SpeechRecognizer can get into a stuck state after several
+  // back-to-back errors where listen() returns immediately with no audio
+  // session. When we hit the threshold, we cancel + re-initialize the
+  // plugin rather than ignore the error and silently leave the mic dead.
+  int _consecutiveSttErrors = 0;
+  static const _sttErrorThreshold = 3;
 
   // Escalates the status line from "thinking" to "waking server" after
   // 5s of waiting so the worker knows the cold-start is happening rather
   // than the app being frozen. Cancelled when the reply lands.
   Timer? _coldStartHintTimer;
-
-  // Round-robin index for the ack-filler phrases — same pattern as triage.
-  // Plays a 1-second cached "got it" the moment STT finalizes so the worker
-  // never hears silence while the LLM/TTS round-trip is in flight. Every
-  // phrase is bundled in the APK and cached on disk, so playback is
-  // instant (no network).
-  int _ackFillerIndex = 0;
-  static const _ackFillers = <String>[
-    'বুঝেছি।',
-    'একটু অপেক্ষা করুন।',
-    'ধন্যবাদ।',
-  ];
 
   @override
   void initState() {
@@ -93,8 +115,31 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Future<void> _initAll() async {
     await _tts.init();
     _wireTtsCallbacks();
-    _sttReady = await _stt.initialize(
-      onError: (_) => _resetToIdle(),
+    _sttReady = await _initStt();
+    if (!mounted) return;
+    // Voice-first: greet immediately, then auto-listen when TTS done.
+    await _speakGreeting();
+  }
+
+  /// Initialize the STT plugin. Used both at boot and from the self-
+  /// recovery path when consecutive errors signal the native recognizer
+  /// is in a stuck state.
+  Future<bool> _initStt() async {
+    return await _stt.initialize(
+      onError: (err) {
+        if (!mounted) return;
+        // Track consecutive errors so a runaway error storm triggers a
+        // hard reset instead of silently leaving the mic dead. The native
+        // SpeechRecognizer occasionally enters a state where listen()
+        // returns immediately with no audio session; only cancel + init
+        // recovers from it.
+        _consecutiveSttErrors++;
+        if (_consecutiveSttErrors >= _sttErrorThreshold) {
+          _recoverStt();
+        } else {
+          _resetToIdle();
+        }
+      },
       onStatus: (status) {
         if (!mounted) return;
         if ((status == SpeechToText.doneStatus ||
@@ -104,29 +149,54 @@ class _AssistantScreenState extends State<AssistantScreen> {
         }
       },
     );
+  }
+
+  /// Hard-reset the STT plugin after [_sttErrorThreshold] consecutive
+  /// errors. Cancels any in-flight listen session, re-initializes the
+  /// plugin, and restores the orb to a clean idle state. Worker can
+  /// then tap to talk again without restarting the app.
+  Future<void> _recoverStt() async {
+    _consecutiveSttErrors = 0;
+    try {
+      await _stt.cancel();
+    } catch (_) {}
+    _sttReady = await _initStt();
     if (!mounted) return;
-    // Voice-first: greet immediately, then auto-listen when TTS done.
-    await _speakGreeting();
+    _resetToIdle();
   }
 
   void _wireTtsCallbacks() {
     _tts.onStart = () {
-      if (mounted) setState(() => _orbState = OrbState.processing);
+      if (mounted && !_isPaused) {
+        setState(() => _orbState = OrbState.processing);
+      }
     };
     _tts.onComplete = () {
       if (!mounted) return;
-      setState(() => _orbState = OrbState.idle);
-      // Auto-listen after every TTS chunk — but wait for the audio to
-      // actually drain from the speaker first, so the next phrase the
-      // AI just spoke isn't captured by STT as the worker's next input.
-      if (!_isThinking && !_showSaveChip) {
+      setState(() => _orbState = _isPaused ? OrbState.paused : OrbState.idle);
+      // Auto-listen after every TTS chunk — but ONLY if the worker hasn't
+      // tapped to pause. _isPaused is the worker-controlled hard switch;
+      // _autoListen is the screen-lifecycle switch. Both must allow it.
+      //
+      // Drain wait extended to 800 ms (was 600 ms) AFTER _tts.isPlaying
+      // reports false. The plugin's isPlaying flag flips off slightly
+      // before the audio actually leaves the speaker on cheaper phones;
+      // the extra buffer kills the "TTS bleeds into next STT" bug where
+      // the assistant's own voice was being captured as the worker's
+      // next utterance.
+      if (_autoListen && !_isPaused && !_isThinking && !_showSaveChip) {
         () async {
           final deadline = DateTime.now().add(const Duration(seconds: 2));
           while (_tts.isPlaying && DateTime.now().isBefore(deadline)) {
             await Future.delayed(const Duration(milliseconds: 80));
           }
-          await Future.delayed(const Duration(milliseconds: 600));
-          if (mounted && !_isThinking && !_showSaveChip && !_isListening) {
+          await Future.delayed(const Duration(milliseconds: 800));
+          if (mounted &&
+              _autoListen &&
+              !_isPaused &&
+              !_isThinking &&
+              !_showSaveChip &&
+              !_isListening) {
             _startListening();
           }
         }();
@@ -146,7 +216,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   // ── STT control ────────────────────────────────────────────────────────
   Future<void> _startListening() async {
-    if (!_sttReady || _isListening) return;
+    if (!_sttReady || _isListening || _isPaused) return;
     setState(() {
       _isListening = true;
       _liveTranscript = '';
@@ -157,6 +227,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
     // get more thinking-time between phrases. They often pause mid-
     // sentence to recall a number or look up a register; 4 sec was
     // committing too early and cutting them off.
+    //
+    // cancelOnError: true (was false) — let errors propagate through the
+    // onError callback to the self-recovery counter rather than silently
+    // swallow them. Silent swallowing was the root cause of the "mic
+    // stuck on listening forever, no audio captured" state.
     await _stt.listen(
       localeId: _activeLang.sttLocale,
       listenFor: const Duration(seconds: 45),
@@ -164,12 +239,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
       listenOptions: SpeechListenOptions(
         listenMode: ListenMode.dictation,
         partialResults: true,
-        cancelOnError: false,
+        cancelOnError: true,
       ),
       onResult: (r) {
         if (!mounted) return;
         setState(() => _liveTranscript = r.recognizedWords);
         if (r.finalResult && _liveTranscript.trim().isNotEmpty) {
+          // Successful capture — reset the error counter.
+          _consecutiveSttErrors = 0;
           _stt.stop();
         }
       },
@@ -179,50 +256,49 @@ class _AssistantScreenState extends State<AssistantScreen> {
   void _onListenComplete() {
     setState(() {
       _isListening = false;
-      _orbState = OrbState.idle;
+      _orbState = _isPaused ? OrbState.paused : OrbState.idle;
     });
     final input = _liveTranscript.trim();
     if (input.isEmpty) {
-      _statusLine = _idleStatus(_activeLang);
+      _statusLine = _isPaused
+          ? _pausedStatus(_activeLang)
+          : _idleStatus(_activeLang);
       // Silent timeout (pauseFor or listenFor with no speech) — re-arm
       // the mic so the screen stays truly always-listening while open.
-      // Gate on TTS-not-playing so the AI's own voice doesn't bleed into
-      // the next STT session (the "TTS taken as input" bug).
-      if (_autoListen && !_isThinking && !_showSaveChip) {
+      // Skip the re-arm if worker has paused, or if TTS is mid-playback
+      // (the AI's own voice would bleed into the next STT session — the
+      // "TTS taken as input" bug). Drain wait extended to 800 ms after
+      // isPlaying clears.
+      if (_autoListen && !_isPaused && !_isThinking && !_showSaveChip) {
         () async {
           final deadline = DateTime.now().add(const Duration(seconds: 2));
           while (_tts.isPlaying && DateTime.now().isBefore(deadline)) {
             await Future.delayed(const Duration(milliseconds: 80));
           }
-          await Future.delayed(const Duration(milliseconds: 600));
-          if (mounted && _autoListen && !_isListening && !_isThinking) {
+          await Future.delayed(const Duration(milliseconds: 800));
+          if (mounted &&
+              _autoListen &&
+              !_isPaused &&
+              !_isListening &&
+              !_isThinking) {
             _startListening();
           }
         }();
       }
       return;
     }
-    // Bridge the network/LLM wait: play a 1-sec cached ack the moment STT
-    // finalizes so the worker never hears silence between speaking and
-    // the assistant's full reply. Fire-and-forget; the response audio
-    // will replace this as soon as it arrives.
-    _playAckFiller();
+    // Send straight to LLM — no ack filler. The filler used to play a
+    // 1-sec "got it" through TTS before the real reply, but that meant
+    // 3 audio focus transitions per turn (STT-stop → ack-TTS → response-
+    // TTS → STT-restart). On Android, each transition risks the system
+    // beep and a state-machine race where one of them never fully
+    // releases audio focus, leaving the mic stuck. Dropping the filler
+    // eliminates one of the three transitions and the stuck-mic bug
+    // we were seeing after ~5-10 turns.
     _handleUserInput(input);
   }
 
-  /// Plays a short cached "got it" filler from disk (round-robin through
-  /// [_ackFillers] so the same phrase doesn't repeat back-to-back). No-op
-  /// if the assistant is processing the previous turn — we don't want to
-  /// stack ack audio over an in-flight response.
-  void _playAckFiller() {
-    if (_isThinking) return;
-    final phrase = _ackFillers[_ackFillerIndex % _ackFillers.length];
-    _ackFillerIndex++;
-    // Don't await — the main response will replace this when ready.
-    _tts.speak(phrase, tone: TtsTone.normal);
-  }
-
-  // ── Main loop: send to Gemini, speak reply ─────────────────────────────
+  // ── Main loop: rule-match → action OR LLM, then speak reply ────────────
   Future<void> _handleUserInput(String input) async {
     HapticFeedback.lightImpact();
     setState(() {
@@ -233,6 +309,35 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _liveTranscript = '';
     });
 
+    // ── Step 1: try rule-based intent classifier first ──
+    // Common app actions (call ambulance, open patients, etc.) bypass
+    // the LLM entirely — instant response, works offline. If the
+    // classifier finds a confident match, we dispatch the action and
+    // speak a short confirmation; conversation history records the
+    // confirmation so the LLM has context if the worker keeps talking.
+    final classified = _intentClassifier.classify(input, _activeLang);
+    if (classified.isHandled && classified.confidence >= 0.45) {
+      final dispatcher = IntentDispatcher(lang: _activeLang);
+      final result = await dispatcher.dispatch(classified);
+      if (result.handled) {
+        setState(() {
+          _isThinking = false;
+          _history.add(
+            AssistantTurn(role: 'assistant', text: result.spokenConfirmation),
+          );
+          _statusLine = '';
+        });
+        if (result.spokenConfirmation.isNotEmpty) {
+          try {
+            await _tts.stop();
+          } catch (_) {}
+          await _tts.speak(result.spokenConfirmation, tone: TtsTone.normal);
+        }
+        return;
+      }
+    }
+
+    // ── Step 2: fall through to LLM for free-form / clinical chat ──
     // Arm cold-start hint — after 5s of waiting, switch the status line
     // to "waking the server" so the worker knows the app isn't frozen.
     _coldStartHintTimer?.cancel();
@@ -280,31 +385,62 @@ class _AssistantScreenState extends State<AssistantScreen> {
     }
   }
 
-  // ── Orb tap: interrupt / resume ────────────────────────────────────────
+  // ── Orb tap: TRUE pause toggle ─────────────────────────────────────────
+  // Worker-controlled hard switch. Every state has one clear behaviour
+  // and the worker always knows what tapping will do:
+  //   Paused      → resume (start listening)
+  //   Listening   → pause  (stop, stay quiet, NO auto-restart)
+  //   Speaking    → pause  (stop TTS, stay quiet)
+  //   Thinking    → pause  (cancel pending re-arm, stay quiet — the
+  //                         in-flight Gemini reply is allowed to land
+  //                         but won't be spoken because TTS is paused)
+  //   Idle        → start listening
+  //
+  // Critical: when we enter the paused state, _autoListen stays true
+  // (it's the screen-lifecycle flag) but _isPaused is the gate every
+  // re-arm path checks. This is the "escape hatch" that lets the worker
+  // recover from any stuck-state without leaving the screen.
   Future<void> _onOrbTap() async {
-    if (_isThinking) return; // can't interrupt while waiting on Gemini
-    if (_orbState == OrbState.processing) {
-      // TTS is speaking — stop it, go listen
-      await _tts.stop();
-      setState(() => _orbState = OrbState.idle);
+    // Resume from a paused session.
+    if (_isPaused) {
+      setState(() {
+        _isPaused = false;
+        _orbState = OrbState.idle;
+        _statusLine = _idleStatus(_activeLang);
+      });
       _startListening();
       return;
     }
-    if (_isListening) {
-      // already listening — stop + process
-      await _stt.stop();
-      return;
-    }
-    // Idle → start listening
-    _startListening();
+    // Pause from anywhere else — stop everything, stay quiet.
+    await _pauseAssistant();
+  }
+
+  Future<void> _pauseAssistant() async {
+    try {
+      if (_isListening) await _stt.cancel();
+    } catch (_) {}
+    try {
+      await _tts.stop();
+    } catch (_) {}
+    _coldStartHintTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _isPaused = true;
+      _isListening = false;
+      _liveTranscript = '';
+      _orbState = OrbState.paused;
+      _statusLine = _pausedStatus(_activeLang);
+    });
   }
 
   void _resetToIdle() {
     setState(() {
       _isListening = false;
       _isThinking = false;
-      _orbState = OrbState.idle;
-      _statusLine = _idleStatus(_activeLang);
+      _orbState = _isPaused ? OrbState.paused : OrbState.idle;
+      _statusLine = _isPaused
+          ? _pausedStatus(_activeLang)
+          : _idleStatus(_activeLang);
     });
   }
 
@@ -434,6 +570,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
         AssistantLang.bn => 'অর্বে ট্যাপ করুন কথা বলতে',
         AssistantLang.hi => 'बोलने के लिए ओर्ब पर टैप करें',
         AssistantLang.en => 'Tap the orb to talk',
+      };
+  String _pausedStatus(AssistantLang l) => switch (l) {
+        AssistantLang.bn => 'মাইক বন্ধ — চালু করতে ট্যাপ করুন',
+        AssistantLang.hi => 'माइक बंद — चालू करने के लिए टैप करें',
+        AssistantLang.en => 'Mic off — tap to start',
       };
 }
 

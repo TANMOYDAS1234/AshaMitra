@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
-enum OrbState { idle, listening, processing }
+enum OrbState { idle, listening, processing, paused }
 
 class VoiceOrb extends StatefulWidget {
   final OrbState state;
@@ -61,12 +61,14 @@ class _VoiceOrbState extends State<VoiceOrb> with TickerProviderStateMixin {
         OrbState.listening => const Color(0xFF22C55E),
         OrbState.processing => const Color(0xFF06B6D4),
         OrbState.idle => const Color(0xFF4F46E5),
+        OrbState.paused => const Color(0xFF6B7280),
       };
 
   IconData get _orbIcon => switch (widget.state) {
         OrbState.listening => Icons.graphic_eq,
         OrbState.processing => Icons.psychology_alt,
         OrbState.idle => Icons.mic,
+        OrbState.paused => Icons.mic_off_rounded,
       };
 
   @override
