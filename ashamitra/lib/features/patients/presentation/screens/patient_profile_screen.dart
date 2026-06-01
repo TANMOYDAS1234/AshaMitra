@@ -28,6 +28,19 @@ class PatientProfileScreen extends StatelessWidget {
     return '🏥';
   }
 
+  /// Map the patient's stored type string ('Pregnancy'/'Newborn'/'Child'
+  /// /'Other', plus Bengali variants from triage-created patients) to
+  /// the lowercase case id used by the triage engine (see
+  /// assets/data/triage_cases.json). Returns null when no engine case
+  /// matches — caller should fall back to the case picker.
+  String? _caseIdFor(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('pregnan') || type.contains('গর্ভ')) return 'pregnancy';
+    if (t.contains('newborn') || type.contains('নবজাতক')) return 'newborn';
+    if (t.contains('child') || type.contains('শিশু')) return 'child';
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final args = (Get.arguments as Map<String, dynamic>?) ?? {};
@@ -228,13 +241,34 @@ class PatientProfileScreen extends StatelessWidget {
                       const SizedBox(height: 20),
                       AppButton(
                         label: 'Start Voice Checkup',
-                        onPressed: () => Get.toNamed(
-                          AppRoutes.selectCase,
-                          arguments: {
-                            if (patientId.isNotEmpty) 'patientId': patientId,
-                            'patientName': name,
-                          },
-                        ),
+                        // We already know the patient and their case type
+                        // from the profile, so skip the case-picker step.
+                        // Route straight to voiceTriage with caseId derived
+                        // from the patient's stored type. Only the 'Other'
+                        // bucket (no engine case) falls back to selectCase.
+                        onPressed: () {
+                          final caseId = _caseIdFor(type);
+                          if (caseId != null) {
+                            Get.toNamed(
+                              AppRoutes.voiceTriage,
+                              arguments: {
+                                'caseId': caseId,
+                                if (patientId.isNotEmpty)
+                                  'patientId': patientId,
+                                'patientName': name,
+                              },
+                            );
+                          } else {
+                            Get.toNamed(
+                              AppRoutes.selectCase,
+                              arguments: {
+                                if (patientId.isNotEmpty)
+                                  'patientId': patientId,
+                                'patientName': name,
+                              },
+                            );
+                          }
+                        },
                         icon: Icons.mic_rounded,
                         width: double.infinity,
                       ),
