@@ -338,8 +338,21 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // ── Action card (all bands) ──────────────────────────────────
-                _ActionCard(engineResult: _engineResult, outcome: _outcome),
+                // ── Nearest referral centers map ─────────────────────────────
+                // Previously this lived inside _ActionCard along with a
+                // duplicate of the action text. The action text is now
+                // already shown inside the band card's "পরবর্তী পদক্ষেপ"
+                // inset, so we only need the map here. The map widget
+                // brings its own "নিকটস্থ রেফার কেন্দ্র" header.
+                if (_outcome != TriageOutcome.safe &&
+                    _engineResult.referral.isNotEmpty &&
+                    _engineResult.referral != 'None') ...[
+                  const SizedBox(height: 16),
+                  ReferralMapWidget(
+                    facilityType: _engineResult.referral,
+                    isEmergency: _outcome == TriageOutcome.emergency,
+                  ),
+                ],
 
                 // ── Attach Patient CTA (anonymous / urgent triage) ──────────
                 // Shown when no patient was picked at start. The subtitle on
@@ -809,117 +822,6 @@ class _AttachedPatientPill extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Action card — shown for all bands, styled by severity ────────────────────
-class _ActionCard extends StatelessWidget {
-  final DecisionOutput engineResult;
-  final TriageOutcome outcome;
-
-  const _ActionCard({required this.engineResult, required this.outcome});
-
-  @override
-  Widget build(BuildContext context) {
-    final (bg, border, textColor, icon, label) = switch (outcome) {
-      TriageOutcome.emergency => (
-        const Color(0xFFFFEBEB),
-        AppColors.emergencyRed,
-        const Color(0xFF7F1D1D),
-        Icons.emergency_rounded,
-        'জরুরি পদক্ষেপ',
-      ),
-      TriageOutcome.attention => (
-        const Color(0xFFFFFBEB),
-        AppColors.warningYellow,
-        const Color(0xFF78350F),
-        Icons.warning_amber_rounded,
-        'পরবর্তী পদক্ষেপ',
-      ),
-      TriageOutcome.safe => (
-        const Color(0xFFECFDF5),
-        AppColors.safeGreen,
-        const Color(0xFF064E3B),
-        Icons.check_circle_outline_rounded,
-        'পরামর্শ',
-      ),
-    };
-
-    final actionText = engineResult.actionBn.isNotEmpty
-        ? engineResult.actionBn
-        : engineResult.actionEn;
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: AppRadius.lgR,
-        border: Border.all(color: border, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: border, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                label.toUpperCase(),
-                style: AppTextStyles.overline.copyWith(color: border),
-              ),
-              if (engineResult.referral.isNotEmpty && engineResult.referral != 'None') ...[
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: border.withValues(alpha: 0.12),
-                    borderRadius: AppRadius.pillR,
-                  ),
-                  child: Text(
-                    engineResult.referral,
-                    style: AppTextStyles.caption.copyWith(color: border, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          if (actionText.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Text(actionText, style: AppTextStyles.body.copyWith(color: textColor)),
-          ],
-          // Nearest referral map (referral cases)
-          if (outcome != TriageOutcome.safe && engineResult.referral.isNotEmpty && engineResult.referral != 'None') ...[
-            const SizedBox(height: 12),
-            ReferralMapWidget(facilityType: engineResult.referral),
-          ],
-          // Sign-off pending badge
-          if (engineResult.signOffPending) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF3CD),
-                borderRadius: AppRadius.smR,
-                border: Border.all(color: const Color(0xFFD97706)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded, size: 14, color: Color(0xFFD97706)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'এই নিয়মটি চূড়ান্ত অনুমোদনের অপেক্ষায় আছে।',
-                      style: AppTextStyles.caption.copyWith(color: const Color(0xFF92400E)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );

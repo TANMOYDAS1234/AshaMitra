@@ -33,115 +33,118 @@ class TriageResultCard extends StatelessWidget {
           child: Transform.scale(scale: 0.96 + 0.04 * t, child: child),
         ),
       ),
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: cfg.bg,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: cfg.color.withValues(alpha: 0.35), width: 2),
-          boxShadow: [
-            BoxShadow(
-              color: cfg.color.withValues(alpha: 0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
+      // ── Outer band-coloured rounded container ─────────────────────────
+      // Whole card wears the band colour so the worker can read the band
+      // (RED / YELLOW / GREEN) at a glance even with the phone halfway
+      // out of their bag. Inset cards inside this container carry the
+      // reason + next step in higher-contrast white so the wording is
+      // also legible.
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
           children: [
-            // ── Band banner ──────────────────────────────────────────────
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
-              child: Stack(
-                children: [
-                  // Safe-band celebration burst — concentric rings rippling
-                  if (outcome == TriageOutcome.safe)
-                    const Positioned.fill(child: _CelebrationBurst()),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-                    decoration: BoxDecoration(color: cfg.color),
-                    child: Row(
-                      children: [
-                        if (outcome == TriageOutcome.emergency)
-                          const _PulseDot(color: Colors.white)
-                        else if (outcome == TriageOutcome.safe)
-                          const _BouncyCheck()
-                        else
-                          Container(
-                            width: 14, height: 14,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                cfg.bandLabel,
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                cfg.subtitle,
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.white.withValues(alpha: 0.88),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Referral level chip
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
-                          ),
-                          child: Text(
-                            cfg.referralLevel,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+            // Safe-band celebration ripples — kept from previous version.
+            if (outcome == TriageOutcome.safe)
+              const Positioned.fill(child: _CelebrationBurst()),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: cfg.color,
+                boxShadow: [
+                  BoxShadow(
+                    color: cfg.color.withValues(alpha: 0.30),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
-            ),
-
-            // ── Body ─────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _BodyRow(
+                  // ── Header row: dot + title + subtitle + referral chip ──
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: outcome == TriageOutcome.emergency
+                            ? const _PulseDot(color: Colors.white)
+                            : outcome == TriageOutcome.safe
+                                ? const _BouncyCheck()
+                                : Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              cfg.bandLabel,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 0.3,
+                                height: 1.15,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              cfg.subtitle,
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.white.withValues(alpha: 0.92),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Referral level pill — top-right, matches design's
+                      // rounded translucent badge ("FRU / SNCU / DH" etc).
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.22),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.55),
+                              width: 1.2),
+                        ),
+                        child: Text(
+                          cfg.referralLevel,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // ── Reason inset card ──────────────────────────────────
+                  _InsetCard(
                     icon: Icons.info_outline_rounded,
                     label: 'result_reason'.tr,
                     value: reason,
                     color: cfg.color,
                   ),
-                  const SizedBox(height: 16),
-                  Divider(color: cfg.color.withValues(alpha: 0.15), height: 1),
-                  const SizedBox(height: 16),
-                  _BodyRow(
+                  const SizedBox(height: 10),
+                  // ── Next-step inset card ───────────────────────────────
+                  _InsetCard(
                     icon: Icons.arrow_forward_ios_rounded,
                     label: 'result_next_step'.tr,
                     value: nextStep,
@@ -196,13 +199,19 @@ class _BandConfig {
   });
 }
 
-class _BodyRow extends StatelessWidget {
+// ── Inset card — white panel inside the band-coloured outer card ────────────
+// Carries the reason / next-step content. The icon sits in a tinted
+// rounded box (lighter shade of the band colour) so it pops without
+// fighting the outer band. Text inside is high-contrast dark on white,
+// because comprehension matters more than aesthetics for a worker
+// reading this in a poorly-lit hut.
+class _InsetCard extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
   final Color color;
 
-  const _BodyRow({
+  const _InsetCard({
     required this.icon,
     required this.label,
     required this.value,
@@ -211,44 +220,56 @@ class _BodyRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 32, height: 32,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        // Very light tint of the band colour — keeps the inset visually
+        // connected to the band without obscuring the white-card feel
+        // from the design.
+        color: Colors.white.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: color),
           ),
-          child: Icon(icon, size: 16, color: color),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: color,
-                  letterSpacing: 0.8,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                    letterSpacing: 0.2,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.onBackground,
-                  height: 1.55,
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.onBackground,
+                    height: 1.55,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
