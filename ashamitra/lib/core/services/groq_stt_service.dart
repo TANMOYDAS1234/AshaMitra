@@ -77,7 +77,10 @@ class GroqSttService {
   /// How long of below-threshold amplitude after speech triggers the
   /// auto-stop. Mirrors the speech_to_text plugin's pauseFor concept
   /// but enforced here in client code rather than the native plugin.
-  static const Duration _silenceTimeout = Duration(milliseconds: 1800);
+  /// Dropped 1800 → 1200 ms after pilot reported the wait felt
+  /// excessive. Worker who wants to keep talking past a pause can
+  /// just keep speaking — the timeout resets on any amplitude blip.
+  static const Duration _silenceTimeout = Duration(milliseconds: 1200);
 
   /// Hard ceiling — even if the worker keeps talking, we stop the
   /// recording at this duration to keep the backend round-trip
@@ -186,14 +189,26 @@ class GroqSttService {
 
   /// Manually stop the recording (worker tapped the orb to commit).
   /// Triggers the upload + completes the active capture's Future.
-  Future<void> stop() async {
+  /// [onProcessingStart] mirrors the auto-stop path so the UI flips
+  /// the orb to "processing" the instant the worker taps to commit,
+  /// not after the upload begins. Without it the orb would sit on
+  /// "listening" green for 500 ms-2 s while the upload is in flight.
+  Future<void> commit({
+    ProcessingStartCallback? onProcessingStart,
+    String languageCode = 'bn',
+  }) async {
     _ampPoller?.cancel();
     _hardCeiling?.cancel();
     final c = _activeCompleter;
     if (c != null && !c.isCompleted) {
-      await _stopAndTranscribe(c, 'bn');
+      onProcessingStart?.call();
+      await _stopAndTranscribe(c, languageCode);
     }
   }
+
+  /// Same as [commit] but kept for symmetry with the speech_to_text
+  /// plugin's `.stop()` method that other callers might still invoke.
+  Future<void> stop() => commit();
 
   /// Cancel without uploading — worker hit pause/cancel during the
   /// capture and doesn't want anything sent. Cleans the temp file.

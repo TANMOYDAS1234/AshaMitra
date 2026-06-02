@@ -584,6 +584,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _history.add(AssistantTurn(role: 'user', text: input));
       _isThinking = true;
       _orbState = OrbState.processing;
+      // Worker has seen "শুনলাম, ভাবছি..." from the onProcessingStart
+      // hook during the Whisper upload. Now the text has arrived and
+      // we're actually calling the LLM — shift to the plain "ভাবছি..."
+      // so the worker can see we moved from "got your audio" to
+      // "working on a reply". Without this, both stages look the
+      // same and a 3 sec total wait reads as one undifferentiated stall.
       _statusLine = _thinkingStatus(_activeLang);
       _liveTranscript = '';
     });
@@ -890,23 +896,20 @@ class _AssistantScreenState extends State<AssistantScreen> {
     await _tts.speak(questionText, tone: TtsTone.question);
   }
 
-  // ── Orb tap: TRUE pause toggle ─────────────────────────────────────────
-  // Worker-controlled hard switch. Every state has one clear behaviour
-  // and the worker always knows what tapping will do:
-  //   Paused      → resume (start listening)
-  //   Listening   → pause  (stop, stay quiet, NO auto-restart)
-  //   Speaking    → pause  (stop TTS, stay quiet)
-  //   Thinking    → pause  (cancel pending re-arm, stay quiet — the
-  //                         in-flight Gemini reply is allowed to land
-  //                         but won't be spoken because TTS is paused)
-  //   Idle        → start listening
+  // ── Orb tap behaviour ───────────────────────────────────────────────────
+  // Paused      → resume (start listening)
+  // Listening   → COMMIT current recording immediately (don't wait for
+  //               silence detection — worker is signalling "I'm done,
+  //               send it now"). Single tap = faster turn.
+  // Speaking    → pause (stop TTS, stay quiet)
+  // Thinking    → pause (cancel pending re-arm)
+  // Idle        → start listening
   //
-  // Critical: when we enter the paused state, _autoListen stays true
-  // (it's the screen-lifecycle flag) but _isPaused is the gate every
-  // re-arm path checks. This is the "escape hatch" that lets the worker
-  // recover from any stuck-state without leaving the screen.
+  // Tap-to-commit is the biggest perceived-speed win for chat-style
+  // dialogue: instead of waiting 1.2 sec of silence to confirm a turn,
+  // the worker just taps and the upload starts. Long-press still
+  // pauses if the worker wants the older "tap = pause" behaviour.
   Future<void> _onOrbTap() async {
-    // Resume from a paused session.
     if (_isPaused) {
       setState(() {
         _isPaused = false;
@@ -916,7 +919,30 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _startListening();
       return;
     }
-    // Pause from anywhere else — stop everything, stay quiet.
+    if (_isListening && _useGroqStt) {
+      // Force-commit the in-flight recording.
+      await _groqStt.commit(
+        languageCode: _activeLang.code,
+        onProcessingStart: () {
+          if (!mounted) return;
+          _stopSttWatchdog();
+          setState(() {
+            _isListening = false;
+            _audioLevel = 0.0;
+            _orbState = OrbState.processing;
+            _statusLine = _heardYouStatus(_activeLang);
+          });
+        },
+      );
+      return;
+    }
+    await _pauseAssistant();
+  }
+
+  Future<void> _onOrbLongPress() async {
+    // Long-press = explicit pause from any state. Worker uses this
+    // when they want the privacy / mic-off mode rather than a fast
+    // commit. Avoids accidentally pausing when they meant to commit.
     await _pauseAssistant();
   }
 
@@ -1069,6 +1095,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     ? _idleStatus(_activeLang)
                     : _statusLine,
                 isThinking: _isThinking,
+                onLongPress: _onOrbLongPress,
                 audioLevel: _audioLevel,
                 onTap: _onOrbTap,
               ),
@@ -1099,9 +1126,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
         AssistantLang.en => 'Speaking...',
       };
   String _listeningStatus(AssistantLang l) => switch (l) {
-        AssistantLang.bn => 'শুনছি — বলুন',
-        AssistantLang.hi => 'सुन रही हूँ — बोलिए',
-        AssistantLang.en => 'Listening...',
+        AssistantLang.bn => 'শুনছি — বলুন · ট্যাপ করে পাঠান',
+        AssistantLang.hi => 'सुन रही हूँ — बोलें · टैप करके भेजें',
+        AssistantLang.en => 'Listening — tap to send',
       };
   String _thinkingStatus(AssistantLang l) => switch (l) {
         AssistantLang.bn => 'ভাবছি...',
@@ -1422,12 +1449,18 @@ class _OrbDock extends StatelessWidget {
   /// even if the orb says "listening".
   final double audioLevel;
   final VoidCallback onTap;
+  /// Long-press = explicit pause. Kept separate from [onTap] because
+  /// tap during listening force-commits the recording (speed win) —
+  /// workers who want the pause behaviour signal it with a long-press
+  /// instead, so they don't accidentally pause mid-thought.
+  final VoidCallback onLongPress;
   const _OrbDock({
     required this.state,
     required this.statusLine,
     required this.isThinking,
     required this.audioLevel,
     required this.onTap,
+    required this.onLongPress,
   });
 
   @override
@@ -1439,6 +1472,7 @@ class _OrbDock extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: onTap,
+            onLongPress: onLongPress,
             child: Stack(
               alignment: Alignment.center,
               children: [
