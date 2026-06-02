@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/api_constants.dart';
 import '../../../core/theme/app_colors.dart';
@@ -156,19 +158,85 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
   }
 
   /// Resolution order:
-  ///   1. Backend /api/directions — proxies Google Directions API,
+  ///   1. On-disk cache — same (origin, destination) requested within
+  ///      [_routeCacheTtl] returns the saved route. Saves Google API
+  ///      calls + makes referrals work offline once the route is
+  ///      cached once. Quantised origin coords (3 decimal places ≈
+  ///      100 m grid) so neighbouring tap points hit the same key.
+  ///   2. Backend /api/directions — proxies Google Directions API,
   ///      live-traffic-aware, key stays server-side.
-  ///   2. OSRM public — free, no key, OSM-based (no live traffic).
-  ///   3. Null — caller draws the straight-line placeholder.
-  ///
-  /// Backend is tried first so a deployment with a Google Maps key
-  /// gets the real-traffic numbers (and matching polyline), while a
-  /// deployment without one falls through to OSRM automatically —
-  /// no client-side config flag needed.
+  ///   3. OSRM public — free, no key, OSM-based (no live traffic).
+  ///   4. Null — caller draws the straight-line placeholder.
   Future<_Route?> _fetchRoute(LatLng origin, LatLng dest) async {
+    final fromDisk = await _loadRouteFromDisk(origin, dest);
+    if (fromDisk != null) return fromDisk;
     final google = await _fetchGoogleRoute(origin, dest);
-    if (google != null) return google;
-    return _fetchOsrmRoute(origin, dest);
+    if (google != null) {
+      unawaited(_saveRouteToDisk(origin, dest, google));
+      return google;
+    }
+    final osrm = await _fetchOsrmRoute(origin, dest);
+    if (osrm != null) {
+      unawaited(_saveRouteToDisk(origin, dest, osrm));
+    }
+    return osrm;
+  }
+
+  /// Disk-cache lifetime. Live-traffic ETAs lose accuracy fast, but
+  /// the polyline + distance are stable. 24 h keeps the route useful
+  /// for offline lookup while not pretending stale traffic data is
+  /// current. After 24 h the route is re-fetched.
+  static const _routeCacheTtl = Duration(hours: 24);
+
+  /// Quantise (origin, dest) into a stable file name. 3 decimal places
+  /// ≈ 110 m grid — workers in the same hut share a cache entry. Both
+  /// halves rounded so the cache works in either direction.
+  String _routeCacheKey(LatLng o, LatLng d) {
+    String q(double v) => v.toStringAsFixed(3);
+    return 'route_${q(o.latitude)}_${q(o.longitude)}__${q(d.latitude)}_${q(d.longitude)}.json';
+  }
+
+  Future<File> _routeCacheFile(LatLng o, LatLng d) async {
+    final base = await getApplicationDocumentsDirectory();
+    final dir = Directory('${base.path}/route_cache');
+    if (!dir.existsSync()) dir.createSync(recursive: true);
+    return File('${dir.path}/${_routeCacheKey(o, d)}');
+  }
+
+  Future<_Route?> _loadRouteFromDisk(LatLng o, LatLng d) async {
+    try {
+      final file = await _routeCacheFile(o, d);
+      if (!file.existsSync()) return null;
+      final age = DateTime.now().difference(file.lastModifiedSync());
+      if (age > _routeCacheTtl) return null;
+      final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      final raw = json['points'] as List;
+      final pts = <LatLng>[
+        for (final p in raw)
+          if (p is List && p.length >= 2)
+            LatLng((p[0] as num).toDouble(), (p[1] as num).toDouble()),
+      ];
+      if (pts.isEmpty) return null;
+      return _Route(
+        points: pts,
+        distanceKm: (json['distanceKm'] as num).toDouble(),
+        durationMin: (json['durationMin'] as num).toInt(),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _saveRouteToDisk(LatLng o, LatLng d, _Route r) async {
+    try {
+      final file = await _routeCacheFile(o, d);
+      final body = {
+        'points': [for (final p in r.points) [p.latitude, p.longitude]],
+        'distanceKm': r.distanceKm,
+        'durationMin': r.durationMin,
+      };
+      await file.writeAsString(jsonEncode(body));
+    } catch (_) { /* best-effort cache */ }
   }
 
   /// Backend proxy to Google Directions API (see server.js

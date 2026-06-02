@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/services/language_controller.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -461,6 +462,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ),
                       ),
+                      // ── App version (read from pubspec at build time) ──
+                      // Lets pilot QA verify "I have the new build". Subtle
+                      // grey text — doesn't compete with the action rows
+                      // above, only the worker who looks for it sees it.
+                      const SizedBox(height: 24),
+                      const _AppVersionFooter(),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),
@@ -470,6 +478,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
       bottomNavigationBar: const BottomNav(currentIndex: 4),
+    );
+  }
+}
+
+/// Tiny "AshaMitra v1.0.0+1" footer in the profile screen so pilot
+/// support can verify which build the worker has when they call in.
+/// Uses package_info_plus (already a transitive dep) — fetched once
+/// then cached for the lifetime of the widget.
+class _AppVersionFooter extends StatefulWidget {
+  const _AppVersionFooter();
+
+  @override
+  State<_AppVersionFooter> createState() => _AppVersionFooterState();
+}
+
+class _AppVersionFooterState extends State<_AppVersionFooter> {
+  String _versionText = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() => _versionText =
+          'AshaMitra v${info.version}+${info.buildNumber}');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _versionText = 'AshaMitra');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_versionText.isEmpty) return const SizedBox.shrink();
+    return Center(
+      child: Text(
+        _versionText,
+        style: AppTextStyles.caption.copyWith(
+          color: AppColors.textSecondary.withValues(alpha: 0.7),
+        ),
+      ),
     );
   }
 }

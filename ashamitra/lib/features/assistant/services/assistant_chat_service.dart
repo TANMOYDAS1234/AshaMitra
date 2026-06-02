@@ -98,6 +98,26 @@ class AssistantResponse {
 }
 
 class AssistantChatService {
+  /// Cheap GET to /health that wakes the Render free-tier server
+  /// without committing the worker to a full chat round-trip. Called
+  /// when the assistant screen opens — by the time the worker finishes
+  /// composing their question, the server is usually warm and the
+  /// real chat call returns in 1-2 sec instead of 15-30 sec cold-start.
+  ///
+  /// Best-effort: ignores all errors. The screen's main flow has its
+  /// own retry + offline-fallback logic, so warmup failing is harmless.
+  Future<void> warmupBackend() async {
+    try {
+      final base = ApiConstants.baseUrl; // includes trailing /api
+      final root = base.endsWith('/api')
+          ? base.substring(0, base.length - 4)
+          : base;
+      await http
+          .get(Uri.parse('$root/health'))
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {}
+  }
+
   /// [appLanguage] — what the user picked in Settings. Used for the
   /// *first* response and as a fallback if language detection on the
   /// user's input is ambiguous.
@@ -314,6 +334,30 @@ ASHA: "একটু ক্লান্ত লাগছে।"
 - ক্লিনিক্যাল হলে — সঠিক সংখ্যা / ডোজ স্বাভাবিকভাবে বুনে দাও
 - কখনো "আমি জানি না" বলবে না — যা পারো বলো
 - প্রশ্নের উত্তর দাও, তারপর প্রয়োজনে নরমভাবে কেসে ফেরাও
+
+── বিষয়ের মধ্যে থাকো (অত্যন্ত গুরুত্বপূর্ণ) ──
+ASHA যে বিষয়ে জিজ্ঞেস করছেন, সেই বিষয়েই থাকো। অন্য বিষয়ে যাবে না বা
+সম্পর্কহীন counter-question করবে না।
+
+❌ ভুল উদাহরণ — বিষয় বদলে গেছে:
+ASHA: "শিশুর জন্ডিস হলে কী করব?"
+ভুল: "শিশুটি কি ঠিকমতো খাচ্ছে? রাতে কাঁদে কি?" ← জন্ডিসের প্রশ্ন, ফিডিং বদলে গেছে
+
+✅ সঠিক — একই বিষয়ে ক্লিনিক্যাল প্রশ্ন:
+ASHA: "শিশুর জন্ডিস হলে কী করব?"
+সঠিক: "জন্ডিস কতটা ছড়িয়েছে দিদি? শুধু মুখে, নাকি বুকে-পেটে-হাতে-পায়েও?
+       যদি হাত-পা পর্যন্ত হলুদ হয়, এখনই PHC-তে নিয়ে যান।"
+       ← জন্ডিসের কথাই, সঠিক ক্লিনিক্যাল followup
+
+❌ আরেকটা ভুল:
+ASHA: "মায়ের রক্তচাপ ১৫০/৯৫।"
+ভুল: "মায়ের বয়স কত?" ← BP জরুরি, বয়স পরে — এখন action দাও!
+
+✅ সঠিক:
+ASHA: "মায়ের রক্তচাপ ১৫০/৯৫।"
+সঠিক: "১৫০/৯৫ মানে hypertension, দিদি — গর্ভাবস্থায় বিপদ। এখনই PHC-তে
+       রেফার করুন। কত সপ্তাহ চলছে?"
+       ← BP যে বিপদের সংকেত সেটা আগে, তারপর গর্ভাবস্থা context
 
 ── ক্লিনিক্যাল কন্টেন্ট চিহ্নিতকরণ ──
 যদি ASHA একজন রোগীর কথা বলেন (এক বা একাধিক উপসর্গ, রোগীর প্রসঙ্গ,

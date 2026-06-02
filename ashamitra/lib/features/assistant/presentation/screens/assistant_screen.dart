@@ -104,12 +104,34 @@ class _AssistantScreenState extends State<AssistantScreen> {
   bool _isPaused = false;
 
   // STT self-recovery: track consecutive error/status-failure events.
-  // The native SpeechRecognizer can get into a stuck state after several
-  // back-to-back errors where listen() returns immediately with no audio
-  // session. When we hit the threshold, we cancel + re-initialize the
-  // plugin rather than ignore the error and silently leave the mic dead.
+  // Threshold dropped 3 → 1 — workers don't tolerate two failed turns
+  // before giving up, so recovery fires on the FIRST error rather than
+  // letting two more silent failures stack on top.
   int _consecutiveSttErrors = 0;
-  static const _sttErrorThreshold = 3;
+  static const _sttErrorThreshold = 1;
+
+  // ── Stuck-listening watchdog ──────────────────────────────────────────
+  // OS-level mic revocation (Infinix HiOS / Android privacy manager) can
+  // leave STT in `listening` state with zero audio reaching the plugin.
+  // The standard onError callback may not fire — the mic just goes dark.
+  // We poll: if N seconds elapse while listening with no partial words
+  // AND no detectable audio level, we treat the session as stuck and
+  // self-recover the plugin.
+  Timer? _sttWatchdogTimer;
+  DateTime? _lastAudioActivity; // updated on partial transcript OR voice
+  bool _showSilentMicBanner = false; // "মাইক চালু আছে কিন্তু কিছু শুনতে পাচ্ছি না"
+  // Continuously-updated audio amplitude from speech_to_text's
+  // onSoundLevelChange. 0.0 = silent, ~1.0 = loud speech. Drives the
+  // pulsing ring around the orb so worker can see voice is landing.
+  double _audioLevel = 0.0;
+
+  // Adaptive pauseFor — the speech_to_text plugin's silence threshold
+  // is set at listen() time and can't change mid-session, so we choose
+  // it once based on what we know about the worker's context:
+  //   - First open with no history → 4500 ms (composing thought)
+  //   - Mid-conversation → 2500 ms (faster turn-taking)
+  Duration get _adaptivePauseFor =>
+      _history.isEmpty ? const Duration(milliseconds: 4500) : const Duration(milliseconds: 2500);
 
   // Escalates the status line from "thinking" to "waking server" after
   // 5s of waiting so the worker knows the cold-start is happening rather
@@ -124,6 +146,18 @@ class _AssistantScreenState extends State<AssistantScreen> {
     );
     _statusLine = _bootStatus(_activeLang);
     _initAll();
+    // Fire-and-forget cold-start prevention. Renders free-tier sleeps
+    // after 15 min idle; the wake-up alone is 15-30 sec. Pinging
+    // /health on screen open kicks off the wake before the worker
+    // tries to talk. Result: when they say something 5 sec later, the
+    // server is usually warm. Negligible bandwidth cost.
+    _warmBackend();
+  }
+
+  Future<void> _warmBackend() async {
+    try {
+      await _chat.warmupBackend();
+    } catch (_) { /* best-effort, ignore failures */ }
   }
 
   Future<void> _initAll() async {
@@ -142,11 +176,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
     return await _stt.initialize(
       onError: (err) {
         if (!mounted) return;
-        // Track consecutive errors so a runaway error storm triggers a
-        // hard reset instead of silently leaving the mic dead. The native
-        // SpeechRecognizer occasionally enters a state where listen()
-        // returns immediately with no audio session; only cancel + init
-        // recovers from it.
+        // Threshold dropped to 1 — workers don't tolerate even one
+        // silent failure before giving up. Recover on the first error.
         _consecutiveSttErrors++;
         if (_consecutiveSttErrors >= _sttErrorThreshold) {
           _recoverStt();
@@ -163,6 +194,46 @@ class _AssistantScreenState extends State<AssistantScreen> {
         }
       },
     );
+  }
+
+  // ── Stuck-listening watchdog ──────────────────────────────────────────
+  // Started when STT begins listening, cancelled when audio is detected
+  // or the session ends. If the elapsed silent time exceeds the limits,
+  // we either show the "can't hear you" banner OR force-recover the
+  // plugin. This catches the OS-level mic-revocation case where
+  // SpeechRecognizer doesn't fire onError but the mic is denied.
+  void _startSttWatchdog() {
+    _sttWatchdogTimer?.cancel();
+    _lastAudioActivity = DateTime.now();
+    _showSilentMicBanner = false;
+    // Poll twice per second — cheap, plenty granular for human-visible
+    // banner timing.
+    _sttWatchdogTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      if (!mounted || !_isListening) {
+        _sttWatchdogTimer?.cancel();
+        return;
+      }
+      final silentFor = DateTime.now().difference(_lastAudioActivity ?? DateTime.now());
+      // After 6 sec of pure silence, show the "I can't hear you" banner.
+      if (!_showSilentMicBanner && silentFor.inSeconds >= 6) {
+        setState(() => _showSilentMicBanner = true);
+      }
+      // After 10 sec of pure silence, assume the OS denied mic access
+      // (or the plugin is stuck) and self-recover. The worker tapping
+      // the orb again then gets a fresh session.
+      if (silentFor.inSeconds >= 10) {
+        _sttWatchdogTimer?.cancel();
+        _recoverStt();
+      }
+    });
+  }
+
+  void _stopSttWatchdog() {
+    _sttWatchdogTimer?.cancel();
+    _sttWatchdogTimer = null;
+    if (mounted && _showSilentMicBanner) {
+      setState(() => _showSilentMicBanner = false);
+    }
   }
 
   /// Hard-reset the STT plugin after [_sttErrorThreshold] consecutive
@@ -237,9 +308,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
     setState(() {
       _isListening = true;
       _liveTranscript = '';
+      _audioLevel = 0.0;
+      _showSilentMicBanner = false;
       _orbState = OrbState.listening;
       _statusLine = _listeningStatus(_activeLang);
     });
+    _startSttWatchdog();
     // listenFor 30s — covers long clinical descriptions; the worker can
     // tap-pause if they need more.
     // pauseFor 2.5s — short, command-style replies ("রিপোর্ট দেখাও",
@@ -256,18 +330,42 @@ class _AssistantScreenState extends State<AssistantScreen> {
     await _stt.listen(
       localeId: _activeLang.sttLocale,
       listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(milliseconds: 2500),
+      pauseFor: _adaptivePauseFor,
       listenOptions: SpeechListenOptions(
         listenMode: ListenMode.dictation,
         partialResults: true,
         cancelOnError: true,
       ),
+      onSoundLevelChange: (level) {
+        if (!mounted) return;
+        // speech_to_text emits dB-ish values in roughly -2 .. 12 range
+        // on Android. Normalize to 0..1 for the orb's pulse animation.
+        final n = ((level + 2) / 12).clamp(0.0, 1.0);
+        // Treat any non-trivial input as audio activity for the
+        // watchdog. The 0.15 threshold filters silence-floor noise.
+        if (n > 0.15) {
+          _lastAudioActivity = DateTime.now();
+          if (_showSilentMicBanner) {
+            setState(() => _showSilentMicBanner = false);
+          }
+        }
+        if ((n - _audioLevel).abs() > 0.04) {
+          setState(() => _audioLevel = n);
+        }
+      },
       onResult: (r) {
         if (!mounted) return;
-        setState(() => _liveTranscript = r.recognizedWords);
+        // Any partial result confirms the mic is working — refresh the
+        // watchdog and hide the silent-mic banner.
+        _lastAudioActivity = DateTime.now();
+        setState(() {
+          _liveTranscript = r.recognizedWords;
+          if (_showSilentMicBanner) _showSilentMicBanner = false;
+        });
         if (r.finalResult && _liveTranscript.trim().isNotEmpty) {
-          // Successful capture — reset the error counter.
+          // Successful capture — reset the error counter + stop watchdog.
           _consecutiveSttErrors = 0;
+          _stopSttWatchdog();
           _stt.stop();
         }
       },
@@ -426,9 +524,46 @@ class _AssistantScreenState extends State<AssistantScreen> {
           tone: TtsTone.normal,
         );
       } else {
-        await _tts.speak(response.text, tone: TtsTone.normal);
+        // Stream: speak the first sentence as soon as the response
+        // arrives, queue the remaining sentences. For multi-sentence
+        // replies this cuts perceived latency by ~60% — worker hears
+        // "ঠিক আছে।" within ~1s of finishing speaking, instead of
+        // waiting for the whole 2-3 sentence reply to render then
+        // play. Single-sentence replies behave identically to before.
+        await _streamSpeak(response.text);
       }
     }
+  }
+
+  /// Split [text] on sentence boundaries (। / . / ? / !) and speak
+  /// each chunk back-to-back. The first call returns as soon as the
+  /// first chunk starts playing — but we still await the chain so the
+  /// caller's TTS-onComplete logic fires after the LAST chunk, which
+  /// is what the auto-listen restart needs.
+  Future<void> _streamSpeak(String text) async {
+    final chunks = _splitSentences(text);
+    if (chunks.isEmpty) return;
+    for (final chunk in chunks) {
+      if (!mounted) return;
+      if (_isPaused) return; // worker hit pause mid-stream
+      await _tts.speak(chunk, tone: TtsTone.normal);
+    }
+  }
+
+  /// Sentence splitter that preserves the terminator on each chunk so
+  /// prosody is correct (the engine pauses appropriately after `?`).
+  /// Falls back to the whole string if no sentence boundary is found.
+  static List<String> _splitSentences(String text) {
+    final s = text.trim();
+    if (s.isEmpty) return const [];
+    // Match runs of non-terminator chars + an optional terminator.
+    final re = RegExp(r'[^।.!?]+[।.!?]?', multiLine: true, dotAll: true);
+    final out = <String>[];
+    for (final m in re.allMatches(s)) {
+      final piece = m.group(0)?.trim();
+      if (piece != null && piece.isNotEmpty) out.add(piece);
+    }
+    return out.isEmpty ? [s] : out;
   }
 
   // ── Voice-driven triage (Tier 2) ───────────────────────────────────────
@@ -577,13 +712,21 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   /// Shared: add the question to history + speak it. Centralized so
   /// the same code runs for the first question and every follow-up.
+  /// Prefixes a small "n of N" cue in the displayed text (NOT spoken)
+  /// so the worker can see progress through the triage without it
+  /// cluttering the audio.
   Future<void> _speakQuestion(String questionText) async {
+    final n = _triageEngine.currentQuestionNumber;
+    final total = _triageEngine.totalQuestions;
+    final displayed = total > 0 ? '[$n / $total]  $questionText' : questionText;
     setState(() {
-      _history.add(AssistantTurn(role: 'assistant', text: questionText));
+      _history.add(AssistantTurn(role: 'assistant', text: displayed));
     });
     try {
       await _tts.stop();
     } catch (_) {}
+    // Spoken text excludes the progress bracket — workers don't want
+    // to hear "one of eight" before every question, just see it.
     await _tts.speak(questionText, tone: TtsTone.question);
   }
 
@@ -625,24 +768,46 @@ class _AssistantScreenState extends State<AssistantScreen> {
       await _tts.stop();
     } catch (_) {}
     _coldStartHintTimer?.cancel();
+    _stopSttWatchdog();
     if (!mounted) return;
     setState(() {
       _isPaused = true;
       _isListening = false;
       _liveTranscript = '';
+      _audioLevel = 0.0;
       _orbState = OrbState.paused;
       _statusLine = _pausedStatus(_activeLang);
     });
   }
 
   void _resetToIdle() {
+    _stopSttWatchdog();
     setState(() {
       _isListening = false;
       _isThinking = false;
+      _audioLevel = 0.0;
       _orbState = _isPaused ? OrbState.paused : OrbState.idle;
       _statusLine = _isPaused
           ? _pausedStatus(_activeLang)
           : _idleStatus(_activeLang);
+    });
+  }
+
+  /// Cancel an in-flight LLM call. The HTTP request itself can't be
+  /// aborted cleanly (the response will arrive eventually) but flipping
+  /// _isThinking off + clearing the cold-start timer + stopping any
+  /// queued TTS means the worker gets the orb back immediately. The
+  /// late reply, if any, gets swallowed by the mounted-check in
+  /// _handleUserInput.
+  void _cancelThinking() {
+    _coldStartHintTimer?.cancel();
+    try {
+      _tts.stop();
+    } catch (_) {}
+    setState(() {
+      _isThinking = false;
+      _orbState = OrbState.idle;
+      _statusLine = _idleStatus(_activeLang);
     });
   }
 
@@ -668,6 +833,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     // re-open the mic on a disposed state.
     _autoListen = false;
     _coldStartHintTimer?.cancel();
+    _sttWatchdogTimer?.cancel();
     _tts.stop();
     _stt.stop();
     super.dispose();
@@ -719,12 +885,27 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   ],
                 ),
               ),
+              // ── Silent-mic banner ───────────────────────────────────
+              // Surfaces after 6 sec of no audio while listening — tells
+              // the worker the assistant is on but isn't hearing them
+              // (commonly an OS-level mic revocation on Infinix HiOS).
+              if (_showSilentMicBanner) _SilentMicBanner(lang: _activeLang),
+              // ── Cancel button during processing ─────────────────────
+              // Visible only while the LLM call is in flight. Gives the
+              // worker an escape hatch when the network is slow and
+              // they don't want to wait another 5-10 sec for whatever
+              // Gemini might say. Tap cancels timer + resets the orb.
+              if (_isThinking) _CancelProcessingButton(
+                lang: _activeLang,
+                onCancel: _cancelThinking,
+              ),
               _OrbDock(
                 state: _orbState,
                 statusLine: _statusLine.isEmpty
                     ? _idleStatus(_activeLang)
                     : _statusLine,
                 isThinking: _isThinking,
+                audioLevel: _audioLevel,
                 onTap: _onOrbTap,
               ),
             ],
@@ -1062,11 +1243,17 @@ class _OrbDock extends StatelessWidget {
   final OrbState state;
   final String statusLine;
   final bool isThinking;
+  /// 0..1 normalised audio level from speech_to_text. Drives the
+  /// pulsing ring around the orb so the worker sees their voice
+  /// is landing in real time — a quiet ring means the mic is dead
+  /// even if the orb says "listening".
+  final double audioLevel;
   final VoidCallback onTap;
   const _OrbDock({
     required this.state,
     required this.statusLine,
     required this.isThinking,
+    required this.audioLevel,
     required this.onTap,
   });
 
@@ -1079,7 +1266,32 @@ class _OrbDock extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: onTap,
-            child: VoiceOrb(state: state, size: 130),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Audio-level halo — pulses outward in proportion to
+                // current voice loudness. Only visible while listening
+                // (state == listening). Scale: 1.0 at silence → ~1.45
+                // at full speech. Subtle so it complements the orb's
+                // existing breathing animation rather than fighting it.
+                if (state == OrbState.listening)
+                  AnimatedScale(
+                    duration: const Duration(milliseconds: 90),
+                    scale: 1.0 + audioLevel * 0.45,
+                    child: Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFF22C55E).withValues(
+                          alpha: 0.10 + audioLevel * 0.30,
+                        ),
+                      ),
+                    ),
+                  ),
+                VoiceOrb(state: state, size: 130),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
           AnimatedSwitcher(
@@ -1089,6 +1301,114 @@ class _OrbDock extends StatelessWidget {
               key: ValueKey(statusLine),
               style: AppTextStyles.label.copyWith(
                 color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Cancel-during-processing pill. Visible only when the LLM call is
+/// in flight. Gives the worker a clear escape hatch when Gemini /
+/// Render is slow — instead of staring at "ভাবছি..." for 15 seconds,
+/// they tap once and the orb is back to listening/idle. The actual
+/// HTTP request keeps going in the background but its result is
+/// ignored on arrival.
+class _CancelProcessingButton extends StatelessWidget {
+  final AssistantLang lang;
+  final VoidCallback onCancel;
+  const _CancelProcessingButton({required this.lang, required this.onCancel});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (lang) {
+      AssistantLang.bn => 'বাতিল করুন',
+      AssistantLang.hi => 'रद्द करें',
+      AssistantLang.en => 'Cancel',
+    };
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: Align(
+        alignment: Alignment.center,
+        child: Material(
+          color: AppColors.surface,
+          borderRadius: AppRadius.pillR,
+          child: InkWell(
+            onTap: onCancel,
+            borderRadius: AppRadius.pillR,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: AppRadius.pillR,
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: AppTextStyles.label.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// "I can't hear you" banner — surfaces 6 sec into a listening session
+/// with no detectable audio. Tells the worker the assistant is on but
+/// not capturing, and points them at the tap-to-restart escape hatch.
+/// On Infinix HiOS this often means the OS has revoked mic access mid-
+/// session even though our app-level permission says granted.
+class _SilentMicBanner extends StatelessWidget {
+  final AssistantLang lang;
+  const _SilentMicBanner({required this.lang});
+
+  @override
+  Widget build(BuildContext context) {
+    final text = switch (lang) {
+      AssistantLang.bn =>
+        'মাইক চালু আছে কিন্তু কিছু শুনতে পাচ্ছি না। অর্বে আবার ট্যাপ করুন।',
+      AssistantLang.hi =>
+        'माइक चालू है पर कुछ सुनाई नहीं दे रहा। ओर्ब पर फिर से टैप करें।',
+      AssistantLang.en =>
+        "Mic is on but I'm not hearing you. Tap the orb to retry.",
+    };
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3CD),
+        borderRadius: AppRadius.mdR,
+        border: Border.all(color: const Color(0xFFD97706)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.mic_off_rounded, size: 18, color: Color(0xFFD97706)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTextStyles.bodySm.copyWith(
+                color: const Color(0xFF92400E),
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

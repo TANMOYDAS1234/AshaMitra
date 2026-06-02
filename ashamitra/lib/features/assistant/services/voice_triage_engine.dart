@@ -96,6 +96,23 @@ class VoiceTriageEngine {
   bool get isFinished => _outcome != null;
   VoiceTriageOutcome? get outcome => _outcome;
   TriageCaseModel? get currentCase => _case;
+  /// 1-indexed position of the question we're currently asking.
+  /// Returns 0 when no session is active.
+  int get currentQuestionNumber => _case == null ? 0 : _index + 1;
+  /// Total questions in the active case.
+  int get totalQuestions => _case?.questions.length ?? 0;
+  /// Map of question text → captured answer. Used by the pre-submit
+  /// review screen so the worker can see what the engine will receive
+  /// before it commits.
+  Map<String, String> get capturedAnswers {
+    final c = _case;
+    if (c == null) return const {};
+    return {
+      for (final entry in _answers.entries)
+        if (c.questions.firstWhereOrNull((q) => q.id == entry.key) != null)
+          c.questions.firstWhere((q) => q.id == entry.key).text: entry.value,
+    };
+  }
 
   /// Load case [caseId] and seek to question 0. Returns the first
   /// QuestionModel to ask, or null if the case wasn't found.
