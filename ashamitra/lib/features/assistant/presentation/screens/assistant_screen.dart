@@ -33,6 +33,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 import '../../../../app/routes.dart';
@@ -236,6 +237,77 @@ class _AssistantScreenState extends State<AssistantScreen> {
     }
   }
 
+  /// Check + re-request microphone permission before starting STT.
+  /// Returns true if permission is granted (worker can proceed),
+  /// false if denied — in which case we show a dialog that either
+  /// (a) re-prompts or (b) deep-links to system Settings if the
+  /// worker tapped "Don't ask again" previously.
+  ///
+  /// HiOS / Android 14 sometimes silently downgrade a granted
+  /// permission to "denied" when the user hasn't interacted for a
+  /// while or the OS's privacy manager kicks in. Re-checking every
+  /// time before listen() catches that.
+  Future<bool> _ensureMicPermission() async {
+    final status = await Permission.microphone.status;
+    if (status.isGranted) return true;
+    if (status.isPermanentlyDenied) {
+      if (!mounted) return false;
+      // Worker chose "Don't ask again" at some point. Only way to
+      // recover is the system settings screen.
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: Text(_micDeniedTitle(_activeLang)),
+          content: Text(_micDeniedBody(_activeLang)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(_micDeniedCancel(_activeLang)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(_micDeniedSettings(_activeLang)),
+            ),
+          ],
+        ),
+      );
+      if (go == true) {
+        await openAppSettings();
+      }
+      return false;
+    }
+    // status is denied or restricted — fire the runtime prompt.
+    final result = await Permission.microphone.request();
+    return result.isGranted;
+  }
+
+  // Permission-denied dialog copy. Bilingual so the worker who has
+  // already switched languages sees their language even at this
+  // edge-case prompt.
+  String _micDeniedTitle(AssistantLang l) => switch (l) {
+        AssistantLang.bn => 'মাইক অনুমতি দরকার',
+        AssistantLang.hi => 'माइक की अनुमति चाहिए',
+        AssistantLang.en => 'Microphone permission needed',
+      };
+  String _micDeniedBody(AssistantLang l) => switch (l) {
+        AssistantLang.bn =>
+          'আপনার কথা শোনার জন্য মাইক অনুমতি দরকার। সেটিংস থেকে চালু করুন।',
+        AssistantLang.hi =>
+          'आपकी आवाज़ सुनने के लिए माइक की अनुमति चाहिए। सेटिंग्स से चालू करें।',
+        AssistantLang.en =>
+          'I need microphone access to hear you. Please enable it in Settings.',
+      };
+  String _micDeniedCancel(AssistantLang l) => switch (l) {
+        AssistantLang.bn => 'বাতিল',
+        AssistantLang.hi => 'रद्द',
+        AssistantLang.en => 'Cancel',
+      };
+  String _micDeniedSettings(AssistantLang l) => switch (l) {
+        AssistantLang.bn => 'সেটিংস খুলুন',
+        AssistantLang.hi => 'सेटिंग्स खोलें',
+        AssistantLang.en => 'Open Settings',
+      };
+
   /// Hard-reset the STT plugin after [_sttErrorThreshold] consecutive
   /// errors. Cancels any in-flight listen session, re-initializes the
   /// plugin, and restores the orb to a clean idle state. Worker can
@@ -305,6 +377,26 @@ class _AssistantScreenState extends State<AssistantScreen> {
   // ── STT control ────────────────────────────────────────────────────────
   Future<void> _startListening() async {
     if (!_sttReady || _isListening || _isPaused) return;
+
+    // Diagnosis from real pilot device: STT was opening the mic for
+    // only ~150 ms then closing without capturing audio. Root cause
+    // was a stale audio-session from the previous turn that the
+    // plugin never cleaned up + HiOS occasionally downgrading the
+    // permission silently. Two defensive guards address both:
+    //
+    //   1. Re-request RECORD_AUDIO every time. If the OS quietly
+    //      downgraded it (Infinix / Android privacy auto-revoke),
+    //      this restores it. If permanently denied, show a clear
+    //      "open settings" path.
+    //   2. _stt.cancel() before _stt.listen() so the plugin tears
+    //      down any prior audio session before starting a fresh one.
+    //      Costs ~30 ms; eliminates the 150 ms-dead-mic failure mode.
+    final permResult = await _ensureMicPermission();
+    if (!permResult) return;
+    try {
+      await _stt.cancel();
+    } catch (_) { /* fresh-init path; ignore prior-session errors */ }
+
     setState(() {
       _isListening = true;
       _liveTranscript = '';
