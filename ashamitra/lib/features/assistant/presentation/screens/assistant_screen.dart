@@ -426,6 +426,20 @@ class _AssistantScreenState extends State<AssistantScreen> {
             setState(() => _audioLevel = level);
           }
         },
+        // Fires the instant silence is detected — gives the orb a
+        // visible state change (green → cyan + "শুনলাম, ভাবছি...")
+        // so the worker doesn't stare at a still-green orb during
+        // the upload + LLM round-trip and assume the system is dead.
+        onProcessingStart: () {
+          if (!mounted) return;
+          _stopSttWatchdog();
+          setState(() {
+            _isListening = false;
+            _audioLevel = 0.0;
+            _orbState = OrbState.processing;
+            _statusLine = _heardYouStatus(_activeLang);
+          });
+        },
         languageCode: _activeLang.code,
       );
       if (!mounted) return;
@@ -1108,6 +1122,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
         AssistantLang.bn => 'মাইক বন্ধ — চালু করতে ট্যাপ করুন',
         AssistantLang.hi => 'माइक बंद — चालू करने के लिए टैप करें',
         AssistantLang.en => 'Mic off — tap to start',
+      };
+  /// Shown the instant Whisper auto-stop fires — between "worker
+  /// stopped speaking" and "transcription text returns". Without this
+  /// status the worker would see a still-green orb during the upload
+  /// + LLM round-trip and think the system was dead.
+  String _heardYouStatus(AssistantLang l) => switch (l) {
+        AssistantLang.bn => 'শুনলাম, ভাবছি...',
+        AssistantLang.hi => 'सुन लिया, सोच रही हूँ...',
+        AssistantLang.en => 'Got it, thinking...',
       };
 }
 

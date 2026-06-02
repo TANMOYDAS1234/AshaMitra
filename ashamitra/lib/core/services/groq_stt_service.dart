@@ -51,6 +51,14 @@ import '../constants/api_constants.dart';
 /// plugin used — clipped to 0.0 - 1.0.
 typedef AudioLevelCallback = void Function(double level);
 
+/// Fires the moment the recorder stops (after auto-stop OR manual stop)
+/// but BEFORE the audio bytes upload to backend /api/transcribe. Used
+/// by the UI to transition the orb from "listening" (green) to
+/// "processing" (cyan) the moment silence is detected — so the
+/// worker isn't staring at a green orb wondering if it's still
+/// recording while the upload is in flight (~500 ms - 2 s typical).
+typedef ProcessingStartCallback = void Function();
+
 class GroqSttService {
   final AudioRecorder _recorder = AudioRecorder();
   Timer? _ampPoller;
@@ -83,8 +91,12 @@ class GroqSttService {
   /// transcribed text once the auto-stop fires (or null if the
   /// recording or upload failed). [onAudioLevel] is invoked at ~10 Hz
   /// while recording so the UI can show a level meter.
+  /// [onProcessingStart] fires once when silence is detected (or the
+  /// hard ceiling hits) but BEFORE the audio uploads — so the UI can
+  /// flip the orb from "listening" to "processing" immediately.
   Future<String?> startCapture({
     required AudioLevelCallback onAudioLevel,
+    ProcessingStartCallback? onProcessingStart,
     String languageCode = 'bn',
   }) async {
     // If a previous capture is still running, cancel it cleanly first.
@@ -153,6 +165,7 @@ class GroqSttService {
         final silentFor = DateTime.now().difference(lastVoiceTick!);
         if (silentFor >= _silenceTimeout) {
           t.cancel();
+          onProcessingStart?.call();
           await _stopAndTranscribe(completer, languageCode);
         }
       }
@@ -163,6 +176,7 @@ class GroqSttService {
     _hardCeiling = Timer(_maxRecordingDuration, () async {
       if (!completer.isCompleted) {
         _ampPoller?.cancel();
+        onProcessingStart?.call();
         await _stopAndTranscribe(completer, languageCode);
       }
     });
