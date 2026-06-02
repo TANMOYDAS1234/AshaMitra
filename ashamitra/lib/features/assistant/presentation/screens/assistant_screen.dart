@@ -44,6 +44,7 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/services/groq_stt_service.dart';
 import '../../../../shared/widgets/voice_orb.dart';
 import '../../services/assistant_chat_service.dart';
 import '../../services/intent_classifier.dart';
@@ -60,7 +61,20 @@ class AssistantScreen extends StatefulWidget {
 class _AssistantScreenState extends State<AssistantScreen> {
   // ── Services ───────────────────────────────────────────────────────────
   final _chat = AssistantChatService();
+  // Device STT — kept as offline fallback. Currently buggy on Infinix
+  // HiOS (audio session race between turns); we now prefer the Groq
+  // Whisper service for capture and only fall back to this when offline.
   final _stt = SpeechToText();
+  // Server-routed STT — records raw audio, uploads to backend
+  // /api/transcribe which proxies to Groq Whisper. Same audio path
+  // every turn, so we don't hit the SpeechRecognizer session-race
+  // failure mode that left workers stuck on "listening".
+  final _groqStt = GroqSttService();
+  // True after we confirmed the backend transcribe endpoint is
+  // reachable. We only flip to device STT fallback after a Groq
+  // failure or if the network is offline. Default true — try Groq
+  // first; the service handles its own offline/failure cases.
+  bool _useGroqStt = true;
   final _tts = TtsService();
   // Rule-based intent classifier runs BEFORE the LLM on every user
   // utterance. Common app actions ("open patients", "call ambulance",
@@ -377,41 +391,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   // ── STT control ────────────────────────────────────────────────────────
   Future<void> _startListening() async {
-    if (!_sttReady || _isListening || _isPaused) return;
-
-    // Pilot device pattern: works first turn, fails every turn after.
-    // Root cause was a race — _stt.cancel() returned before the native
-    // audio session was fully torn down, so the immediately-following
-    // _stt.listen() found the previous session still occupying the mic
-    // and silently no-op'd. Three defensive guards in order:
-    //
-    //   1. Re-request RECORD_AUDIO every time. HiOS / Android 14
-    //      privacy auto-revoke can silently downgrade a granted
-    //      permission between sessions; re-checking restores it.
-    //   2. _stt.cancel() to tear down any prior audio session, then
-    //      explicit 400 ms wait so the native side fully releases
-    //      the mic and audio focus before we ask for them again.
-    //   3. If _stt.isListening still reports true after the cancel
-    //      (rare but seen on Infinix), fully re-initialize the
-    //      plugin from scratch — last-ditch recovery.
+    if (_isListening || _isPaused) return;
     final permResult = await _ensureMicPermission();
     if (!permResult) return;
-    try {
-      await _stt.cancel();
-    } catch (_) { /* fresh-init path; ignore prior-session errors */ }
-    // The cancel/teardown is asynchronous on the native side. Without
-    // this delay, the new listen() runs while the previous session is
-    // still releasing the audio hardware — the second listen ends up
-    // a no-op and the orb sits in "listening" with no audio reaching
-    // the recognizer. 400 ms is the smallest value that survived the
-    // pilot test on Infinix HiOS.
-    await Future.delayed(const Duration(milliseconds: 400));
-    // If the cancel didn't take, fully re-initialize.
-    if (_stt.isListening) {
-      try { await _stt.cancel(); } catch (_) {}
-      _sttReady = await _initStt();
-      await Future.delayed(const Duration(milliseconds: 200));
-    }
 
     setState(() {
       _isListening = true;
@@ -422,6 +404,62 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _statusLine = _listeningStatus(_activeLang);
     });
     _startSttWatchdog();
+
+    // Prefer the Groq Whisper path. It uses MediaRecorder (separate
+    // Android API from SpeechRecognizer) so it isn't subject to the
+    // audio-session race that left the device STT plugin stuck on
+    // "listening" between turns. The service auto-stops on silence
+    // (1.8 sec) and uploads the recording for transcription. Falls
+    // back to device STT only if the Groq path returns null (no
+    // network, backend down, Groq quota, etc.).
+    if (_useGroqStt) {
+      final text = await _groqStt.startCapture(
+        onAudioLevel: (level) {
+          if (!mounted) return;
+          if (level > 0.15) {
+            _lastAudioActivity = DateTime.now();
+            if (_showSilentMicBanner) {
+              setState(() => _showSilentMicBanner = false);
+            }
+          }
+          if ((level - _audioLevel).abs() > 0.04) {
+            setState(() => _audioLevel = level);
+          }
+        },
+        languageCode: _activeLang.code,
+      );
+      if (!mounted) return;
+      _stopSttWatchdog();
+      setState(() {
+        _isListening = false;
+        _audioLevel = 0.0;
+      });
+      if (text != null && text.trim().isNotEmpty) {
+        setState(() => _liveTranscript = text.trim());
+        _handleUserInput(text.trim());
+        return;
+      }
+      // Empty result from Groq → either silence-only utterance OR
+      // network/Groq failure. Re-arm (the empty-input recovery path
+      // mirrors the previous device-STT behaviour).
+      _onListenComplete();
+      return;
+    }
+
+    // ── Fallback: device speech_to_text plugin ──
+    // Same defensive guards we used before: cancel + 400 ms wait, full
+    // re-init if cancel didn't take. Reached only when Groq is off
+    // (offline pilot mode, future flag).
+    if (!_sttReady) return;
+    try {
+      await _stt.cancel();
+    } catch (_) {}
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (_stt.isListening) {
+      try { await _stt.cancel(); } catch (_) {}
+      _sttReady = await _initStt();
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
     // listenFor 30s — covers long clinical descriptions; the worker can
     // tap-pause if they need more.
     // pauseFor 2.5s — short, command-style replies ("রিপোর্ট দেখাও",
@@ -870,7 +908,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   Future<void> _pauseAssistant() async {
     try {
-      if (_isListening) await _stt.cancel();
+      if (_isListening) {
+        await _groqStt.cancel();
+        await _stt.cancel();
+      }
     } catch (_) {}
     try {
       await _tts.stop();
@@ -944,6 +985,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _sttWatchdogTimer?.cancel();
     _tts.stop();
     _stt.stop();
+    _groqStt.dispose();
     super.dispose();
   }
 

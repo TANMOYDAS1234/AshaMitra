@@ -33,6 +33,13 @@ dependencies:
   google_fonts: ^6.2.1
   shimmer: ^3.0.0
   package_info_plus: ^9.0.1
+  # Audio recording for Groq Whisper transcription path. The
+  # speech_to_text plugin's Android SpeechRecognizer turned out to be
+  # unreliable on Infinix HiOS (audio session race between turns), so
+  # we record raw audio with `record` and send it to backend
+  # /api/transcribe → Groq Whisper API. Whisper has excellent Bengali
+  # support and Groq is fast (~500 ms-2 s typical).
+  record: ^6.0.0
 
 dependency_overrides:
   # Several Flutter plugins bumped their own buildscript Kotlin version
