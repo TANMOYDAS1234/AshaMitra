@@ -281,12 +281,12 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     _autoListen = true;
     await _tts.stop();
 
-    // Pilot device reported 150 ms-dead-mic — the STT plugin would
-    // open the mic then close it without capturing any audio.
-    // _stt.cancel() before listen() forces a fresh audio session
-    // and eliminates the failure mode. Cheap (~30 ms); call it
-    // every turn regardless of prior state.
+    // Pilot device pattern: first turn captures, every later turn
+    // silently no-ops. Cancel + explicit delay so the native side
+    // fully releases the audio session before we ask for it again.
+    // 400 ms survived field testing on Infinix HiOS.
     try { await _stt.cancel(); } catch (_) {}
+    await Future.delayed(const Duration(milliseconds: 400));
 
     final online = await _hasInternet();
     _isOffline = !online;

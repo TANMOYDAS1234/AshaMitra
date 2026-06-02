@@ -215,14 +215,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
         return;
       }
       final silentFor = DateTime.now().difference(_lastAudioActivity ?? DateTime.now());
-      // After 6 sec of pure silence, show the "I can't hear you" banner.
-      if (!_showSilentMicBanner && silentFor.inSeconds >= 6) {
+      // After 4 sec of pure silence, show the "I can't hear you" banner.
+      if (!_showSilentMicBanner && silentFor.inSeconds >= 4) {
         setState(() => _showSilentMicBanner = true);
       }
-      // After 10 sec of pure silence, assume the OS denied mic access
-      // (or the plugin is stuck) and self-recover. The worker tapping
-      // the orb again then gets a fresh session.
-      if (silentFor.inSeconds >= 10) {
+      // After 7 sec of pure silence, assume the OS denied mic access
+      // (or the plugin is stuck) and self-recover. Cut from 10 → 7
+      // so the worker doesn't sit through nearly a full minute when
+      // multiple turns are stuck back-to-back.
+      if (silentFor.inSeconds >= 7) {
         _sttWatchdogTimer?.cancel();
         _recoverStt();
       }
@@ -347,7 +348,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
           while (_tts.isPlaying && DateTime.now().isBefore(deadline)) {
             await Future.delayed(const Duration(milliseconds: 80));
           }
-          await Future.delayed(const Duration(milliseconds: 800));
+          await Future.delayed(const Duration(milliseconds: 1500));
           if (mounted &&
               _autoListen &&
               !_isPaused &&
@@ -378,24 +379,39 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Future<void> _startListening() async {
     if (!_sttReady || _isListening || _isPaused) return;
 
-    // Diagnosis from real pilot device: STT was opening the mic for
-    // only ~150 ms then closing without capturing audio. Root cause
-    // was a stale audio-session from the previous turn that the
-    // plugin never cleaned up + HiOS occasionally downgrading the
-    // permission silently. Two defensive guards address both:
+    // Pilot device pattern: works first turn, fails every turn after.
+    // Root cause was a race — _stt.cancel() returned before the native
+    // audio session was fully torn down, so the immediately-following
+    // _stt.listen() found the previous session still occupying the mic
+    // and silently no-op'd. Three defensive guards in order:
     //
-    //   1. Re-request RECORD_AUDIO every time. If the OS quietly
-    //      downgraded it (Infinix / Android privacy auto-revoke),
-    //      this restores it. If permanently denied, show a clear
-    //      "open settings" path.
-    //   2. _stt.cancel() before _stt.listen() so the plugin tears
-    //      down any prior audio session before starting a fresh one.
-    //      Costs ~30 ms; eliminates the 150 ms-dead-mic failure mode.
+    //   1. Re-request RECORD_AUDIO every time. HiOS / Android 14
+    //      privacy auto-revoke can silently downgrade a granted
+    //      permission between sessions; re-checking restores it.
+    //   2. _stt.cancel() to tear down any prior audio session, then
+    //      explicit 400 ms wait so the native side fully releases
+    //      the mic and audio focus before we ask for them again.
+    //   3. If _stt.isListening still reports true after the cancel
+    //      (rare but seen on Infinix), fully re-initialize the
+    //      plugin from scratch — last-ditch recovery.
     final permResult = await _ensureMicPermission();
     if (!permResult) return;
     try {
       await _stt.cancel();
     } catch (_) { /* fresh-init path; ignore prior-session errors */ }
+    // The cancel/teardown is asynchronous on the native side. Without
+    // this delay, the new listen() runs while the previous session is
+    // still releasing the audio hardware — the second listen ends up
+    // a no-op and the orb sits in "listening" with no audio reaching
+    // the recognizer. 400 ms is the smallest value that survived the
+    // pilot test on Infinix HiOS.
+    await Future.delayed(const Duration(milliseconds: 400));
+    // If the cancel didn't take, fully re-initialize.
+    if (_stt.isListening) {
+      try { await _stt.cancel(); } catch (_) {}
+      _sttReady = await _initStt();
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
 
     setState(() {
       _isListening = true;
@@ -486,7 +502,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
           while (_tts.isPlaying && DateTime.now().isBefore(deadline)) {
             await Future.delayed(const Duration(milliseconds: 80));
           }
-          await Future.delayed(const Duration(milliseconds: 800));
+          await Future.delayed(const Duration(milliseconds: 1500));
           if (mounted &&
               _autoListen &&
               !_isPaused &&
