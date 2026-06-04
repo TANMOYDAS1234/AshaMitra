@@ -180,15 +180,19 @@ class IntentDispatcher {
     }
   }
 
-  /// Launch the system dialer to [number]. We use the dialer rather
-  /// than placing the call directly so the worker has one final
-  /// chance to confirm — important when the assistant might have
-  /// misheard a non-emergency utterance as "call 102".
+  /// Open [number] in the phone's default call app. externalApplication
+  /// forces Android to hand the tel: intent to the default dialer/phone
+  /// app (or show the call-app chooser if none is set) rather than the
+  /// in-app/platform-default handling, which doesn't reliably surface a
+  /// dialer on every device. We open the dialer rather than placing the
+  /// call directly so the worker has one final chance to confirm —
+  /// important when the assistant might have misheard a non-emergency
+  /// utterance as "call 102".
   Future<DispatchResult> _callNumber(String number) async {
     final uri = Uri(scheme: 'tel', path: number);
     bool launched = false;
     try {
-      launched = await launchUrl(uri);
+      launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       launched = false;
     }

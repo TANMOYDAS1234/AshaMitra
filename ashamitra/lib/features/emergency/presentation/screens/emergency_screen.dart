@@ -15,8 +15,11 @@ class EmergencyScreen extends StatelessWidget {
 
   Future<void> _call(String number) async {
     final uri = Uri.parse('tel:$number');
+    // externalApplication routes the tel: number to the phone's default
+    // call app (or the chooser if none is set) instead of platform-default
+    // handling, which doesn't reliably open a dialer on every device.
     if (await canLaunchUrl(uri)) {
-      await launchUrl(uri);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       Get.snackbar('Error', 'Cannot open dialer', snackPosition: SnackPosition.BOTTOM);
     }
