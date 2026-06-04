@@ -162,6 +162,24 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Duration get _adaptivePauseFor =>
       _history.isEmpty ? const Duration(milliseconds: 3000) : const Duration(milliseconds: 1500);
 
+  // ── Conversation self-heal watchdog ───────────────────────────────────
+  // The always-listening loop re-arms the mic from a single TTS-onComplete
+  // callback (and the empty-result path). If that callback ever fails to
+  // fire — a missed audioplayers completion event, an audio-focus hiccup
+  // after many TTS↔STT cycles, or a stalled turn — the conversation
+  // silently dies: orb idle, mic not listening, worker must tap. This is
+  // the safety net: if we SHOULD be listening (auto-listen on; not paused,
+  // thinking, or showing the save chip; TTS not playing) but aren't, for
+  // ~8s, restart listening. It only ever fires when the normal re-arm
+  // didn't, so it can't fight the happy path (which re-arms within ~3.5s).
+  Timer? _selfHealTimer;
+  int _idleTicks = 0;
+  // Keeps Render's free-tier server warm while the assistant is open: it
+  // sleeps after ~15 min idle, turning the next reply into a 15-30s cold
+  // start. A periodic /health ping covers quiet stretches mid-session.
+  // Server-side UptimeRobot is the always-on complement for the FIRST open.
+  Timer? _keepWarmTimer;
+
   // Escalates the status line from "thinking" to "waking server" after
   // 5s of waiting so the worker knows the cold-start is happening rather
   // than the app being frozen. Cancelled when the reply lands.
@@ -181,12 +199,56 @@ class _AssistantScreenState extends State<AssistantScreen> {
     // tries to talk. Result: when they say something 5 sec later, the
     // server is usually warm. Negligible bandwidth cost.
     _warmBackend();
+    _startSelfHealWatchdog();
+    _startKeepWarm();
   }
 
   Future<void> _warmBackend() async {
     try {
       await _chat.warmupBackend();
     } catch (_) { /* best-effort, ignore failures */ }
+  }
+
+  /// Pings /health every 10 min while the screen is open so Render's
+  /// free tier doesn't sleep mid-session (it naps after ~15 min idle).
+  /// Cheap insurance against a 15-30s cold-start reply after a quiet spell.
+  void _startKeepWarm() {
+    _keepWarmTimer?.cancel();
+    _keepWarmTimer =
+        Timer.periodic(const Duration(minutes: 10), (_) => _warmBackend());
+  }
+
+  /// Safety net for the always-listening loop. Polls every 4s: if the
+  /// assistant should be listening (auto-listen on; not paused, thinking,
+  /// or showing the save chip; TTS silent) but isn't, for two ticks (~8s),
+  /// the normal TTS-onComplete re-arm must have been missed — so restart
+  /// listening. Guarded by the same conditions as the happy-path re-arm,
+  /// so it only fires when the loop genuinely stalled, never during the
+  /// normal ~3.5s re-arm window or an intentional pause.
+  void _startSelfHealWatchdog() {
+    _selfHealTimer?.cancel();
+    _idleTicks = 0;
+    _selfHealTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted) {
+        _selfHealTimer?.cancel();
+        return;
+      }
+      final shouldBeListening = _autoListen &&
+          !_isPaused &&
+          !_isThinking &&
+          !_showSaveChip &&
+          !_isListening &&
+          !_tts.isPlaying;
+      if (shouldBeListening) {
+        _idleTicks++;
+        if (_idleTicks >= 2) {
+          _idleTicks = 0;
+          _startListening();
+        }
+      } else {
+        _idleTicks = 0;
+      }
+    });
   }
 
   Future<void> _initAll() async {
@@ -1075,6 +1137,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _autoListen = false;
     _coldStartHintTimer?.cancel();
     _sttWatchdogTimer?.cancel();
+    _selfHealTimer?.cancel();
+    _keepWarmTimer?.cancel();
     _tts.stop();
     _stt.stop();
     _groqStt.dispose();
