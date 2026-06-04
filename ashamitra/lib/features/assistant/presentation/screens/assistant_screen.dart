@@ -124,6 +124,25 @@ class _AssistantScreenState extends State<AssistantScreen> {
   // Tap again to resume.
   bool _isPaused = false;
 
+  // ── Interaction model ─────────────────────────────────────────────────
+  // Hold-to-talk (WhatsApp voice-note style): the mic is ON only while the
+  // worker is physically pressing the orb, and the captured speech is sent
+  // the moment they release. This removes the always-listening churn —
+  // no surprise mic on/off, no premature cut-off mid-sentence, no AI-voice
+  // bleeding back into the mic — because the worker, not a silence timer,
+  // owns when listening starts and stops. The legacy always-listening
+  // auto-restart paths are kept but gated behind `!_holdToTalk` so this is
+  // a one-flag switch (and reversible).
+  static const bool _holdToTalk = true;
+  // When the current press began — used to ignore accidental quick taps
+  // (a <300ms press sends nothing) so a stray touch never fires an empty turn.
+  DateTime? _holdStartedAt;
+  // Monotonic turn counter. Each user turn bumps it; an in-flight reply
+  // checks its captured value after the network await and bails if a newer
+  // turn has started (i.e. the worker barged in) — so a stale reply never
+  // speaks over the new one.
+  int _turnSeq = 0;
+
   // STT self-recovery: track consecutive GENUINE-fault events. Benign
   // events (error_no_match / error_speech_timeout) never count here —
   // they're handled inline in _initStt's onError and reset this to 0.
@@ -226,6 +245,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
   /// so it only fires when the loop genuinely stalled, never during the
   /// normal ~3.5s re-arm window or an intentional pause.
   void _startSelfHealWatchdog() {
+    // Only relevant to the always-listening loop. In hold-to-talk the mic
+    // is driven entirely by the worker's press, so there's no stalled loop
+    // to recover — skip it.
+    if (_holdToTalk) return;
     _selfHealTimer?.cancel();
     _idleTicks = 0;
     _selfHealTimer = Timer.periodic(const Duration(seconds: 4), (_) {
@@ -442,18 +465,18 @@ class _AssistantScreenState extends State<AssistantScreen> {
     };
     _tts.onComplete = () {
       if (!mounted) return;
-      setState(() => _orbState = _isPaused ? OrbState.paused : OrbState.idle);
-      // Auto-listen after every TTS chunk — but ONLY if the worker hasn't
-      // tapped to pause. _isPaused is the worker-controlled hard switch;
-      // _autoListen is the screen-lifecycle switch. Both must allow it.
-      //
-      // Drain wait extended to 800 ms (was 600 ms) AFTER _tts.isPlaying
-      // reports false. The plugin's isPlaying flag flips off slightly
-      // before the audio actually leaves the speaker on cheaper phones;
-      // the extra buffer kills the "TTS bleeds into next STT" bug where
-      // the assistant's own voice was being captured as the worker's
-      // next utterance.
-      if (_autoListen && !_isPaused && !_isThinking && !_showSaveChip) {
+      setState(() {
+        _orbState = _isPaused ? OrbState.paused : OrbState.idle;
+        // Hold-to-talk: after the reply finishes, just sit idle showing the
+        // "hold to talk" hint. The mic stays OFF until the worker presses —
+        // no auto-restart, so nothing toggles on its own.
+        if (_holdToTalk && !_isPaused) _statusLine = _holdHintStatus(_activeLang);
+      });
+      // Legacy always-listening auto-restart — gated off in hold-to-talk.
+      // Re-arms the mic after every TTS chunk unless the worker paused.
+      // The drain wait (isPlaying + 1500ms) kept the AI's own voice from
+      // bleeding into the next STT session.
+      if (!_holdToTalk && _autoListen && !_isPaused && !_isThinking && !_showSaveChip) {
         () async {
           final deadline = DateTime.now().add(const Duration(seconds: 2));
           while (_tts.isPlaying && DateTime.now().isBefore(deadline)) {
@@ -589,8 +612,16 @@ class _AssistantScreenState extends State<AssistantScreen> {
     await _stt.listen(
       listenOptions: SpeechListenOptions(
         localeId: _activeLang.sttLocale,
-        listenFor: const Duration(seconds: 30),
-        pauseFor: _adaptivePauseFor,
+        // Hold-to-talk: the worker's release ends the turn, so use long
+        // windows that effectively disable the silence auto-stop — a pause
+        // to think mid-sentence must NOT cut them off. Always-listening
+        // mode keeps the adaptive silence threshold for snappy turns.
+        listenFor: _holdToTalk
+            ? const Duration(seconds: 120)
+            : const Duration(seconds: 30),
+        pauseFor: _holdToTalk
+            ? const Duration(seconds: 120)
+            : _adaptivePauseFor,
         listenMode: ListenMode.dictation,
         partialResults: true,
         cancelOnError: true,
@@ -640,14 +671,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
     if (input.isEmpty) {
       _statusLine = _isPaused
           ? _pausedStatus(_activeLang)
-          : _idleStatus(_activeLang);
-      // Silent timeout (pauseFor or listenFor with no speech) — re-arm
-      // the mic so the screen stays truly always-listening while open.
-      // Skip the re-arm if worker has paused, or if TTS is mid-playback
-      // (the AI's own voice would bleed into the next STT session — the
-      // "TTS taken as input" bug). Drain wait extended to 800 ms after
-      // isPlaying clears.
-      if (_autoListen && !_isPaused && !_isThinking && !_showSaveChip) {
+          : (_holdToTalk ? _holdHintStatus(_activeLang) : _idleStatus(_activeLang));
+      // Legacy always-listening re-arm on a silent turn — gated off in
+      // hold-to-talk (the worker decides when to talk; nothing auto-restarts).
+      if (!_holdToTalk && _autoListen && !_isPaused && !_isThinking && !_showSaveChip) {
         () async {
           final deadline = DateTime.now().add(const Duration(seconds: 2));
           while (_tts.isPlaying && DateTime.now().isBefore(deadline)) {
@@ -679,6 +706,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
   // ── Main loop: triage flow → rule-match → LLM, then speak reply ────────
   Future<void> _handleUserInput(String input) async {
     HapticFeedback.lightImpact();
+    // Stamp this turn. If the worker barges in (holds the orb again) while
+    // the reply is being fetched, _turnSeq advances and this turn's reply is
+    // dropped after the network await instead of speaking over the new one.
+    final myTurn = ++_turnSeq;
     setState(() {
       _history.add(AssistantTurn(role: 'user', text: input));
       _isThinking = true;
@@ -761,6 +792,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
     );
 
     _coldStartHintTimer?.cancel();
+
+    // Barge-in guard: the worker started a new turn while this reply was in
+    // flight — drop it silently so it can't speak over the newer turn.
+    if (!mounted || myTurn != _turnSeq) return;
 
     // Switch active language to whatever the worker just spoke
     _activeLang = response.detectedLanguage;
@@ -1083,6 +1118,83 @@ class _AssistantScreenState extends State<AssistantScreen> {
     });
   }
 
+  // ── Hold-to-talk handlers ─────────────────────────────────────────────
+  // Press the orb → mic on; release → send. The worker owns the mic, so
+  // nothing toggles on its own. Pressing also barges in: it stops any reply
+  // in flight (TTS + pending LLM) and grabs the mic immediately, so the
+  // worker is never stuck waiting for the assistant to finish.
+  Future<void> _onHoldStart() async {
+    if (!_holdToTalk || _isListening) return;
+    _coldStartHintTimer?.cancel();
+    try {
+      await _tts.stop();
+    } catch (_) {}
+    // Supersede any in-flight reply so it can't speak over the new turn
+    // (the stale reply is dropped by the _turnSeq guard in _handleUserInput).
+    if (mounted && (_isThinking || _showSaveChip)) {
+      setState(() {
+        _isThinking = false;
+        _showSaveChip = false;
+      });
+    }
+    _holdStartedAt = DateTime.now();
+    await _startListening();
+  }
+
+  Future<void> _onHoldEnd() async {
+    if (!_holdToTalk) return;
+    final start = _holdStartedAt;
+    _holdStartedAt = null;
+    if (!_isListening) return;
+    final heldMs =
+        start == null ? 0 : DateTime.now().difference(start).inMilliseconds;
+    _stopSttWatchdog();
+    // Ignore an accidental quick tap — never fire an empty turn.
+    if (heldMs < 300) {
+      try {
+        await _groqStt.cancel();
+      } catch (_) {}
+      try {
+        await _stt.cancel();
+      } catch (_) {}
+      if (!mounted) return;
+      setState(() {
+        _isListening = false;
+        _audioLevel = 0.0;
+        _orbState = OrbState.idle;
+        _statusLine = _holdHintStatus(_activeLang);
+      });
+      return;
+    }
+    // Commit what was captured → process → reply.
+    if (mounted) {
+      setState(() {
+        _audioLevel = 0.0;
+        _orbState = OrbState.processing;
+        _statusLine = _heardYouStatus(_activeLang);
+      });
+    }
+    if (_useGroqStt) {
+      await _groqStt.commit(
+        languageCode: _activeLang.code,
+        onProcessingStart: () {
+          if (!mounted) return;
+          setState(() {
+            _isListening = false;
+            _audioLevel = 0.0;
+            _orbState = OrbState.processing;
+            _statusLine = _heardYouStatus(_activeLang);
+          });
+        },
+      );
+    } else {
+      // Device STT: stop() finalises → onStatus(done) → _onListenComplete().
+      try {
+        await _stt.stop();
+      } catch (_) {}
+    }
+  }
+
   void _resetToIdle() {
     _stopSttWatchdog();
     setState(() {
@@ -1208,9 +1320,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
               _OrbDock(
                 state: _orbState,
                 statusLine: _statusLine.isEmpty
-                    ? _idleStatus(_activeLang)
+                    ? (_holdToTalk
+                        ? _holdHintStatus(_activeLang)
+                        : _idleStatus(_activeLang))
                     : _statusLine,
                 isThinking: _isThinking,
+                holdToTalk: _holdToTalk,
+                onHoldStart: _onHoldStart,
+                onHoldEnd: _onHoldEnd,
                 onLongPress: _onOrbLongPress,
                 audioLevel: _audioLevel,
                 onTap: _onOrbTap,
@@ -1260,6 +1377,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
         AssistantLang.bn => 'অর্বে ট্যাপ করুন কথা বলতে',
         AssistantLang.hi => 'बोलने के लिए ओर्ब पर टैप करें',
         AssistantLang.en => 'Tap the orb to talk',
+      };
+  /// Hold-to-talk idle hint: press and hold to speak, release to send.
+  String _holdHintStatus(AssistantLang l) => switch (l) {
+        AssistantLang.bn => 'ধরে রেখে বলুন · ছেড়ে দিলে পাঠাবে',
+        AssistantLang.hi => 'दबाकर बोलें · छोड़ने पर भेजेगा',
+        AssistantLang.en => 'Hold to talk · release to send',
       };
   String _pausedStatus(AssistantLang l) => switch (l) {
         AssistantLang.bn => 'মাইক বন্ধ — চালু করতে ট্যাপ করুন',
@@ -1570,6 +1693,12 @@ class _OrbDock extends StatelessWidget {
   /// workers who want the pause behaviour signal it with a long-press
   /// instead, so they don't accidentally pause mid-thought.
   final VoidCallback onLongPress;
+  /// When true, the orb is a press-and-hold control (mic on while pressed,
+  /// send on release) instead of tap/long-press. [onTap]/[onLongPress] are
+  /// then unused but kept so the always-listening mode is a one-flag flip.
+  final bool holdToTalk;
+  final VoidCallback onHoldStart;
+  final VoidCallback onHoldEnd;
   const _OrbDock({
     required this.state,
     required this.statusLine,
@@ -1577,7 +1706,26 @@ class _OrbDock extends StatelessWidget {
     required this.audioLevel,
     required this.onTap,
     required this.onLongPress,
+    required this.holdToTalk,
+    required this.onHoldStart,
+    required this.onHoldEnd,
   });
+
+  /// Hold-to-talk → raw pointer Listener (press = mic on, release = send),
+  /// with no long-press delay. Always-listening → the old tap/long-press
+  /// GestureDetector. behavior:opaque so the whole orb area is pressable.
+  Widget _gestureWrap(Widget child) {
+    if (holdToTalk) {
+      return Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: (_) => onHoldStart(),
+        onPointerUp: (_) => onHoldEnd(),
+        onPointerCancel: (_) => onHoldEnd(),
+        child: child,
+      );
+    }
+    return GestureDetector(onTap: onTap, onLongPress: onLongPress, child: child);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1586,10 +1734,8 @@ class _OrbDock extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          GestureDetector(
-            onTap: onTap,
-            onLongPress: onLongPress,
-            child: Stack(
+          _gestureWrap(
+            Stack(
               alignment: Alignment.center,
               children: [
                 // Audio-level halo — pulses outward in proportion to
