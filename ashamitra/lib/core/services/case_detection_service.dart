@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import '../constants/api_constants.dart';
 import '../../features/triage/data/models/triage_case_model.dart';
 
 class CaseDetectionService {
-  static const _geminiKey = 'AIzaSyAza9BlFFmv9uSpd93g-ibAK6IcbgtIxic';
-  static const _geminiUrl =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_geminiKey';
+  // The Gemini call lives on the backend (/api/detect-case) so the API key
+  // never ships inside the APK. Stage-1 rule matching below stays fully
+  // on-device; only the ambiguous-confidence fallback touches the network.
   static const _confidenceThreshold = 0.80;
 
   List<TriageCaseModel>? _cases;
@@ -98,58 +99,35 @@ class CaseDetectionService {
     return (caseId: bestId, confidence: normalized);
   }
 
-  // ── Gemini AI detection ──────────────────────────────────────
+  // ── AI detection (server-routed) ─────────────────────────────
+  // Posts the transcript + case list to the backend /api/detect-case,
+  // which runs the same low-temperature Gemini classification through its
+  // rotating keys and returns {caseId, confidence}. The Gemini key stays
+  // on the server and never ships in the APK. Any failure (network, AI
+  // quota, unparseable output → non-200) throws, and the caller in
+  // detect() falls back to the rule-based result, so triage never blocks.
   Future<({String caseId, double confidence})> _geminiDetect(
       String transcript, List<TriageCaseModel> cases) async {
-    final caseList = cases.map((c) => '${c.id}: ${c.titleEn}').join('\n');
-    final prompt = '''
-You are a medical triage classifier for ASHA workers in rural India.
-Given the following speech transcript, classify it into exactly one case type.
-
-Available cases:
-$caseList
-
-Transcript: "$transcript"
-
-Respond with ONLY a JSON object like:
-{"caseId": "pregnancy", "confidence": 0.95}
-
-Rules:
-- caseId must be one of: ${cases.map((c) => c.id).join(', ')}
-- confidence must be between 0.0 and 1.0
-- No explanation, no markdown, just the JSON object
-''';
-
     final response = await http
         .post(
-          Uri.parse(_geminiUrl),
+          Uri.parse('${ApiConstants.baseUrl}/detect-case'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'contents': [
-              {
-                'parts': [
-                  {'text': prompt}
-                ]
-              }
+            'transcript': transcript,
+            'cases': [
+              for (final c in cases) {'id': c.id, 'titleEn': c.titleEn},
             ],
-            'generationConfig': {'temperature': 0.1, 'maxOutputTokens': 64}
           }),
         )
         .timeout(const Duration(seconds: 8));
 
-    if (response.statusCode != 200) throw Exception('Gemini error');
+    if (response.statusCode != 200) throw Exception('detect-case error');
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final text = (body['candidates'][0]['content']['parts'][0]['text'] as String)
-        .trim()
-        .replaceAll('```json', '')
-        .replaceAll('```', '')
-        .trim();
-
-    final result = jsonDecode(text) as Map<String, dynamic>;
+    if (body['success'] != true) throw Exception('detect-case failed');
     return (
-      caseId: result['caseId'] as String,
-      confidence: (result['confidence'] as num).toDouble(),
+      caseId: body['caseId'] as String,
+      confidence: (body['confidence'] as num).toDouble(),
     );
   }
 }

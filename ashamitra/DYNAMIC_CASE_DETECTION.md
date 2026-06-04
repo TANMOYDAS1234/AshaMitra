@@ -107,10 +107,11 @@ Risk scoring → Result
 ## 🔧 Configuration
 
 ### Gemini API Key
-Already configured in `case_detection_service.dart`:
-```dart
-static const _geminiKey = 'AIzaSyAza9BlFFmv9uSpd93g-ibAK6IcbgtIxic';
-```
+The Gemini call is server-side: `case_detection_service.dart` POSTs to the
+backend `/api/detect-case`, which holds the key in its environment
+(`GEMINI_API_KEY`, rotated across `GEMINI_API_KEY_2`, `_3`, …). No API key is
+stored in the app or this repo — it must never be hardcoded in client source,
+since anything in the APK can be extracted from the binary.
 
 ### Confidence Threshold
 ```dart
