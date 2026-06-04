@@ -9,6 +9,16 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
 
     <queries>
+        <!-- Android 11+ (API 30) hides other packages behind package-
+             visibility filtering. The device speech_to_text plugin binds to
+             whatever app provides android.speech.RecognitionService (Google,
+             Samsung, etc.); without this <intent> the recognizer is invisible
+             to us and listen() silently no-ops on most turns — the exact
+             "mic on but capturing nothing" failure seen on Infinix HiOS.
+             Required by the speech_to_text plugin (see its example app). -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.DIAL"/>
             <data android:scheme="tel"/>

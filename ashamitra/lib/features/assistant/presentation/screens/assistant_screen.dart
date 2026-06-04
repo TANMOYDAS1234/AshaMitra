@@ -61,20 +61,26 @@ class AssistantScreen extends StatefulWidget {
 class _AssistantScreenState extends State<AssistantScreen> {
   // ── Services ───────────────────────────────────────────────────────────
   final _chat = AssistantChatService();
-  // Device STT — kept as offline fallback. Currently buggy on Infinix
-  // HiOS (audio session race between turns); we now prefer the Groq
-  // Whisper service for capture and only fall back to this when offline.
+  // Device STT — the PRIMARY capture path. On-device Bengali/Hindi
+  // recognition is noticeably more accurate for our workers than Groq
+  // Whisper was, so we drive this directly. The historical "stuck on
+  // listening" failures on Infinix HiOS were NOT an audio-session race —
+  // they were (1) a missing android.speech.RecognitionService <queries>
+  // entry that left the recognizer invisible under Android 11+ package
+  // visibility, and (2) an over-eager error handler that tore the plugin
+  // down on every benign error_no_match. Both are fixed now (see
+  // AndroidManifest.xml + _initStt onError below).
   final _stt = SpeechToText();
-  // Server-routed STT — records raw audio, uploads to backend
-  // /api/transcribe which proxies to Groq Whisper. Same audio path
-  // every turn, so we don't hit the SpeechRecognizer session-race
-  // failure mode that left workers stuck on "listening".
+  // Server-routed STT via Groq Whisper. Kept only as a LAST-RESORT
+  // fallback for the rare device with no on-device recognizer at all
+  // (no Google app / unsupported OEM). Whisper's accuracy was worse for
+  // our workers, so we never prefer it when device STT is available.
   final _groqStt = GroqSttService();
-  // True after we confirmed the backend transcribe endpoint is
-  // reachable. We only flip to device STT fallback after a Groq
-  // failure or if the network is offline. Default true — try Groq
-  // first; the service handles its own offline/failure cases.
-  bool _useGroqStt = true;
+  // True only when the device recognizer failed to initialise (no
+  // RecognitionService on this phone). Set in _initAll from _sttReady.
+  // Default false → prefer device STT; flip to Groq only when the
+  // device recognizer is genuinely unavailable.
+  bool _useGroqStt = false;
   final _tts = TtsService();
   // Rule-based intent classifier runs BEFORE the LLM on every user
   // utterance. Common app actions ("open patients", "call ambulance",
@@ -118,12 +124,16 @@ class _AssistantScreenState extends State<AssistantScreen> {
   // Tap again to resume.
   bool _isPaused = false;
 
-  // STT self-recovery: track consecutive error/status-failure events.
-  // Threshold dropped 3 → 1 — workers don't tolerate two failed turns
-  // before giving up, so recovery fires on the FIRST error rather than
-  // letting two more silent failures stack on top.
+  // STT self-recovery: track consecutive GENUINE-fault events. Benign
+  // events (error_no_match / error_speech_timeout) never count here —
+  // they're handled inline in _initStt's onError and reset this to 0.
+  // Threshold is 2: a single transient fault (e.g. a one-off recognizer
+  // busy) just re-arms via onStatus; only two faults back-to-back mean
+  // the plugin is genuinely wedged and warrants a full reinit. The old
+  // value of 1 fired a teardown on every benign no-match, which was the
+  // bug, not a feature.
   int _consecutiveSttErrors = 0;
-  static const _sttErrorThreshold = 1;
+  static const _sttErrorThreshold = 2;
 
   // ── Stuck-listening watchdog ──────────────────────────────────────────
   // OS-level mic revocation (Infinix HiOS / Android privacy manager) can
@@ -179,6 +189,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
     await _tts.init();
     _wireTtsCallbacks();
     _sttReady = await _initStt();
+    // Device STT is the preferred path. Only fall back to Groq Whisper
+    // when the on-device recognizer failed to initialise (no Google app
+    // / OEM without a RecognitionService). On every normal phone
+    // _sttReady is true, so _useGroqStt stays false.
+    _useGroqStt = !_sttReady;
     if (!mounted) return;
     // Voice-first: greet immediately, then auto-listen when TTS done.
     await _speakGreeting();
@@ -191,13 +206,29 @@ class _AssistantScreenState extends State<AssistantScreen> {
     return await _stt.initialize(
       onError: (err) {
         if (!mounted) return;
-        // Threshold dropped to 1 — workers don't tolerate even one
-        // silent failure before giving up. Recover on the first error.
+        final msg = err.errorMsg;
+        // `error_no_match` and `error_speech_timeout` are NORMAL in an
+        // always-listening loop — the worker simply paused or the
+        // recognizer caught nothing this turn. They are NOT failures.
+        // The old code treated every error the same and (with threshold
+        // 1) tore the whole plugin down on each one; re-initialising
+        // mid-loop left the recognizer in a no-op state on the NEXT
+        // turn. That self-inflicted churn — not an audio-session race —
+        // was the real "mic on but capturing nothing" bug. Here we just
+        // reset the fault counter and let the onStatus(done) that always
+        // follows (cancelOnError: true) re-arm the mic via
+        // _onListenComplete().
+        if (msg == 'error_no_match' || msg == 'error_speech_timeout') {
+          _consecutiveSttErrors = 0;
+          return;
+        }
+        // Genuine fault (audio / client / busy / network). Only
+        // hard-recover after two back-to-back faults, so a single
+        // transient hiccup doesn't reinitialise the plugin and stall the
+        // next turn. The onStatus(done) re-arms the mic in between.
         _consecutiveSttErrors++;
         if (_consecutiveSttErrors >= _sttErrorThreshold) {
           _recoverStt();
-        } else {
-          _resetToIdle();
         }
       },
       onStatus: (status) {
@@ -405,13 +436,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
     });
     _startSttWatchdog();
 
-    // Prefer the Groq Whisper path. It uses MediaRecorder (separate
-    // Android API from SpeechRecognizer) so it isn't subject to the
-    // audio-session race that left the device STT plugin stuck on
-    // "listening" between turns. The service auto-stops on silence
-    // (1.8 sec) and uploads the recording for transcription. Falls
-    // back to device STT only if the Groq path returns null (no
-    // network, backend down, Groq quota, etc.).
+    // Groq Whisper fallback — reached ONLY when the device recognizer
+    // failed to initialise (_useGroqStt was set from !_sttReady in
+    // _initAll). On every normal phone this branch is skipped and we use
+    // the more-accurate device STT path below. The service auto-stops on
+    // silence and uploads the recording for transcription.
     if (_useGroqStt) {
       final text = await _groqStt.startCapture(
         onAudioLevel: (level) {
@@ -460,19 +489,23 @@ class _AssistantScreenState extends State<AssistantScreen> {
       return;
     }
 
-    // ── Fallback: device speech_to_text plugin ──
-    // Same defensive guards we used before: cancel + 400 ms wait, full
-    // re-init if cancel didn't take. Reached only when Groq is off
-    // (offline pilot mode, future flag).
+    // ── Primary: device speech_to_text plugin ──
     if (!_sttReady) return;
-    try {
-      await _stt.cancel();
-    } catch (_) {}
-    await Future.delayed(const Duration(milliseconds: 400));
+    // Only tear down a prior session if one is genuinely still open. The
+    // old code ran an unconditional cancel + 400 ms wait on EVERY turn —
+    // that added latency to every utterance and, worse, cancelling an
+    // already-idle recognizer could leave it transiently unavailable for
+    // the listen() that immediately followed. Now that the real bug (the
+    // missing RecognitionService <queries> + the no-match teardown) is
+    // fixed, we only guard the genuine "previous session not yet closed"
+    // case, with a full reinit as a last resort if cancel doesn't take.
     if (_stt.isListening) {
       try { await _stt.cancel(); } catch (_) {}
-      _sttReady = await _initStt();
-      await Future.delayed(const Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (_stt.isListening) {
+        _sttReady = await _initStt();
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
     }
     // listenFor 30s — covers long clinical descriptions; the worker can
     // tap-pause if they need more.
@@ -488,10 +521,10 @@ class _AssistantScreenState extends State<AssistantScreen> {
     // swallow them. Silent swallowing was the root cause of the "mic
     // stuck on listening forever, no audio captured" state.
     await _stt.listen(
-      localeId: _activeLang.sttLocale,
-      listenFor: const Duration(seconds: 30),
-      pauseFor: _adaptivePauseFor,
       listenOptions: SpeechListenOptions(
+        localeId: _activeLang.sttLocale,
+        listenFor: const Duration(seconds: 30),
+        pauseFor: _adaptivePauseFor,
         listenMode: ListenMode.dictation,
         partialResults: true,
         cancelOnError: true,
@@ -934,6 +967,21 @@ class _AssistantScreenState extends State<AssistantScreen> {
           });
         },
       );
+      return;
+    }
+    if (_isListening && _sttReady) {
+      // Tap-to-commit on the device STT path: stop capturing now and let
+      // the recognizer finalise the current partial instead of waiting
+      // out the pauseFor silence window. The resulting final onResult /
+      // onStatus(done) flows into _onListenComplete() as usual. Flip the
+      // orb to processing immediately so the tap feels responsive.
+      _stopSttWatchdog();
+      setState(() {
+        _audioLevel = 0.0;
+        _orbState = OrbState.processing;
+        _statusLine = _heardYouStatus(_activeLang);
+      });
+      try { await _stt.stop(); } catch (_) {}
       return;
     }
     await _pauseAssistant();
