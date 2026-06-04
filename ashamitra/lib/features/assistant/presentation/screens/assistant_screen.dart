@@ -150,13 +150,17 @@ class _AssistantScreenState extends State<AssistantScreen> {
   // pulsing ring around the orb so worker can see voice is landing.
   double _audioLevel = 0.0;
 
-  // Adaptive pauseFor — the speech_to_text plugin's silence threshold
-  // is set at listen() time and can't change mid-session, so we choose
-  // it once based on what we know about the worker's context:
-  //   - First open with no history → 4500 ms (composing thought)
-  //   - Mid-conversation → 2500 ms (faster turn-taking)
+  // Adaptive pauseFor — on Android this maps to the recognizer's
+  // "complete silence length": how long it waits in trailing silence
+  // before finalizing and returning the result. It's the single biggest
+  // knob on "how fast does she reply after I stop talking", so we keep
+  // it tight; tap-to-commit covers anyone who wants instant.
+  //   - First open with no history → 3000 ms (still room to compose)
+  //   - Mid-conversation → 1500 ms (snappy follow-ups / commands)
+  // Lowered from 4500/2500 — pilot wanted a quicker turnaround, and the
+  // recognizer's own end-of-speech VAD usually fires before this anyway.
   Duration get _adaptivePauseFor =>
-      _history.isEmpty ? const Duration(milliseconds: 4500) : const Duration(milliseconds: 2500);
+      _history.isEmpty ? const Duration(milliseconds: 3000) : const Duration(milliseconds: 1500);
 
   // Escalates the status line from "thinking" to "waking server" after
   // 5s of waiting so the worker knows the cold-start is happening rather

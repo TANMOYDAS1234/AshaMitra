@@ -49,7 +49,10 @@ class VapiTtsService {
   //          Wavenet-A (distinctly Indian Bengali, current default).
   // Bumping this tag invalidates every device's cached MP3s — the next
   // prewarm cycle will re-fetch all phrases with the new voice.
-  static const _voice = 'gcloud:Wavenet-A:v1';
+  // v2: backend now normalizes pronunciation (BP, PHC, 150/95, °C, mg…)
+  // before synthesis — bump so stale v1 MP3s with the old garbled
+  // pronunciation are re-fetched instead of replayed from cache.
+  static const _voice = 'gcloud:Wavenet-A:v2';
 
   Function()? onStart;
   Function()? onComplete;
@@ -76,7 +79,7 @@ class VapiTtsService {
   // ──────────────────────────────────────────────────────────────────────────
 
   /// Returns the bundle-asset bytes for [key] if such an MP3 ships in the
-  /// APK at assets/voices/<key>.mp3. Null otherwise. The generate-bundled-
+  /// APK at `assets/voices/<key>.mp3`. Null otherwise. The generate-bundled-
   /// voices.js script produces these files using the SAME cache key, so a
   /// match here means the bundled audio is byte-identical to what the live
   /// /api/tts would produce.
