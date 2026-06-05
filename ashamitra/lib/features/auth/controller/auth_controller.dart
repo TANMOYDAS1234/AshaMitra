@@ -49,6 +49,32 @@ class AuthController extends GetxController {
     }
   }
 
+  /// Resend OTP WITHOUT navigating — we're already on the OTP screen, so
+  /// going through [login] is wrong: its `Get.toNamed(otp)` is a no-op here
+  /// (GetX preventDuplicates blocks navigating to the route we're already on),
+  /// which is why the freshly-generated OTP never reached the UI. This fetches
+  /// a new code and returns it so the screen can update in place:
+  ///   • returns the 6-digit pilot OTP on pilot-mode success,
+  ///   • returns '' on success with no OTP in the response (real SMS path),
+  ///   • returns null on failure (errorMsg is set).
+  Future<String?> resendOtp(String phone) async {
+    isLoading.value = true;
+    errorMsg.value  = '';
+    try {
+      final res = await ApiService.sendOtp(phone.trim());
+      if (res['success'] == true) {
+        return res['otp']?.toString() ?? '';
+      }
+      errorMsg.value = res['message']?.toString() ?? 'OTP পাঠানো ব্যর্থ।';
+      return null;
+    } catch (_) {
+      errorMsg.value = 'সংযোগ ব্যর্থ। সার্ভার চালু আছে কিনা দেখুন।';
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   /// Step 2 — verify OTP via backend, receive JWT + user object.
   Future<void> verifyOtp(String phone, String otp) async {
     if (otp.trim().length != 6) {

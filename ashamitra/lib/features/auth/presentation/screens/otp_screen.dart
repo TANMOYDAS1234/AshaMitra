@@ -217,19 +217,36 @@ class _OtpScreenState extends State<OtpScreen> {
                                 ? null
                                 : () async {
                                     _ctrl.errorMsg.value = '';
-                                    await _ctrl.login(_phone);
-                                    if (_ctrl.errorMsg.value.isEmpty) {
-                                      Get.snackbar(
-                                        'otp_sent_title'.tr,
-                                        'otp_sent_msg'.trParams({'phone': _phone}),
-                                        snackPosition: SnackPosition.BOTTOM,
-                                        backgroundColor: AppColors.safeGreen,
-                                        colorText: Colors.white,
-                                        margin: const EdgeInsets.all(16),
-                                        borderRadius: 12,
-                                        duration: const Duration(seconds: 3),
-                                      );
+                                    // Resend WITHOUT navigating, then refresh
+                                    // this screen's OTP banner + boxes in place.
+                                    final newOtp = await _ctrl.resendOtp(_phone);
+                                    if (newOtp == null) return; // failure → errorMsg shows
+                                    if (newOtp.length == 6) {
+                                      setState(() {
+                                        _pilotOtp = newOtp;
+                                        for (int i = 0; i < 6; i++) {
+                                          _boxes[i].text = newOtp[i];
+                                        }
+                                      });
+                                    } else {
+                                      // Real-SMS path (no OTP in response) — clear
+                                      // the old code so the worker types the new one.
+                                      setState(() {
+                                        for (final b in _boxes) {
+                                          b.clear();
+                                        }
+                                      });
                                     }
+                                    Get.snackbar(
+                                      'otp_sent_title'.tr,
+                                      'otp_sent_msg'.trParams({'phone': _phone}),
+                                      snackPosition: SnackPosition.BOTTOM,
+                                      backgroundColor: AppColors.safeGreen,
+                                      colorText: Colors.white,
+                                      margin: const EdgeInsets.all(16),
+                                      borderRadius: 12,
+                                      duration: const Duration(seconds: 3),
+                                    );
                                   },
                             child: Text('resend_otp'.tr),
                           )),
