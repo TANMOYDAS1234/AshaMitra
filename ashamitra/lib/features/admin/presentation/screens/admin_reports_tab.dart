@@ -43,7 +43,7 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('Reports', style: AppTextStyles.h2),
+                    child: Text('reports'.tr, style: AppTextStyles.h2),
                   ),
                   Obx(() {
                     final activeCount = [
@@ -64,7 +64,7 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                           ),
                           icon: const Icon(Icons.filter_alt_rounded,
                               color: AppColors.primary, size: 20),
-                          tooltip: 'Filter by worker / location',
+                          tooltip: 'admin_filter_by_tooltip'.tr,
                         ),
                         if (activeCount > 0)
                           Positioned(
@@ -97,7 +97,7 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                     ),
                     icon: const Icon(Icons.delete_outline_rounded,
                         color: AppColors.emergencyRed, size: 20),
-                    tooltip: 'Deleted reports',
+                    tooltip: 'admin_deleted_reports'.tr,
                   ),
                   const SizedBox(width: 8),
                   Obx(() => IconButton(
@@ -115,7 +115,7 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                                 ? AppColors.textSecondary
                                 : AppColors.onPrimary,
                             size: 20),
-                        tooltip: 'Download PDF',
+                        tooltip: 'admin_download_pdf'.tr,
                       )),
                 ],
               ),
@@ -133,35 +133,35 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                           onTap: () => ctrl.setFilter('all')),
                       const SizedBox(width: 8),
                       _FilterChip(
-                          label: '🔴 Red',
+                          label: 'admin_filter_red'.tr,
                           selected: ctrl.filterMode.value == 'red',
                           color: AppColors.emergencyRed,
                           onTap: () => ctrl.setFilter('red')),
                       const SizedBox(width: 8),
                       _FilterChip(
-                          label: '🟡 Yellow',
+                          label: 'admin_filter_yellow'.tr,
                           selected: ctrl.filterMode.value == 'yellow',
                           color: AppColors.warningYellow,
                           onTap: () => ctrl.setFilter('yellow')),
                       const SizedBox(width: 8),
                       _FilterChip(
-                          label: '🟢 Green',
+                          label: 'admin_filter_green'.tr,
                           selected: ctrl.filterMode.value == 'green',
                           color: AppColors.safeGreen,
                           onTap: () => ctrl.setFilter('green')),
                       const SizedBox(width: 8),
                       _FilterChip(
-                          label: '📅 Day',
+                          label: 'admin_chip_day'.tr,
                           selected: ctrl.filterMode.value == 'day',
                           onTap: () => _pickDate(context, ctrl, 'day')),
                       const SizedBox(width: 8),
                       _FilterChip(
-                          label: '📆 Month',
+                          label: 'admin_chip_month'.tr,
                           selected: ctrl.filterMode.value == 'month',
                           onTap: () => _pickDate(context, ctrl, 'month')),
                       const SizedBox(width: 8),
                       _FilterChip(
-                          label: '🗓 Year',
+                          label: 'admin_chip_year'.tr,
                           selected: ctrl.filterMode.value == 'year',
                           onTap: () => _pickDate(context, ctrl, 'year')),
                     ],
@@ -173,7 +173,7 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                   child: Row(
                     children: [
-                      _SummaryChip('Total ${ctrl.totalReports}',
+                      _SummaryChip('total_n'.trParams({'count': '${ctrl.totalReports}'}),
                           AppColors.primary),
                       const SizedBox(width: 8),
                       _SummaryChip('🔴 ${ctrl.redReports}',
@@ -245,17 +245,17 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
       initialDatePickerMode:
           mode == 'year' ? DatePickerMode.year : DatePickerMode.day,
       helpText: mode == 'day'
-          ? 'Select Day'
+          ? 'pick_day'.tr
           : mode == 'month'
-              ? 'Select Month'
-              : 'Select Year',
+              ? 'pick_month'.tr
+              : 'pick_year'.tr,
     );
     if (picked != null) ctrl.setFilter(mode, date: picked);
   }
 
   Future<void> _downloadPdf(List<dynamic> reports) async {
     if (reports.isEmpty) {
-      Get.snackbar('No reports', 'Nothing to export', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('pdf_no_reports_title'.tr, 'admin_nothing_to_export'.tr, snackPosition: SnackPosition.BOTTOM);
       return;
     }
     // Cap at 100 so the file stays openable on low-RAM admin tablets.
@@ -468,7 +468,8 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
       await PdfHelper.saveAndOpen(bytes, fileName)
           .timeout(const Duration(seconds: 15));
     } catch (e) {
-      Get.snackbar('PDF generation failed', 'Could not generate PDF: $e',
+      Get.snackbar('pdf_generation_failed'.tr,
+          'admin_pdf_failed_msg'.trParams({'error': '$e'}),
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.emergencyRed,
           colorText: AppColors.onPrimary,
@@ -515,28 +516,28 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                   ),
                   Row(
                     children: [
-                      Expanded(child: Text('Filter reports', style: AppTextStyles.h2)),
+                      Expanded(child: Text('admin_filter_reports'.tr, style: AppTextStyles.h2)),
                       if (ctrl.selectedWorkerId.value != null ||
                           ctrl.selectedDistrict.value != null ||
                           ctrl.selectedBlock.value   != null)
                         TextButton.icon(
                           onPressed: () { ctrl.clearLocationFilters(); Get.back(); },
                           icon: const Icon(Icons.clear_rounded, size: 16),
-                          label: const Text('Clear'),
+                          label: Text('admin_clear'.tr),
                         ),
                     ],
                   ),
                   const SizedBox(height: 16),
 
                   // ── Worker ─────────────────────────────────────────────
-                  Text('ASHA WORKER', style: AppTextStyles.overline),
+                  Text('admin_asha_worker_label'.tr, style: AppTextStyles.overline),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String?>(
                     initialValue: ctrl.selectedWorkerId.value,
                     isExpanded: true,
                     decoration: const InputDecoration(),
                     items: [
-                      const DropdownMenuItem<String?>(value: null, child: Text('সব ASHA — All workers')),
+                      DropdownMenuItem<String?>(value: null, child: Text('admin_all_workers'.tr)),
                       for (final w in workers)
                         DropdownMenuItem<String?>(
                           value: w.id,
@@ -548,14 +549,14 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                   const SizedBox(height: 16),
 
                   // ── District ──────────────────────────────────────────
-                  Text('DISTRICT', style: AppTextStyles.overline),
+                  Text('district'.tr, style: AppTextStyles.overline),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String?>(
                     initialValue: ctrl.selectedDistrict.value,
                     isExpanded: true,
                     decoration: const InputDecoration(),
                     items: [
-                      const DropdownMenuItem<String?>(value: null, child: Text('সব জেলা — All districts')),
+                      DropdownMenuItem<String?>(value: null, child: Text('admin_all_districts'.tr)),
                       for (final d in ctrl.districts)
                         DropdownMenuItem<String?>(value: d, child: Text(d)),
                     ],
@@ -564,14 +565,14 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                   const SizedBox(height: 16),
 
                   // ── Block ─────────────────────────────────────────────
-                  Text('BLOCK', style: AppTextStyles.overline),
+                  Text('block'.tr, style: AppTextStyles.overline),
                   const SizedBox(height: 6),
                   DropdownButtonFormField<String?>(
                     initialValue: ctrl.selectedBlock.value,
                     isExpanded: true,
                     decoration: const InputDecoration(),
                     items: [
-                      const DropdownMenuItem<String?>(value: null, child: Text('সব ব্লক — All blocks')),
+                      DropdownMenuItem<String?>(value: null, child: Text('admin_all_blocks'.tr)),
                       for (final b in ctrl.blocks)
                         DropdownMenuItem<String?>(value: b, child: Text(b)),
                     ],
@@ -584,7 +585,7 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                     child: FilledButton.icon(
                       onPressed: () { ctrl.applyLocationFilters(); Get.back(); },
                       icon: const Icon(Icons.check_rounded),
-                      label: const Text('Apply filters'),
+                      label: Text('admin_apply_filters'.tr),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                       ),

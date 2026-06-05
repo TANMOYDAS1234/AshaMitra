@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -64,22 +65,23 @@ void showAdminReportDetail(BuildContext context, Map<String, dynamic> r) {
               ],
             ),
             const SizedBox(height: 16),
-            _DetailRow('Patient', r['patientName']?.toString() ?? '-'),
-            _DetailRow('ASHA Worker', r['ashaName']?.toString() ?? '-'),
-            _DetailRow('ASHA Phone', r['ashaPhone']?.toString() ?? '-'),
-            _DetailRow('Risk Score', '${r['riskScore'] ?? 0}'),
-            _DetailRow('Risk Level', r['riskLevel']?.toString() ?? '-'),
-            _DetailRow('Facility', r['facilityType']?.toString() ?? '-'),
-            _DetailRow('Recheck After', '${r['recheckAfterHours'] ?? 0} hrs'),
+            _DetailRow('admin_patient'.tr, r['patientName']?.toString() ?? '-'),
+            _DetailRow('role_worker'.tr, r['ashaName']?.toString() ?? '-'),
+            _DetailRow('admin_asha_phone'.tr, r['ashaPhone']?.toString() ?? '-'),
+            _DetailRow('risk_score'.tr, '${r['riskScore'] ?? 0}'),
+            _DetailRow('risk_level'.tr, r['riskLevel']?.toString() ?? '-'),
+            _DetailRow('facility'.tr, r['facilityType']?.toString() ?? '-'),
+            _DetailRow('recheck_after'.tr,
+                'recheck_after_hours'.trParams({'hours': '${r['recheckAfterHours'] ?? 0}'})),
             if ((r['reason']?.toString() ?? '').isNotEmpty)
-              _DetailRow('Reason', r['reason'].toString()),
+              _DetailRow('result_reason'.tr, r['reason'].toString()),
             if ((r['nextStep']?.toString() ?? '').isNotEmpty)
-              _DetailRow('Next Step', r['nextStep'].toString()),
+              _DetailRow('result_next_step'.tr, r['nextStep'].toString()),
             if ((r['situation']?.toString() ?? '').isNotEmpty)
-              _DetailRow('Situation', r['situation'].toString()),
+              _DetailRow('section_situation'.tr, r['situation'].toString()),
             if ((r['dangerSigns'] as List?)?.isNotEmpty == true) ...[
               const SizedBox(height: 8),
-              Text('Danger Signs',
+              Text('section_danger_signs'.tr,
                   style: AppTextStyles.caption.copyWith(
                     fontWeight: FontWeight.w700,
                   )),
@@ -131,7 +133,7 @@ List<Widget> _qaSection(dynamic raw) {
   if (pairs.isEmpty) return const [];
   return [
     const SizedBox(height: 12),
-    Text('Assessment Q&A',
+    Text('assessment_qa_title'.tr,
         style: AppTextStyles.caption.copyWith(
           fontWeight: FontWeight.w700,
         )),

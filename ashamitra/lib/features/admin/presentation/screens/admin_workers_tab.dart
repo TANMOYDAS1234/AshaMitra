@@ -39,7 +39,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('ASHA Workers', style: AppTextStyles.h2),
+                    child: Text('admin_asha_workers'.tr, style: AppTextStyles.h2),
                   ),
                   IconButton(
                     onPressed: () => _showAddSheet(context, ctrl),
@@ -49,7 +49,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                     ),
                     icon: const Icon(Icons.person_add_alt_1_rounded,
                         color: AppColors.onPrimary, size: 20),
-                    tooltip: 'Add ASHA Worker',
+                    tooltip: 'admin_add_asha_tooltip'.tr,
                   ),
                 ],
               ),
@@ -199,7 +199,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                                   );
                                 } else {
                                   Get.snackbar(
-                                    'Error',
+                                    'error'.tr,
                                     ctrl.errorMsg.value,
                                     backgroundColor: AppColors.emergencyRed,
                                     colorText: AppColors.onPrimary,
@@ -327,10 +327,10 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                 child: Row(
                   children: [
                     _StatChip(Icons.people_rounded, '${patients.length}',
-                        'Patients', AppColors.primary),
+                        'patients'.tr, AppColors.primary),
                     const SizedBox(width: 10),
                     _StatChip(Icons.analytics_rounded, '${reports.length}',
-                        'Reports', AppColors.purple),
+                        'reports'.tr, AppColors.purple),
                   ],
                 ),
               ),
@@ -342,7 +342,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                   children: [
                     if (patients.isNotEmpty) ...[
-                      Text('Patients', style: AppTextStyles.label),
+                      Text('patients'.tr, style: AppTextStyles.label),
                       const SizedBox(height: 8),
                       ...patients.map((p) => _PatientRow(p,
                           onTap: () => Get.toNamed(
@@ -350,7 +350,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                       const SizedBox(height: 16),
                     ],
                     if (reports.isNotEmpty) ...[
-                      Text('Reports', style: AppTextStyles.label),
+                      Text('reports'.tr, style: AppTextStyles.label),
                       const SizedBox(height: 8),
                       ...reports.map((r) => _ReportRow(r,
                           onTap: () => showAdminReportDetail(sheetCtx, r))),
@@ -359,7 +359,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                       Center(
                         child: Padding(
                           padding: const EdgeInsets.only(top: 32),
-                          child: Text('No activity yet', style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
+                          child: Text('admin_no_activity'.tr, style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
                         ),
                       ),
                   ],

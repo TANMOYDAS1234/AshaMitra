@@ -99,7 +99,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                 const SizedBox(height: 28),
 
                 // ── Recent reports ───────────────────────────────
-                Text('Recent Reports', style: AppTextStyles.label),
+                Text('admin_recent_reports'.tr, style: AppTextStyles.label),
                 const SizedBox(height: 12),
                 Obx(() {
                   if (ctrl.isLoading.value) {

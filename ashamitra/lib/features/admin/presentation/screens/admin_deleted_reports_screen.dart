@@ -37,7 +37,7 @@ class _AdminDeletedReportsScreenState extends State<AdminDeletedReportsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Deleted reports'),
+        title: Text('admin_deleted_reports'.tr),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: AppColors.onBackground,
@@ -61,7 +61,7 @@ class _AdminDeletedReportsScreenState extends State<AdminDeletedReportsScreen> {
                         size: 64,
                         color: AppColors.textSecondary.withValues(alpha: 0.4)),
                     const SizedBox(height: 12),
-                    Text('No deleted reports', style: AppTextStyles.bodySm),
+                    Text('no_deleted_reports'.tr, style: AppTextStyles.bodySm),
                   ],
                 ),
               );
@@ -99,8 +99,8 @@ class _AdminDeletedReportsScreenState extends State<AdminDeletedReportsScreen> {
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(
       content: Text(ok
-          ? 'Report restored — visible to the worker again'
-          : 'Restore failed — try again'),
+          ? 'report_restored'.tr
+          : 'report_restore_failed'.tr),
       duration: const Duration(seconds: 3),
       backgroundColor: ok ? AppColors.safeGreen : AppColors.emergencyRed,
     ));
@@ -114,22 +114,22 @@ class _AdminDeletedReportsScreenState extends State<AdminDeletedReportsScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Permanently delete?'),
+        title: Text('admin_permanent_delete_confirm'.tr),
         content: Text(
-          'This will erase the report from the database. The worker '
-          'soft-deleted it on ${r['deletedAt']?.toString().substring(0, 10) ?? "—"}. '
-          'This action cannot be undone.',
+          'admin_permanent_delete_msg'.trParams({
+            'date': r['deletedAt']?.toString().substring(0, 10) ?? '—',
+          }),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text('cancel'.tr),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
                 backgroundColor: AppColors.emergencyRed),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Erase'),
+            child: Text('admin_erase'.tr),
           ),
         ],
       ),
@@ -139,8 +139,8 @@ class _AdminDeletedReportsScreenState extends State<AdminDeletedReportsScreen> {
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(SnackBar(
       content: Text(ok
-          ? 'Report permanently erased'
-          : 'Permanent delete failed — try again'),
+          ? 'report_erased'.tr
+          : 'report_erase_failed'.tr),
       duration: const Duration(seconds: 3),
       backgroundColor: ok ? AppColors.safeGreen : AppColors.emergencyRed,
     ));
@@ -226,7 +226,7 @@ class _DeletedReportCard extends StatelessWidget {
                         Text(
                           patientName?.isNotEmpty == true
                               ? patientName!
-                              : 'Anonymous report',
+                              : 'admin_anonymous_report'.tr,
                           style: AppTextStyles.body
                               .copyWith(fontWeight: FontWeight.w700),
                           maxLines: 1,
@@ -263,7 +263,7 @@ class _DeletedReportCard extends StatelessWidget {
               const SizedBox(height: 10),
               _MetaRow(
                 icon: Icons.person_outline_rounded,
-                label: 'Worker',
+                label: 'worker'.tr,
                 value: [
                   ashaName,
                   if (ashaDistrict.isNotEmpty || ashaBlock.isNotEmpty)
@@ -273,13 +273,13 @@ class _DeletedReportCard extends StatelessWidget {
               const SizedBox(height: 6),
               _MetaRow(
                 icon: Icons.schedule_rounded,
-                label: 'Created',
+                label: 'created'.tr,
                 value: createdAt,
               ),
               const SizedBox(height: 6),
               _MetaRow(
                 icon: Icons.delete_outline_rounded,
-                label: 'Deleted',
+                label: 'deleted'.tr,
                 value: deletedAt,
                 valueColor: AppColors.emergencyRed,
               ),
@@ -299,8 +299,8 @@ class _DeletedReportCard extends StatelessWidget {
                       onPressed: onRestore,
                       icon: const Icon(Icons.restore_rounded,
                           size: 16, color: AppColors.primary),
-                      label: const Text('Restore',
-                          style: TextStyle(color: AppColors.primary)),
+                      label: Text('admin_restore'.tr,
+                          style: const TextStyle(color: AppColors.primary)),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: AppColors.primary),
                         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -312,7 +312,7 @@ class _DeletedReportCard extends StatelessWidget {
                     child: FilledButton.icon(
                       onPressed: onPermanentDelete,
                       icon: const Icon(Icons.delete_forever_rounded, size: 16),
-                      label: const Text('Erase'),
+                      label: Text('admin_erase'.tr),
                       style: FilledButton.styleFrom(
                         backgroundColor: AppColors.emergencyRed,
                         padding: const EdgeInsets.symmetric(vertical: 8),

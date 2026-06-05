@@ -113,7 +113,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = 'ডেটা লোড হয়নি'; _loading = false; });
+      setState(() { _error = 'map_data_failed'.tr; _loading = false; });
     }
   }
 
@@ -326,7 +326,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
 
   Future<Position?> _getLocation() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
-      setState(() { _error = 'GPS বন্ধ আছে। সেটিংস থেকে চালু করুন।'; _loading = false; });
+      setState(() { _error = 'gps_off_msg'.tr; _loading = false; });
       return null;
     }
     var perm = await Geolocator.checkPermission();
@@ -491,18 +491,18 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
   bool _isRecommended(String type) => _extractFacilityKeyword(widget.facilityType) == type;
 
   static String _typeLabelBn(String type) => switch (type) {
-    'PHC'      => 'PHC — প্রাথমিক স্বাস্থ্য',
-    'CHC'      => 'CHC — কমিউনিটি হেলথ',
-    'DH'       => 'DH — জেলা হাসপাতাল',
-    'SNCU'     => 'SNCU — নবজাতক যত্ন',
-    'hospital' => 'হাসপাতাল / ক্লিনিক',
-    _          => 'স্বাস্থ্যকেন্দ্র',
+    'PHC'      => 'facility_phc'.tr,
+    'CHC'      => 'facility_chc'.tr,
+    'DH'       => 'facility_dh'.tr,
+    'SNCU'     => 'facility_sncu'.tr,
+    'hospital' => 'facility_hospital'.tr,
+    _          => 'facility_default'.tr,
   };
 
   String _distanceLabel(double km) {
-    if (km < 0.1) return '${(km * 1000).round()} মি';
-    if (km < 10) return '${km.toStringAsFixed(1)} কিমি';
-    return '${km.round()} কিমি';
+    if (km < 0.1) return 'map_meters'.trParams({'m': '${(km * 1000).round()}'});
+    if (km < 10) return 'map_km'.trParams({'km': km.toStringAsFixed(1)});
+    return 'map_km'.trParams({'km': '${km.round()}'});
   }
 
   /// Distance preferring the OSRM-routed value (real road distance)
@@ -521,26 +521,30 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
       // OSRM's duration is computed from per-road speed limits — already
       // accounts for highway vs. village road. Just format it.
       final mins = r.durationMin;
-      if (mins < 1) return '১ মিনিট';
-      if (mins < 60) return '$mins মিনিট';
+      if (mins < 1) return 'map_minute'.tr;
+      if (mins < 60) return 'map_minutes'.trParams({'mins': '$mins'});
       final hrs = mins ~/ 60;
       final rem = mins % 60;
-      return rem == 0 ? '$hrs ঘণ্টা' : '$hrs ঘণ্টা $rem মিনিট';
+      return rem == 0
+          ? 'map_hours'.trParams({'hours': '$hrs'})
+          : 'map_hours_min'.trParams({'hours': '$hrs', 'mins': '$rem'});
     }
     return _travelTime(p.distanceKm);
   }
 
   String _travelTime(double km) {
-    if (km < 0.05) return '১ মিনিট';
+    if (km < 0.05) return 'map_minute'.tr;
     if (km < 2) {
       final mins = (km / 5 * 60).round();
-      return '$mins মিনিট হাঁটা';
+      return 'map_minutes_walk'.trParams({'mins': '$mins'});
     }
     final mins = (km / 30 * 60).round();
-    if (mins < 60) return '$mins মিনিট';
+    if (mins < 60) return 'map_minutes'.trParams({'mins': '$mins'});
     final hrs = mins ~/ 60;
     final rem = mins % 60;
-    return rem == 0 ? '$hrs ঘণ্টা' : '$hrs ঘণ্টা $rem মিনিট';
+    return rem == 0
+        ? 'map_hours'.trParams({'hours': '$hrs'})
+        : 'map_hours_min'.trParams({'hours': '$hrs', 'mins': '$rem'});
   }
 
   Future<void> _openDirections(_Place place) async {
@@ -591,11 +595,11 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.isEmergency ? 'জরুরি রেফার কেন্দ্র' : 'নিকটস্থ রেফার কেন্দ্র',
+                        widget.isEmergency ? 'emergency_referral_center'.tr : 'nearby_referral_center'.tr,
                         style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
                       ),
                       Text(
-                        widget.isEmergency ? 'এখনই রেফার করুন — সময় নষ্ট করবেন না' : 'আপনার অবস্থান থেকে',
+                        widget.isEmergency ? 'refer_now_no_delay'.tr : 'from_your_location'.tr,
                         style: const TextStyle(fontSize: 11, color: Colors.white70),
                       ),
                     ],
@@ -660,9 +664,9 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                               label: _routedTravelTime(_selected!),
                             ),
                             if (_routingInFlight && _routes[_selected!] == null)
-                              const _InfoChip(
+                              _InfoChip(
                                 icon: Icons.route_rounded,
-                                label: 'রাস্তা গণনা…',
+                                label: 'route_calculating'.tr,
                               ),
                             if (_selected!.isGovt)
                               _InfoChip(icon: Icons.verified_rounded, label: 'govt_badge'.tr, iconColor: const Color(0xFF059669)),
@@ -825,7 +829,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                         child: _MapLegend(
                           // always show "You" entry
                           entries: [
-                            _LegendEntry(color: AppColors.primary, icon: Icons.person_rounded, label: 'আপনি'),
+                            _LegendEntry(color: AppColors.primary, icon: Icons.person_rounded, label: 'you_label'.tr),
                             // only show types that actually appear in _places
                             ..._places.map((p) => p.type).toSet().map((type) =>
                               _LegendEntry(
@@ -854,7 +858,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                             const SizedBox(height: 4),
                             _ZoomBtn(
                               icon: Icons.my_location_rounded,
-                              tooltip: 'ফিরে যান',
+                              tooltip: 'recenter_map'.tr,
                               onTap: () {
                                 if (_selected != null) {
                                   _mapController.fitCamera(
@@ -887,13 +891,13 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
               child: Row(
-                children: const [
-                  Icon(Icons.info_outline_rounded, size: 13, color: AppColors.textSecondary),
-                  SizedBox(width: 6),
+                children: [
+                  const Icon(Icons.info_outline_rounded, size: 13, color: AppColors.textSecondary),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      '২০০ কিমির মধ্যে কোনো নিবন্ধিত স্বাস্থ্যকেন্দ্র পাওয়া যায়নি।',
-                      style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      'no_centers_in_range'.tr,
+                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                     ),
                   ),
                 ],

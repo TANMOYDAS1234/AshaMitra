@@ -93,20 +93,20 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
             const SizedBox(height: 16),
             _PhotoOption(
               icon: Icons.photo_library_rounded,
-              label: 'Choose from Gallery',
+              label: 'photo_choose_gallery'.tr,
               color: AppColors.primary,
               onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); },
             ),
             _PhotoOption(
               icon: Icons.camera_alt_rounded,
-              label: 'Take Photo',
+              label: 'photo_take'.tr,
               color: AppColors.sky,
               onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); },
             ),
             if (hasPhoto)
               _PhotoOption(
                 icon: Icons.delete_rounded,
-                label: 'Remove Photo',
+                label: 'photo_remove'.tr,
                 color: AppColors.emergencyRed,
                 onTap: () { Navigator.pop(context); _auth.updateProfileImage(null); },
               ),
@@ -233,7 +233,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
               const SizedBox(height: 20),
               Text('admin_logout'.tr, style: AppTextStyles.h3),
               const SizedBox(height: 8),
-              Text('লগআউট করতে চান?',
+              Text('confirm_logout'.tr,
                   textAlign: TextAlign.center,
                   style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
               const SizedBox(height: 24),
@@ -291,7 +291,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Settings', style: AppTextStyles.h2),
+              Text('admin_settings'.tr, style: AppTextStyles.h2),
               const SizedBox(height: 20),
 
               // ── Avatar card ──────────────────────────────────────
@@ -343,7 +343,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(u?.name ?? 'Admin', style: AppTextStyles.h3),
+                            Text(u?.name ?? 'role_admin'.tr, style: AppTextStyles.h3),
                             const SizedBox(height: 4),
                             Text(u?.phone ?? '', style: AppTextStyles.bodySm),
                             const SizedBox(height: 6),
@@ -354,7 +354,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                                   color: AppColors.primary
                                       .withValues(alpha: 0.08),
                                   borderRadius: AppRadius.smR),
-                              child: Text('Admin',
+                              child: Text('role_admin'.tr,
                                   style: AppTextStyles.overline.copyWith(color: AppColors.primary)),
                             ),
                           ],
@@ -373,7 +373,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Edit Profile', style: AppTextStyles.label),
+                      Text('edit_profile'.tr, style: AppTextStyles.label),
                       const SizedBox(height: 16),
                       _Field(ctrl: _name, label: 'admin_full_name'.tr,
                           icon: Icons.person_rounded,
@@ -455,7 +455,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                         const Icon(Icons.logout_rounded,
                             color: AppColors.emergencyRed, size: 20),
                         const SizedBox(width: 8),
-                        Text('Logout',
+                        Text('logout'.tr,
                             style: AppTextStyles.labelLg.copyWith(color: AppColors.emergencyRed)),
                       ],
                     ),

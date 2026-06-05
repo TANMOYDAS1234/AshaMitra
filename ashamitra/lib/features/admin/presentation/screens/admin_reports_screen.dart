@@ -183,7 +183,7 @@ class AdminReportsScreen extends StatelessWidget {
       final bytes = await doc.save();
       await PdfHelper.saveAndOpen(bytes, 'admin_reports_${DateTime.now().millisecondsSinceEpoch}.pdf');
     } catch (e) {
-      Get.snackbar('Error', 'Could not generate PDF: $e', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('error'.tr, 'admin_pdf_failed_msg'.trParams({'error': '$e'}), snackPosition: SnackPosition.BOTTOM);
     }
   }
 
