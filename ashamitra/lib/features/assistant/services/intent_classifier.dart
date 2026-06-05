@@ -106,20 +106,19 @@ class RuleBasedIntentClassifier {
       intent: AssistantIntent.callAmbulance,
       keywordGroups: [
         [
-          // noun group — what to call
+          // Explicit ambulance words ONLY. Numerals (102 / 108) are
+          // deliberately NOT triggers — they collide with spoken
+          // temperatures ("102 জ্বর"), BP and counts, and were causing the
+          // assistant to dial an ambulance on ordinary fever questions.
+          // The old call-verb group (কল / ডাক / ফোন) was also removed: the
+          // 2-char verbs matched inside unrelated words (থাকলে → কল), and
+          // the explicit ambulance word is unambiguous on its own.
           'অ্যাম্বুলেন্স', 'এম্বুলেন্স', 'এম্বুলান্স',
           'एम्बुलेंस', 'एंबुलेंस', 'ऐम्बुलेंस',
           'ambulance',
-          '102', '১০২', '१०२', '108', '১০৮', '१०८',
-        ],
-        [
-          // verb group — what to do
-          'কল', 'ডাক', 'বুলাও', 'ফোন',
-          'कॉल', 'बुला', 'फ़ोन', 'फोन',
-          'call', 'dial', 'phone',
         ],
       ],
-      minGroupsMatched: 1, // ambulance alone is unambiguous enough
+      minGroupsMatched: 1,
     ),
     _IntentRule(
       intent: AssistantIntent.findNearestPHC,
@@ -299,6 +298,21 @@ class RuleBasedIntentClassifier {
     return s.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
+  /// True when [keyword] matches the input.
+  /// - Multi-word keywords (containing a space) match as a substring of
+  ///   [normalized] — e.g. "blood pressure", "স্বাস্থ্য কেন্দ্র".
+  /// - Single tokens match a whole token OR a token *prefix*, so inflected
+  ///   forms still hit ("ডাকো" → "ডাক", "রোগীদের" → "রোগী") while unrelated
+  ///   words that merely *contain* the keyword do NOT ("থাকলে" does not
+  ///   start with "কল"). This is what kills the old substring false-positives.
+  static bool _keywordHit(String keyword, String normalized, Set<String> tokens) {
+    if (keyword.contains(' ')) return normalized.contains(keyword);
+    for (final t in tokens) {
+      if (t == keyword || t.startsWith(keyword)) return true;
+    }
+    return false;
+  }
+
   /// Run rule matching. Returns [ClassifiedIntent.unknown] if no
   /// intent satisfies its [minGroupsMatched] threshold.
   // ignore: unused_element
@@ -307,6 +321,14 @@ class RuleBasedIntentClassifier {
     final normalized = _normalize(input);
     final stemmed = _stem(normalized);
     if (stemmed.isEmpty) return ClassifiedIntent.unknown;
+
+    // Token set from both the normalized and stemmed forms. Matching is
+    // token-aware (whole-token or token-prefix) rather than raw substring,
+    // so a 2-char keyword like "কল" no longer matches inside "থাকলে".
+    final tokens = <String>{
+      ...normalized.split(' '),
+      ...stemmed.split(' '),
+    }..removeWhere((t) => t.isEmpty);
 
     AssistantIntent bestIntent = AssistantIntent.unknown;
     double bestScore = 0.0;
@@ -319,7 +341,7 @@ class RuleBasedIntentClassifier {
         for (final synonym in group) {
           final lowered = synonym.toLowerCase();
           if (lowered.length < 2) continue;
-          if (stemmed.contains(lowered) || normalized.contains(lowered)) {
+          if (_keywordHit(lowered, normalized, tokens)) {
             matchedGroups++;
             if (synonym.length > longestHit.length) longestHit = synonym;
             break; // one hit per group is enough

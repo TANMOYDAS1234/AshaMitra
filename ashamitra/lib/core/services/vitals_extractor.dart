@@ -33,6 +33,7 @@ class VitalsExtractor {
     _extractSpO2(text, vitals);
     _extractWeight(text, vitals);
     _extractRespiratoryRate(text, vitals);
+    _extractHaemoglobin(text, vitals);
 
     return vitals;
   }
@@ -215,6 +216,29 @@ class VitalsExtractor {
     }
   }
 
+  // ── Haemoglobin ───────────────────────────────────────────────────────────
+  // Patterns: "Hb 7", "হিমোগ্লোবিন ৭", "hemoglobin 6.5", "এইচবি ৮", "hb 9 gram"
+  // Key matches the rule engine + severity scorer ('haemoglobin') so a spoken
+  // Hb value drives the anaemia rules (ANC/PNC severe < 7 = RED, 7–10 = YELLOW).
+  static void _extractHaemoglobin(String text, Map<String, double> vitals) {
+    final hbKeywords = [
+      'haemoglobin', 'hemoglobin', 'হিমোগ্লোবিন', 'এইচবি', 'hb',
+    ];
+    for (final kw in hbKeywords) {
+      if (!text.contains(kw)) continue;
+      final pattern = RegExp('$kw\\D{0,10}(\\d{1,2}(?:\\.\\d)?)');
+      final m = pattern.firstMatch(text);
+      if (m != null) {
+        final val = double.tryParse(m.group(1)!);
+        // Plausible Hb range g/dL — guards against picking up an age / dose.
+        if (val != null && val >= 2 && val <= 20) {
+          vitals['haemoglobin'] = val;
+          return;
+        }
+      }
+    }
+  }
+
   /// Returns a human-readable Bengali summary of extracted vitals
   /// for display in the chat bubble and for Gemini context.
   static String summarise(Map<String, double> vitals) {
@@ -240,6 +264,9 @@ class VitalsExtractor {
     if (vitals.containsKey('respiratory_rate')) {
       parts.add('শ্বাসের হার: ${vitals['respiratory_rate']!.toInt()}/মিনিট');
     }
+    if (vitals.containsKey('haemoglobin')) {
+      parts.add('Hb: ${vitals['haemoglobin']} g/dL');
+    }
     return parts.join(', ');
   }
 
@@ -259,15 +286,17 @@ class VitalsExtractor {
       alerts.add('BP $sys — উচ্চ রক্তচাপ। ২৪ ঘণ্টার মধ্যে PHC-তে নিয়ে যান।');
     }
 
-    // Temperature
+    // Temperature (≥ thresholds match the rule engine boundaries)
     final temp = vitals['temperature_c'];
     if (temp != null) {
-      if (moduleId == 'newborn' && temp > 37.5) {
-        alerts.add('জ্বর ${temp}°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।');
-      } else if (moduleId == 'delivery_pnc' && temp > 38.0) {
-        alerts.add('জ্বর ${temp}°C — পিউরপেরাল সেপসিসের ঝুঁকি! FRU-তে রেফার করুন।');
-      } else if (temp > 38.5) {
-        alerts.add('জ্বর ${temp}°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।');
+      if (moduleId == 'newborn' && temp >= 37.5) {
+        alerts.add('জ্বর $temp°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।');
+      } else if (moduleId == 'delivery_pnc' && temp >= 38.0) {
+        alerts.add('জ্বর $temp°C — পিউরপেরাল সেপসিসের ঝুঁকি! FRU-তে রেফার করুন।');
+      } else if (temp >= 40.0) {
+        alerts.add('জ্বর $temp°C — হাইপারপায়রেক্সিয়া! FRU-তে রেফার করুন, ম্যালেরিয়া পরীক্ষা করুন।');
+      } else if (temp >= 38.5) {
+        alerts.add('জ্বর $temp°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।');
       }
     }
 
@@ -289,20 +318,37 @@ class VitalsExtractor {
       alerts.add('SpO2 ${spo2.toInt()}% — কম অক্সিজেন। FRU-তে রেফার করুন।');
     }
 
-    // Respiratory rate
+    // Respiratory rate (newborn ≥60, older infant/child ≥40 = fast breathing
+    // per IMNCI — the non-newborn branch was previously >50 and silently
+    // missed fast breathing in the 1–5 yr group).
     final rr = vitals['respiratory_rate'];
     if (rr != null) {
-      if (moduleId == 'newborn' && rr > 60) {
+      if (moduleId == 'newborn' && rr >= 60) {
         alerts.add('শ্বাসের হার ${rr.toInt()}/মিনিট — নবজাতকের জন্য বিপদচিহ্ন! SNCU-তে রেফার করুন।');
-      } else if (rr > 50) {
-        alerts.add('শ্বাসের হার ${rr.toInt()}/মিনিট — দ্রুত শ্বাস। PHC-তে নিয়ে যান।');
+      } else if (moduleId != 'newborn' && rr >= 40) {
+        alerts.add('শ্বাসের হার ${rr.toInt()}/মিনিট — দ্রুত শ্বাস (সম্ভাব্য নিউমোনিয়া)। PHC-তে নিয়ে যান।');
       }
     }
 
-    // Weight (newborn LBW)
+    // Weight (newborn): <1.8 kg = RED (VLBW/HBNC threshold), 1.8–2.5 = YELLOW
+    // (LBW) — matches the engine's newborn weight rules.
     final weight = vitals['weight_kg'];
-    if (weight != null && moduleId == 'newborn' && weight < 1.5) {
-      alerts.add('ওজন $weight kg — LBW (কম ওজন)। SNCU-তে রেফার করুন।');
+    if (weight != null && moduleId == 'newborn') {
+      if (weight < 1.8) {
+        alerts.add('ওজন $weight kg — খুব কম ওজন (VLBW)। কাঙ্গারু মাদার কেয়ার শুরু করুন, এখনই SNCU-তে রেফার করুন।');
+      } else if (weight <= 2.5) {
+        alerts.add('ওজন $weight kg — কম ওজন (LBW)। কাঙ্গারু কেয়ার, প্রতি ২ ঘণ্টায় বুকের দুধ।');
+      }
+    }
+
+    // Haemoglobin (anaemia — esp. pregnancy / postpartum)
+    final hb = vitals['haemoglobin'];
+    if (hb != null) {
+      if (hb < 7) {
+        alerts.add('Hb $hb g/dL — গুরুতর রক্তাল্পতা! FRU-তে রেফার করুন (রক্ত সঞ্চালন লাগতে পারে)।');
+      } else if (hb < 10) {
+        alerts.add('Hb $hb g/dL — মাঝারি রক্তাল্পতা। IFA বাড়ান, PHC-তে Hb পরীক্ষা করান।');
+      }
     }
 
     return alerts.isEmpty ? null : alerts.join(' ');

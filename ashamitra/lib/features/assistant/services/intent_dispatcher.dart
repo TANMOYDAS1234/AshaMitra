@@ -61,7 +61,10 @@ class IntentDispatcher {
     HapticFeedback.lightImpact();
     switch (intent.intent) {
       case AssistantIntent.callAmbulance:
-        return _callNumber('102');
+        // 108 = all-purpose emergency medical ambulance (matches the clinical
+        // engine's RED-band action and the vitals danger alerts, which all
+        // say "Call 108"). Single source of truth for the emergency number.
+        return _callNumber('108');
 
       case AssistantIntent.findNearestPHC:
         // No standalone "nearest PHC" screen yet — emergency screen
@@ -187,7 +190,7 @@ class IntentDispatcher {
   /// dialer on every device. We open the dialer rather than placing the
   /// call directly so the worker has one final chance to confirm —
   /// important when the assistant might have misheard a non-emergency
-  /// utterance as "call 102".
+  /// utterance as "call 108".
   Future<DispatchResult> _callNumber(String number) async {
     final uri = Uri(scheme: 'tel', path: number);
     bool launched = false;
