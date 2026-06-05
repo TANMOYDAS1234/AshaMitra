@@ -240,11 +240,35 @@ class AssistantChatService {
       } catch (_) { /* malformed JSON — fall through */ }
     }
 
-    // No usable JSON — strip any trailing {...} from the prose so the
+    // Balanced-JSON parse failed — most often because the model TRUNCATED the
+    // JSON (e.g. `{"spoken_text":"…",` with no closing brace). Pull the
+    // spoken_text field directly by regex so the worker sees a clean reply
+    // instead of raw JSON. The value pattern allows escaped quotes.
+    final fieldMatch = RegExp(r'"spoken_text"\s*:\s*"((?:\\.|[^"\\])*)"')
+        .firstMatch(raw);
+    if (fieldMatch != null) {
+      final spoken = fieldMatch
+          .group(1)!
+          .replaceAll(r'\"', '"')
+          .replaceAll(r'\n', ' ')
+          .replaceAll(r'\\', r'\')
+          .trim();
+      if (spoken.isNotEmpty) {
+        return AssistantResponse(
+          text: spoken,
+          detectedLanguage: _heuristicLang(spoken, appLanguage),
+          isClinical: false,
+          shouldOfferSave: false,
+          prefetchedAudio: audioBytes,
+        );
+      }
+    }
+
+    // No usable JSON or field — strip any trailing {...} from the prose so the
     // chat bubble never shows raw structured fields. If the whole reply
     // was prose, this is a no-op.
     final plainText = raw.replaceAll(
-      RegExp(r'\s*\{[\s\S]*\}\s*$', multiLine: true), '',
+      RegExp(r'\s*\{[\s\S]*\}?\s*$', multiLine: true), '',
     ).trim();
     return AssistantResponse(
       text: plainText.isEmpty ? _genericReply(appLanguage) : plainText,
