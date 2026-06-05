@@ -29,7 +29,10 @@ class App extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       translations: AppTranslations(),
       locale: LanguageController.locales[lang.selectedIndex.value],
-      fallbackLocale: const Locale('en', 'US'),
+      // Bengali is the primary language + the fallback: any key missing a
+      // Hindi/English translation shows Bengali rather than going blank or
+      // English. Keeps the worker experience safe while hi/en fill in.
+      fallbackLocale: const Locale('bn', 'BD'),
       theme: _buildTheme(),
       initialBinding: AppBinding(),
       initialRoute: AppRoutes.splash,

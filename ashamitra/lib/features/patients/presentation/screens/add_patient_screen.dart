@@ -148,6 +148,21 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     });
   }
 
+  // Localized display labels for the English-valued gender / case options.
+  // The stored value stays English (the patient model + reports rely on it);
+  // only what the worker reads is translated.
+  String _genderLabel(String g) => switch (g) {
+        'Female' => 'gender_female'.tr,
+        'Male' => 'gender_male'.tr,
+        _ => 'gender_other'.tr,
+      };
+  String _caseLabel(String c) => switch (c) {
+        'Pregnancy' => 'case_pregnancy'.tr,
+        'Newborn' => 'case_newborn'.tr,
+        'Child' => 'case_child'.tr,
+        _ => 'case_other'.tr,
+      };
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -190,15 +205,17 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Gender', style: AppTextStyles.label),
+                                  Text('gender'.tr, style: AppTextStyles.label),
                                   const SizedBox(height: 6),
                                   DropdownButtonFormField<String>(
                                     initialValue: _gender,
                                     onChanged: (v) => setState(() => _gender = v!),
                                     style: AppTextStyles.body,
                                     decoration: const InputDecoration(),
+                                    // Value stays English (stored in the model);
+                                    // only the shown label is localized.
                                     items: ['Female', 'Male', 'Other']
-                                        .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                                        .map((g) => DropdownMenuItem(value: g, child: Text(_genderLabel(g))))
                                         .toList(),
                                   ),
                                 ],
@@ -227,7 +244,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Case Type', style: AppTextStyles.label),
+                            Text('case_type'.tr, style: AppTextStyles.label),
                             const SizedBox(height: 10),
                             Wrap(
                               spacing: 10,
@@ -251,7 +268,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                                             : AppShadows.low,
                                       ),
                                       child: Text(
-                                        c,
+                                        _caseLabel(c),
                                         style: AppTextStyles.label.copyWith(
                                           color: sel ? AppColors.onPrimary : AppColors.textSecondary,
                                         ),

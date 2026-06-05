@@ -430,7 +430,7 @@ class _AssessmentCard extends StatelessWidget {
                     children: [
                       Icon(Icons.arrow_forward_rounded, size: 13, color: border),
                       const SizedBox(width: 5),
-                      Text('NEXT STEP',
+                      Text('next_step'.tr,
                           style: TextStyle(fontSize: 11,
                               fontWeight: FontWeight.w800,
                               color: border, letterSpacing: 0.5)),
@@ -499,8 +499,8 @@ class _QaCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('ASSESSMENT Q&A',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
+            Text('assessment_qa'.tr,
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
                     color: AppColors.primary, letterSpacing: 0.5)),
             const SizedBox(height: 12),
             for (var i = 0; i < qaHistory.length; i++) ...[
@@ -539,15 +539,14 @@ class _EmptyAssessment extends StatelessWidget {
             Icon(Icons.assignment_outlined, size: 40,
                 color: AppColors.primary.withValues(alpha: 0.4)),
             const SizedBox(height: 12),
-            const Text('No assessment recorded yet',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+            Text('no_assessment_yet'.tr,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
                     color: AppColors.onBackground)),
             const SizedBox(height: 4),
-            const Text(
-                'Start a voice checkup to record the first triage assessment '
-                'for this patient.',
+            Text(
+                'no_assessment_hint'.tr,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary,
+                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary,
                     height: 1.5)),
           ],
         ),
@@ -581,7 +580,7 @@ class _ReportHistory extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('REPORT HISTORY (${reports.length})',
+            Text('report_history'.trParams({'count': '${reports.length}'}),
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700,
                     color: AppColors.primary, letterSpacing: 0.5)),
             const SizedBox(height: 12),

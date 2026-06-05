@@ -21,7 +21,7 @@ class EmergencyScreen extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      Get.snackbar('Error', 'Cannot open dialer', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('error'.tr, 'cannot_open_dialer'.tr, snackPosition: SnackPosition.BOTTOM);
     }
   }
 
@@ -30,7 +30,7 @@ class EmergencyScreen extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      Get.snackbar('Error', 'Cannot open maps', snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('error'.tr, 'cannot_open_maps'.tr, snackPosition: SnackPosition.BOTTOM);
     }
   }
 

@@ -2,6 +2,24 @@ import 'package:get/get.dart';
 
 class AppTranslations extends Translations {
   static const _en = {
+    // ── De-hardcode batch 1 (add_patient / patient_profile / emergency) ──
+    "gender_female": "Female",
+    "gender_male": "Male",
+    "gender_other": "Other",
+    "case_type": "Case Type",
+    "case_pregnancy": "Pregnancy",
+    "case_newborn": "Newborn",
+    "case_child": "Child",
+    "case_other": "Other",
+    "next_step": "NEXT STEP",
+    "assessment_qa": "ASSESSMENT Q&A",
+    "no_assessment_yet": "No assessment recorded yet",
+    "no_assessment_hint":
+        "Start a voice checkup to record the first triage assessment for this patient.",
+    "report_history": "REPORT HISTORY (@count)",
+    "error": "Error",
+    "cannot_open_dialer": "Cannot open dialer",
+    "cannot_open_maps": "Cannot open maps",
     "app_name": "Ashamitra",
     "continue": "Continue",
     "login": "Login",
@@ -435,6 +453,24 @@ class AppTranslations extends Translations {
   };
 
   static const _bn = {
+    // ── De-hardcode batch 1 (add_patient / patient_profile / emergency) ──
+    "gender_female": "মহিলা",
+    "gender_male": "পুরুষ",
+    "gender_other": "অন্যান্য",
+    "case_type": "কেসের ধরন",
+    "case_pregnancy": "গর্ভাবস্থা",
+    "case_newborn": "নবজাতক",
+    "case_child": "শিশু",
+    "case_other": "অন্যান্য",
+    "next_step": "পরবর্তী পদক্ষেপ",
+    "assessment_qa": "মূল্যায়ন প্রশ্নোত্তর",
+    "no_assessment_yet": "এখনও কোনো মূল্যায়ন রেকর্ড করা হয়নি",
+    "no_assessment_hint":
+        "এই রোগীর প্রথম ট্রায়াজ মূল্যায়ন রেকর্ড করতে একটি ভয়েস চেকআপ শুরু করুন।",
+    "report_history": "রিপোর্ট ইতিহাস (@count)",
+    "error": "ত্রুটি",
+    "cannot_open_dialer": "ডায়ালার খোলা গেল না",
+    "cannot_open_maps": "ম্যাপ খোলা গেল না",
     "app_name": "আশামিত্র",
     "continue": "চালিয়ে যান",
     "login": "লগইন",
@@ -864,6 +900,24 @@ class AppTranslations extends Translations {
   };
 
   static const _hi = {
+    // ── De-hardcode batch 1 (add_patient / patient_profile / emergency) ──
+    "gender_female": "महिला",
+    "gender_male": "पुरुष",
+    "gender_other": "अन्य",
+    "case_type": "केस प्रकार",
+    "case_pregnancy": "गर्भावस्था",
+    "case_newborn": "नवजात",
+    "case_child": "बच्चा",
+    "case_other": "अन्य",
+    "next_step": "अगला कदम",
+    "assessment_qa": "आकलन प्रश्नोत्तर",
+    "no_assessment_yet": "अभी तक कोई आकलन दर्ज नहीं",
+    "no_assessment_hint":
+        "इस मरीज़ का पहला ट्रायाज आकलन दर्ज करने के लिए वॉइस चेकअप शुरू करें।",
+    "report_history": "रिपोर्ट इतिहास (@count)",
+    "error": "त्रुटि",
+    "cannot_open_dialer": "डायलर नहीं खुल सका",
+    "cannot_open_maps": "मैप नहीं खुल सका",
     "app_name": "आशामित्र",
     "continue": "जारी रखें",
     "login": "लॉगिन",
