@@ -455,28 +455,32 @@ extracted_answers শুধু সেই প্রশ্নগুলো যা �
         .replaceAll('```', '')
         .trim();
 
-    // Fire partial callback with the spoken text only — not raw JSON.
-    if (onPartialResponse != null && raw.isNotEmpty) {
-      try {
-        final preview = (jsonDecode(raw) as Map<String, dynamic>)['spoken_response'] as String?;
-        if (preview != null && preview.isNotEmpty) onPartialResponse(preview);
-      } catch (_) {
-        // JSON not yet complete — show a neutral waiting indicator
+    // Recover the human-facing line FIRST — robustly, so a reply that was
+    // clipped mid-JSON still yields clean text instead of leaking the literal
+    // `"spoken_response": {...` to the screen or TTS. (Rare now that the
+    // server disables model "thinking", but cheap insurance.)
+    final spokenFromText = _extractSpokenResponse(raw);
+
+    // Fire partial callback with the spoken text only — never raw JSON.
+    if (onPartialResponse != null) {
+      if (spokenFromText != null && spokenFromText.isNotEmpty) {
+        onPartialResponse(spokenFromText);
+      } else if (raw.isNotEmpty) {
         onPartialResponse('বিশ্লেষণ করছি...');
       }
     }
     // Safe JSON parse — Gemini occasionally returns markdown leaks or
     // truncated output. Rather than crashing to offline, return a minimal
-    // valid response so the conversation can continue.
+    // valid response (carrying the text we already recovered) so the
+    // conversation continues without ever speaking raw JSON.
     Map<String, dynamic> json;
     try {
       json = jsonDecode(raw) as Map<String, dynamic>;
     } catch (_) {
-      final spokenFallback = raw.isNotEmpty && !raw.startsWith('{')
-          ? raw.split('{').first.trim()
-          : 'বুঝেছি। একটু অপেক্ষা করুন।';
       return ConversationResponse(
-        spokenResponse: spokenFallback,
+        spokenResponse: (spokenFromText != null && spokenFromText.isNotEmpty)
+            ? spokenFromText
+            : 'বুঝেছি, একটু অপেক্ষা করুন।',
         extractedAnswers: const {},
         extractedVitals: spokenVitals,
         shouldFinish: false,
@@ -491,7 +495,10 @@ extracted_answers শুধু সেই প্রশ্নগুলো যা �
       if (e.value is bool) extracted[e.key] = e.value as bool;
     }
 
-    String spokenResponse = json['spoken_response'] as String? ?? newInput;
+    final jsonSpoken = (json['spoken_response'] as String?)?.trim();
+    String spokenResponse = (jsonSpoken != null && jsonSpoken.isNotEmpty)
+        ? jsonSpoken
+        : (spokenFromText ?? newInput);
     if (spokenVitals.isNotEmpty) {
       final alert = VitalsExtractor.getDangerAlert(spokenVitals, moduleId);
       if (alert != null) spokenResponse = '$alert $spokenResponse';
@@ -506,6 +513,73 @@ extracted_answers শুধু সেই প্রশ্নগুলো যা �
       prefetchedAudio: prefetchedAudio,
       cancelSession: json['cancel_session'] == true,
     );
+  }
+
+  /// Pulls the human-facing "spoken_response" line out of the model's JSON
+  /// output. Tries a strict parse of a balanced object first, then an
+  /// open-ended regex that tolerates a value clipped mid-string (no closing
+  /// quote) — so a truncated reply still yields clean text instead of leaking
+  /// the literal `"spoken_response": {...` to the screen or TTS. Returns null
+  /// when nothing usable is found.
+  static String? _extractSpokenResponse(String raw) {
+    if (raw.isEmpty) return null;
+    // 1) Strict: first balanced {...} object.
+    final obj = _extractJsonObject(raw);
+    if (obj != null) {
+      try {
+        final v = (jsonDecode(obj) as Map<String, dynamic>)['spoken_response'];
+        if (v is String && v.trim().isNotEmpty) return v.trim();
+      } catch (_) { /* fall through to regex */ }
+    }
+    // 2) Open-ended: capture the value even if the closing quote is missing.
+    final m =
+        RegExp(r'"spoken_response"\s*:\s*"((?:\\.|[^"\\])*)').firstMatch(raw);
+    if (m != null) {
+      final unescaped = (m.group(1) ?? '')
+          .replaceAll(r'\"', '"')
+          .replaceAll(r'\n', ' ')
+          .replaceAll(r'\\', r'\')
+          .trim();
+      if (unescaped.isNotEmpty) return unescaped;
+    }
+    // 3) Last resort: prose before any brace (model ignored the JSON contract).
+    if (!raw.trimLeft().startsWith('{')) {
+      final prose = raw.split('{').first.trim();
+      if (prose.isNotEmpty) return prose;
+    }
+    return null;
+  }
+
+  /// Returns the first balanced {...} object substring, or null. Tolerates
+  /// braces and quotes that appear inside string values.
+  static String? _extractJsonObject(String s) {
+    final start = s.indexOf('{');
+    if (start < 0) return null;
+    int depth = 0;
+    bool inStr = false;
+    bool esc = false;
+    for (int i = start; i < s.length; i++) {
+      final c = s[i];
+      if (inStr) {
+        if (esc) {
+          esc = false;
+        } else if (c == r'\') {
+          esc = true;
+        } else if (c == '"') {
+          inStr = false;
+        }
+        continue;
+      }
+      if (c == '"') {
+        inStr = true;
+      } else if (c == '{') {
+        depth++;
+      } else if (c == '}') {
+        depth--;
+        if (depth == 0) return s.substring(start, i + 1);
+      }
+    }
+    return null;
   }
 
 }
