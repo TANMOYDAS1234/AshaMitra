@@ -1175,10 +1175,21 @@ class _AssistantScreenState extends State<AssistantScreen> {
         },
       );
     } else {
-      // Device STT: stop() finalises → onStatus(done) → _onListenComplete().
+      // Device STT: drive the result DIRECTLY instead of relying solely on the
+      // recognizer's onStatus(done) callback — on some Android builds that
+      // event doesn't fire after stop(), which left the orb stuck on
+      // "ভাবছি…" forever (the captured answer was never processed). Set
+      // _isListening=false FIRST so the onStatus handler (guarded on
+      // _isListening) can't ALSO complete the turn (no double-processing),
+      // then finalize and complete here. A short settle lets the final
+      // partial land into _liveTranscript before we read it.
+      if (mounted) setState(() => _isListening = false);
       try {
         await _stt.stop();
       } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 350));
+      if (!mounted) return;
+      _onListenComplete();
     }
   }
 
