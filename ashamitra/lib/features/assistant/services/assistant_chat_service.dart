@@ -18,6 +18,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint (temp diagnostics)
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/api_constants.dart';
@@ -214,6 +215,21 @@ class AssistantChatService {
       } catch (_) { /* fall back to /tts */ }
     }
 
+    // ── TEMP diagnostics ──────────────────────────────────────────────────
+    // Prints what the LLM actually returned, what the backend extracted to
+    // SPEAK (spokenText), and the audio size — so we can pin the exact cause
+    // of "speaks/shows raw JSON". Remove once verified. Grep logcat: ASHA_DBG
+    if (kDebugMode) {
+      String snip(Object? v) {
+        final s = (v ?? '(none)').toString().replaceAll('\n', ' ');
+        return s.length > 260 ? '${s.substring(0, 260)}…' : s;
+      }
+      debugPrint('[ASHA_DBG] provider=${body['provider']} cached=${body['cached']} '
+          'audioKB=${(audioBytes?.length ?? 0) ~/ 1024}');
+      debugPrint('[ASHA_DBG] spokenText(backend, what is SPOKEN)="${snip(body['spokenText'])}"');
+      debugPrint('[ASHA_DBG] raw(LLM text)="${snip(raw)}"');
+    }
+
     // Robust JSON extraction. The LLM sometimes returns prose + a JSON
     // block (especially Groq for short conversational prompts), e.g.
     //   "Sure, here's how:\n{\"spoken_text\":\"...\",...}"
@@ -244,7 +260,9 @@ class AssistantChatService {
     // JSON (e.g. `{"spoken_text":"…",` with no closing brace). Pull the
     // spoken_text field directly by regex so the worker sees a clean reply
     // instead of raw JSON. The value pattern allows escaped quotes.
-    final fieldMatch = RegExp(r'"spoken_text"\s*:\s*"((?:\\.|[^"\\])*)"')
+    // No trailing quote in the pattern → also catches a reply cut off
+    // MID-value (model truncated before closing the string).
+    final fieldMatch = RegExp(r'"spoken_text"\s*:\s*"((?:\\.|[^"\\])*)')
         .firstMatch(raw);
     if (fieldMatch != null) {
       final spoken = fieldMatch
