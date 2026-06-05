@@ -11,7 +11,6 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/voice_orb.dart';
-import '../../../../shared/widgets/mic_button.dart';
 import '../../../../core/services/gemini_conversation_service.dart';
 import '../../../../core/services/rule_executor.dart';
 import '../../../../core/services/offline_brain.dart';
@@ -74,7 +73,16 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   // response completes — worker never has to tap mic between turns.
   // Toggled off when the user explicitly stops the mic (long press or
   // when the screen is disposed).
-  bool _autoListen = true;
+  //
+  // Default false now: triage uses HOLD-TO-TALK (same as the assistant) —
+  // the worker presses the orb to talk and releases to send, so the mic is
+  // never auto-opened. This kills the always-listening churn / TTS-bleed and
+  // matches the assistant UX. (The auto-restart code paths below stay but are
+  // gated on _autoListen, so they no-op.)
+  bool _autoListen = false;
+  // When the current hold (press) began — used to ignore an accidental
+  // sub-300ms tap so a stray touch never fires an empty turn.
+  DateTime? _holdStartedAt;
   // Index for round-robin selection of ack fillers so the same short
   // phrase doesn't play three times in a row.
   int _ackFillerIndex = 0;
@@ -332,6 +340,92 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
         listenOptions: opts,
         onResult: _onSpeechResult,
       );
+    }
+  }
+
+  // ── Hold-to-talk (same UX as the assistant) ───────────────────
+  // Press the orb → mic on; release → send. The worker owns the mic, so it
+  // never auto-opens/closes between turns. Pressing also barges in (stops any
+  // TTS). The online/offline hybrid is unchanged — _processInput still routes
+  // to Gemini when online and the offline brain when not.
+  Future<void> _onHoldStart() async {
+    if (_isListening || _isProcessing || !_sttAvailable) return;
+    _autoListen = false;
+    await _tts.stop(); // barge-in
+    // Release any lingering session before re-opening (Infinix HiOS).
+    try { await _stt.cancel(); } catch (_) {}
+    try { await _sttFallback.cancel(); } catch (_) {}
+    await Future.delayed(const Duration(milliseconds: 250));
+    final online = await _hasInternet();
+    _isOffline = !online;
+    _holdStartedAt = DateTime.now();
+    if (!mounted) return;
+    setState(() {
+      _isListening = true;
+      _transcript = '';
+      _orbState = OrbState.listening;
+      _statusText = _isOffline ? '🔴 অফলাইন — ধরে রেখে বলুন' : '🟢 ধরে রেখে বলুন';
+    });
+    final opts = SpeechListenOptions(
+      listenMode: ListenMode.dictation,
+      onDevice: _isOffline,
+      partialResults: true,
+      cancelOnError: false,
+    );
+    // Long windows: the worker's RELEASE ends the turn, so silence must not
+    // auto-commit (a pause to recall a number must not cut them off).
+    await _stt.listen(
+      localeId: 'bn_IN',
+      listenFor: const Duration(seconds: 120),
+      pauseFor: const Duration(seconds: 120),
+      listenOptions: opts,
+      onResult: _onSpeechResult,
+      onSoundLevelChange: (level) {
+        if (mounted && _isListening) {
+          final n = ((level + 2) / 12).clamp(0.0, 1.0);
+          if (n > 0.15) setState(() => _orbState = OrbState.listening);
+        }
+      },
+    );
+    if (!_isOffline) {
+      _sttFallback.listen(
+        localeId: 'hi_IN',
+        listenFor: const Duration(seconds: 120),
+        pauseFor: const Duration(seconds: 120),
+        listenOptions: opts,
+        onResult: _onSpeechResult,
+      );
+    }
+  }
+
+  Future<void> _onHoldEnd() async {
+    if (!_isListening) return;
+    final heldMs = _holdStartedAt == null
+        ? 0
+        : DateTime.now().difference(_holdStartedAt!).inMilliseconds;
+    _holdStartedAt = null;
+    // Ignore an accidental quick tap — never fire an empty turn.
+    if (heldMs < 300) {
+      try { await _stt.cancel(); } catch (_) {}
+      try { await _sttFallback.cancel(); } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+          _transcript = '';
+          _orbState = OrbState.idle;
+        });
+      }
+      return;
+    }
+    if (mounted) setState(() { _isListening = false; _orbState = OrbState.processing; });
+    // stop() finalises → onStatus(done) / final onResult → _processInput
+    // (guarded against double-calls). We also nudge it directly in case the
+    // recognizer doesn't deliver a final event on this device.
+    await _stt.stop();
+    await _sttFallback.stop();
+    if (_transcript.isNotEmpty) {
+      _playAckFiller();
+      _processInput(_transcript);
     }
   }
 
@@ -1040,7 +1134,15 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   children: [
-                    VoiceOrb(size: orbSize, state: _orbState),
+                    // Hold-to-talk: press the orb to listen, release to send
+                    // (same gesture as the assistant). Listener captures the
+                    // raw press/release regardless of hold duration.
+                    Listener(
+                      onPointerDown: (_) => _onHoldStart(),
+                      onPointerUp: (_) => _onHoldEnd(),
+                      onPointerCancel: (_) => _onHoldEnd(),
+                      child: VoiceOrb(size: orbSize, state: _orbState),
+                    ),
                     const SizedBox(height: 8),
                     if (_transcript.isNotEmpty)
                       Container(
@@ -1069,18 +1171,14 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                 child: Column(
                   children: [
-                    MicButton(
-                      isListening: _isListening,
-                      onToggleOn: _toggleListening,
-                      onToggleOff: _toggleListening,
-                    ),
-                    const SizedBox(height: 8),
+                    // Mic control is the orb itself now (hold-to-talk), so the
+                    // separate toggle button is gone — just the status line.
                     Text(
                       _isProcessing
                           ? _statusText
                           : _isListening
-                              ? 'শুনছি — থামাতে আবার চাপুন'
-                              : _statusText,
+                              ? 'শুনছি — ছেড়ে দিলে পাঠাবে'
+                              : 'ধরে রেখে বলুন · ছেড়ে দিলে পাঠাবে',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.caption.copyWith(
                         color: _isListening
