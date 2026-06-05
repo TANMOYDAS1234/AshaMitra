@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:get/get.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
@@ -335,35 +336,35 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
           context: context,
           builder: (_) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('লোকেশন প্রয়োজন', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            content: const Text('নিকটস্থ স্বাস্থ্যকেন্দ্র খুঁজে পেতে আপনার বর্তমান অবস্থান দরকার।', style: TextStyle(fontSize: 14)),
+            title: Text('location_needed_title'.tr, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            content: Text('location_needed_msg'.tr, style: const TextStyle(fontSize: 14)),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('বাতিল')),
-              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('অনুমতি দিন', style: TextStyle(fontWeight: FontWeight.w700))),
+              TextButton(onPressed: () => Navigator.pop(context, false), child: Text('cancel'.tr)),
+              TextButton(onPressed: () => Navigator.pop(context, true), child: Text('grant_permission'.tr, style: const TextStyle(fontWeight: FontWeight.w700))),
             ],
           ),
         );
         if (proceed != true) {
-          setState(() { _error = 'লোকেশন অনুমতি দেওয়া হয়নি'; _loading = false; });
+          setState(() { _error = 'location_denied_msg'.tr; _loading = false; });
           return null;
         }
       }
       perm = await Geolocator.requestPermission();
     }
     if (perm == LocationPermission.deniedForever) {
-      setState(() { _error = 'লোকেশন অনুমতি স্থায়ীভাবে বন্ধ।'; _loading = false; });
+      setState(() { _error = 'location_permanently_off_msg'.tr; _loading = false; });
       if (mounted) {
         showDialog(
           context: context,
           builder: (_) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('অনুমতি বন্ধ আছে', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            content: const Text('অ্যাপ সেটিংস থেকে লোকেশন অনুমতি চালু করুন।', style: TextStyle(fontSize: 14)),
+            title: Text('permission_off_title'.tr, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            content: Text('enable_location_msg'.tr, style: const TextStyle(fontSize: 14)),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('বাতিল')),
+              TextButton(onPressed: () => Navigator.pop(context), child: Text('cancel'.tr)),
               TextButton(
                 onPressed: () { Navigator.pop(context); Geolocator.openAppSettings(); },
-                child: const Text('সেটিংস খুলুন', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: Text('open_settings'.tr, style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -372,7 +373,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
       return null;
     }
     if (perm == LocationPermission.denied) {
-      setState(() { _error = 'লোকেশন অনুমতি দেওয়া হয়নি'; _loading = false; });
+      setState(() { _error = 'location_denied_msg'.tr; _loading = false; });
       return null;
     }
     final last = await Geolocator.getLastKnownPosition();
@@ -664,7 +665,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                                 label: 'রাস্তা গণনা…',
                               ),
                             if (_selected!.isGovt)
-                              _InfoChip(icon: Icons.verified_rounded, label: 'সরকারি', iconColor: const Color(0xFF059669)),
+                              _InfoChip(icon: Icons.verified_rounded, label: 'govt_badge'.tr, iconColor: const Color(0xFF059669)),
                           ],
                         ),
                       ],
@@ -680,10 +681,10 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                         borderRadius: BorderRadius.circular(10),
                         boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 6, offset: const Offset(0, 2))],
                       ),
-                      child: const Row(children: [
-                        Icon(Icons.directions_rounded, color: Colors.white, size: 14),
-                        SizedBox(width: 4),
-                        Text('পথ', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+                      child: Row(children: [
+                        const Icon(Icons.directions_rounded, color: Colors.white, size: 14),
+                        const SizedBox(width: 4),
+                        Text('directions_label'.tr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
                       ]),
                     ),
                   ),
@@ -906,10 +907,10 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Row(
                 children: [
-                  const Text('কাছের কেন্দ্রসমূহ',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.onBackground)),
+                  Text('nearby_centers_title'.tr,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.onBackground)),
                   const Spacer(),
-                  Text('${_places.length}টি পাওয়া গেছে',
+                  Text('centers_found'.trParams({'count': '${_places.length}'}),
                       style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                 ],
               ),
@@ -971,7 +972,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                   decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
-                                  child: const Text('প্রস্তাবিত', style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.w700)),
+                                  child: Text('recommended_badge'.tr, style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.w700)),
                                 ),
                               ],
                             ]),
@@ -985,7 +986,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
                                 const SizedBox(width: 4),
                                 const Icon(Icons.verified_rounded, size: 10, color: Color(0xFF059669)),
                                 const SizedBox(width: 2),
-                                const Text('সরকারি', style: TextStyle(fontSize: 9, color: Color(0xFF059669), fontWeight: FontWeight.w600)),
+                                Text('govt_badge'.tr, style: const TextStyle(fontSize: 9, color: Color(0xFF059669), fontWeight: FontWeight.w600)),
                               ],
                             ]),
                             const SizedBox(height: 4),
@@ -1094,7 +1095,7 @@ class _MapLegendState extends State<_MapLegend> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('সংকেত', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF1E1B4B))),
+                Text('legend_label'.tr, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF1E1B4B))),
                 const SizedBox(width: 4),
                 Icon(
                   _expanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_right_rounded,
@@ -1176,7 +1177,7 @@ class _ErrorTile extends StatelessWidget {
           Expanded(child: Text(error, style: const TextStyle(fontSize: 12, color: Color(0xFF92400E)))),
           GestureDetector(
             onTap: onRetry,
-            child: const Text('আবার চেষ্টা', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w700)),
+            child: Text('retry'.tr, style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w700)),
           ),
         ],
       ),

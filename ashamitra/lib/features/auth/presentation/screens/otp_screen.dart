@@ -220,8 +220,8 @@ class _OtpScreenState extends State<OtpScreen> {
                                     await _ctrl.login(_phone);
                                     if (_ctrl.errorMsg.value.isEmpty) {
                                       Get.snackbar(
-                                        'OTP পাঠানো হয়েছে',
-                                        '$_phone নম্বরে নতুন OTP পাঠানো হয়েছে।',
+                                        'otp_sent_title'.tr,
+                                        'otp_sent_msg'.trParams({'phone': _phone}),
                                         snackPosition: SnackPosition.BOTTOM,
                                         backgroundColor: AppColors.safeGreen,
                                         colorText: Colors.white,

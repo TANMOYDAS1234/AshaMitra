@@ -41,13 +41,13 @@ class GreetingHeader extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    Text('Notifications', style: AppTextStyles.h2),
+                    Text('notifications'.tr, style: AppTextStyles.h2),
                     const Spacer(),
                     Obx(() => ctrl.unreadCount.value > 0
                         ? TextButton.icon(
                             onPressed: () => ctrl.markAllRead(),
                             icon: const Icon(Icons.done_all_rounded, size: 16),
-                            label: const Text('Mark all read'),
+                            label: Text('mark_all_read'.tr),
                           )
                         : const SizedBox.shrink()),
                   ],
@@ -317,7 +317,7 @@ class _EmptyNotifications extends StatelessWidget {
           TextButton.icon(
             onPressed: onRefresh,
             icon: const Icon(Icons.refresh_rounded, size: 16),
-            label: const Text('Refresh'),
+            label: Text('refresh'.tr),
           ),
         ],
       ),

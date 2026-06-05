@@ -2,6 +2,27 @@ import 'package:get/get.dart';
 
 class AppTranslations extends Translations {
   static const _en = {
+    // ── De-hardcode batch 2 (lists / nav / referral map) ──
+    "search_patient_hint": "Search patient or village...",
+    "mark_all_read": "Mark all read",
+    "refresh": "Refresh",
+    "otp_sent_title": "OTP sent",
+    "otp_sent_msg": "A new OTP has been sent to @phone.",
+    "location_needed_title": "Location needed",
+    "location_needed_msg": "Your current location is needed to find nearby health centres.",
+    "grant_permission": "Grant",
+    "location_denied_msg": "Location permission not granted",
+    "location_permanently_off_msg": "Location permission is permanently off.",
+    "permission_off_title": "Permission is off",
+    "enable_location_msg": "Enable location permission in app settings.",
+    "open_settings": "Open settings",
+    "directions_label": "Directions",
+    "nearby_centers_title": "Nearby centres",
+    "centers_found": "@count found",
+    "recommended_badge": "Recommended",
+    "govt_badge": "Govt",
+    "legend_label": "Legend",
+    "retry": "Retry",
     // ── De-hardcode batch 1 (add_patient / patient_profile / emergency) ──
     "gender_female": "Female",
     "gender_male": "Male",
@@ -453,6 +474,27 @@ class AppTranslations extends Translations {
   };
 
   static const _bn = {
+    // ── De-hardcode batch 2 (lists / nav / referral map) ──
+    "search_patient_hint": "রোগী বা গ্রাম খুঁজুন...",
+    "mark_all_read": "সব পঠিত করুন",
+    "refresh": "রিফ্রেশ করুন",
+    "otp_sent_title": "OTP পাঠানো হয়েছে",
+    "otp_sent_msg": "@phone নম্বরে নতুন OTP পাঠানো হয়েছে।",
+    "location_needed_title": "লোকেশন প্রয়োজন",
+    "location_needed_msg": "নিকটস্থ স্বাস্থ্যকেন্দ্র খুঁজে পেতে আপনার বর্তমান অবস্থান দরকার।",
+    "grant_permission": "অনুমতি দিন",
+    "location_denied_msg": "লোকেশন অনুমতি দেওয়া হয়নি",
+    "location_permanently_off_msg": "লোকেশন অনুমতি স্থায়ীভাবে বন্ধ।",
+    "permission_off_title": "অনুমতি বন্ধ আছে",
+    "enable_location_msg": "অ্যাপ সেটিংস থেকে লোকেশন অনুমতি চালু করুন।",
+    "open_settings": "সেটিংস খুলুন",
+    "directions_label": "পথ",
+    "nearby_centers_title": "কাছের কেন্দ্রসমূহ",
+    "centers_found": "@count টি পাওয়া গেছে",
+    "recommended_badge": "প্রস্তাবিত",
+    "govt_badge": "সরকারি",
+    "legend_label": "সংকেত",
+    "retry": "আবার চেষ্টা",
     // ── De-hardcode batch 1 (add_patient / patient_profile / emergency) ──
     "gender_female": "মহিলা",
     "gender_male": "পুরুষ",
@@ -900,6 +942,27 @@ class AppTranslations extends Translations {
   };
 
   static const _hi = {
+    // ── De-hardcode batch 2 (lists / nav / referral map) ──
+    "search_patient_hint": "मरीज़ या गाँव खोजें...",
+    "mark_all_read": "सभी पढ़े हुए चिह्नित करें",
+    "refresh": "ताज़ा करें",
+    "otp_sent_title": "OTP भेजा गया",
+    "otp_sent_msg": "@phone पर नया OTP भेजा गया है।",
+    "location_needed_title": "लोकेशन चाहिए",
+    "location_needed_msg": "नज़दीकी स्वास्थ्य केंद्र खोजने के लिए आपकी वर्तमान लोकेशन चाहिए।",
+    "grant_permission": "अनुमति दें",
+    "location_denied_msg": "लोकेशन अनुमति नहीं मिली",
+    "location_permanently_off_msg": "लोकेशन अनुमति स्थायी रूप से बंद है।",
+    "permission_off_title": "अनुमति बंद है",
+    "enable_location_msg": "ऐप सेटिंग्स से लोकेशन अनुमति चालू करें।",
+    "open_settings": "सेटिंग्स खोलें",
+    "directions_label": "रास्ता",
+    "nearby_centers_title": "नज़दीकी केंद्र",
+    "centers_found": "@count मिले",
+    "recommended_badge": "अनुशंसित",
+    "govt_badge": "सरकारी",
+    "legend_label": "संकेत",
+    "retry": "फिर कोशिश",
     // ── De-hardcode batch 1 (add_patient / patient_profile / emergency) ──
     "gender_female": "महिला",
     "gender_male": "पुरुष",

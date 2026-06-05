@@ -139,7 +139,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   onChanged: (v) => setState(() => _searchQuery = v),
                   style: AppTextStyles.body,
                   decoration: InputDecoration(
-                    hintText: 'Search patient or village...',
+                    hintText: 'search_patient_hint'.tr,
                     prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
                   ),
                 ),
@@ -232,7 +232,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                               context: context,
                               builder: (_) => AlertDialog(
                                 title: Text('delete_patient'.tr),
-                                content: Text('"${p.name}" তালিকা থেকে মুছে ফেলবেন?'),
+                                content: Text('delete_patient_confirm'.trParams({'name': p.name})),
                                 actions: [
                                   TextButton(onPressed: () => Get.back(result: false), child: Text('cancel'.tr)),
                                   TextButton(
