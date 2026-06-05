@@ -193,11 +193,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
   // didn't, so it can't fight the happy path (which re-arms within ~3.5s).
   Timer? _selfHealTimer;
   int _idleTicks = 0;
-  // Keeps Render's free-tier server warm while the assistant is open: it
-  // sleeps after ~15 min idle, turning the next reply into a 15-30s cold
-  // start. A periodic /health ping covers quiet stretches mid-session.
-  // Server-side UptimeRobot is the always-on complement for the FIRST open.
-  Timer? _keepWarmTimer;
+  // (Server keep-warm now lives in the app-wide ServerHeartbeat, started in
+  // main() — see server_heartbeat.dart. No per-screen timer needed here.)
 
   // Escalates the status line from "thinking" to "waking server" after
   // 5s of waiting so the worker knows the cold-start is happening rather
@@ -219,22 +216,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
     // server is usually warm. Negligible bandwidth cost.
     _warmBackend();
     _startSelfHealWatchdog();
-    _startKeepWarm();
   }
 
   Future<void> _warmBackend() async {
     try {
       await _chat.warmupBackend();
     } catch (_) { /* best-effort, ignore failures */ }
-  }
-
-  /// Pings /health every 10 min while the screen is open so Render's
-  /// free tier doesn't sleep mid-session (it naps after ~15 min idle).
-  /// Cheap insurance against a 15-30s cold-start reply after a quiet spell.
-  void _startKeepWarm() {
-    _keepWarmTimer?.cancel();
-    _keepWarmTimer =
-        Timer.periodic(const Duration(minutes: 10), (_) => _warmBackend());
   }
 
   /// Safety net for the always-listening loop. Polls every 4s: if the
@@ -1250,7 +1237,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _coldStartHintTimer?.cancel();
     _sttWatchdogTimer?.cancel();
     _selfHealTimer?.cancel();
-    _keepWarmTimer?.cancel();
     _tts.stop();
     _stt.stop();
     _groqStt.dispose();

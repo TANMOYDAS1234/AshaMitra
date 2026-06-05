@@ -6,6 +6,7 @@ import 'core/services/local_storage_service.dart';
 import 'core/services/language_controller.dart';
 import 'core/services/rule_executor.dart';
 import 'core/services/tts_prewarm_service.dart';
+import 'core/services/server_heartbeat.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +22,10 @@ void main() async {
   // Warm the TTS cache in the background so Leda's voice works offline.
   // Non-blocking — returns immediately. See TtsPrewarmService docs.
   unawaited(TtsPrewarmService.startInBackground());
+
+  // App-wide server heartbeat — keeps Render's free tier awake while the app
+  // is open so the first assistant/triage request isn't a cold-start stall.
+  ServerHeartbeat.instance.start();
 
   runApp(const App());
 }
