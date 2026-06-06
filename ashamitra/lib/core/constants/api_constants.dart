@@ -1,5 +1,5 @@
 class ApiConstants {
-  static const baseUrl = 'https://ashamitra-backend.onrender.com/api';
+  static const baseUrl = 'https://ashamitra-backend.flintdeorient.in/api';
   static const timeout = Duration(seconds: 30);
 
   static const authSendOtp = '/auth/send-otp';

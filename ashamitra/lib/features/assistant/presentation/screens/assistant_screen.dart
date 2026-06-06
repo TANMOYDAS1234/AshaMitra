@@ -193,8 +193,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
   // didn't, so it can't fight the happy path (which re-arms within ~3.5s).
   Timer? _selfHealTimer;
   int _idleTicks = 0;
-  // (Server keep-warm now lives in the app-wide ServerHeartbeat, started in
-  // main() — see server_heartbeat.dart. No per-screen timer needed here.)
+  // (No server keep-warm timer needed — the backend runs on an always-on VPS,
+  // so there's no cold-start nap to pre-empt.)
 
   // Escalates the status line from "thinking" to "waking server" after
   // 5s of waiting so the worker knows the cold-start is happening rather

@@ -13,7 +13,7 @@ class _ApiResponse {
 }
 
 class ApiService {
-  static const baseUrl = 'https://ashamitra-backend.onrender.com/api';
+  static const baseUrl = 'https://ashamitra-backend.flintdeorient.in/api';
 
   static String? _token;
 
