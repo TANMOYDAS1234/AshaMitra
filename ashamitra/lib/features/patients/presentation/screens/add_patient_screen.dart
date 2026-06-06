@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/utils/permissions.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_button.dart';
@@ -25,10 +27,22 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   final _formKey = GlobalKey<FormState>();
   String _caseType = 'Pregnancy';
   String _gender = 'Female';
+  // Age unit: 'days' | 'months' | 'years'. Drives how the engine reads age
+  // (newborn 0–28 d vs child 2 mo–5 y vs mother's age in years). Defaults
+  // smartly from the case type so a newborn's "6" is never read as 6 years.
+  String _ageUnit = 'years';
   final _nameCtrl = TextEditingController();
   final _ageCtrl = TextEditingController();
   final _villageCtrl = TextEditingController();
   final _mobileCtrl = TextEditingController();
+
+  // ── Speak-to-fill (voice dictation for free-text fields) ────────────────
+  // Many ASHA workers type slowly; letting them speak the name/village in
+  // Bengali fills the field in Bengali script via on-device STT. Lazily
+  // initialised on first mic tap so we never prompt for the mic on open.
+  final _stt = SpeechToText();
+  bool _sttReady = false;
+  String? _dictating; // 'name' | 'village' | null — which field is active
 
   /// If non-null, this screen is in EDIT mode for an existing patient.
   /// Pre-fills the form fields and the Save button calls updatePatient
@@ -53,6 +67,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       _mobileCtrl.text  = args.mobile;
       _caseType = args.type;
       _gender   = args.gender.isNotEmpty ? args.gender : 'Female';
+      _ageUnit  = args.ageUnit.isNotEmpty ? args.ageUnit : _defaultAgeUnit(args.type);
     } else if (args is Map<String, dynamic>) {
       // 1b fix: when the worker reaches Add Patient from a case tile on the
       // dashboard, the case ID is passed in as 'caseType'. Pre-select that
@@ -63,11 +78,15 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           ['Pregnancy', 'Newborn', 'Child', 'Other'].contains(preselected)) {
         _caseType = preselected;
       }
+      _ageUnit = _defaultAgeUnit(_caseType);
+    } else {
+      _ageUnit = _defaultAgeUnit(_caseType);
     }
   }
 
   @override
   void dispose() {
+    try { _stt.stop(); } catch (_) {}
     _nameCtrl.dispose();
     _ageCtrl.dispose();
     _villageCtrl.dispose();
@@ -76,6 +95,20 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   }
 
   bool get _isEditing => _editing != null;
+
+  // Smart default age unit per case: newborn → days, child → months,
+  // pregnancy/other → years (the mother's / person's age).
+  static String _defaultAgeUnit(String caseType) => switch (caseType) {
+        'Newborn' => 'days',
+        'Child'   => 'months',
+        _         => 'years',
+      };
+
+  String _ageUnitLabel(String u) => switch (u) {
+        'days'   => 'age_unit_days'.tr,
+        'months' => 'age_unit_months'.tr,
+        _        => 'age_unit_years'.tr,
+      };
 
   void _showSnack(String title, String body, Color color) {
     Get.snackbar(
@@ -89,33 +122,98 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     );
   }
 
+  // ── Speak-to-fill ───────────────────────────────────────────────────────
+  Future<void> _initStt() async {
+    final ok = await AppPermissions.requestMicrophone();
+    if (!ok) {
+      if (mounted) setState(() => _sttReady = false);
+      return;
+    }
+    _sttReady = await _stt.initialize(
+      onError: (_) {
+        if (mounted) setState(() => _dictating = null);
+      },
+      onStatus: (s) {
+        if ((s == SpeechToText.doneStatus ||
+                s == SpeechToText.notListeningStatus) &&
+            mounted) {
+          setState(() => _dictating = null);
+        }
+      },
+    );
+    if (mounted) setState(() {});
+  }
+
+  /// Toggle dictation for [field], writing the recognised Bengali text into
+  /// [ctrl]. Tapping the same field's mic again stops it.
+  Future<void> _dictate(String field, TextEditingController ctrl) async {
+    if (_dictating == field) {
+      try { await _stt.stop(); } catch (_) {}
+      if (mounted) setState(() => _dictating = null);
+      return;
+    }
+    if (!_sttReady) {
+      await _initStt();
+      if (!_sttReady) {
+        _showSnack('app_name'.tr, 'mic_permission_denied'.tr,
+            AppColors.warningYellow);
+        return;
+      }
+    }
+    try { await _stt.stop(); } catch (_) {}
+    if (mounted) setState(() => _dictating = field);
+    await _stt.listen(
+      listenOptions: SpeechListenOptions(
+        localeId: 'bn_IN',
+        listenMode: ListenMode.dictation,
+        partialResults: true,
+        cancelOnError: true,
+      ),
+      onResult: (r) {
+        if (!mounted) return;
+        ctrl.text = r.recognizedWords;
+        ctrl.selection =
+            TextSelection.collapsed(offset: ctrl.text.length);
+        if (r.finalResult && mounted) setState(() => _dictating = null);
+      },
+    );
+  }
+
+  Widget _micSuffix(String field, TextEditingController ctrl) {
+    final active = _dictating == field;
+    return IconButton(
+      tooltip: 'speak'.tr,
+      icon: Icon(
+        active ? Icons.mic_rounded : Icons.mic_none_rounded,
+        color: active ? AppColors.emergencyRed : AppColors.primary,
+        size: 20,
+      ),
+      onPressed: () => _dictate(field, ctrl),
+    );
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_isEditing) {
-      // EDIT mode: only update demographic fields. Triage data is preserved
-      // by copyWith semantics — those fields aren't passed so the existing
-      // values carry over.
       final updated = _editing!.copyWith(
         name:    _nameCtrl.text.trim(),
         type:    _caseType,
         village: _villageCtrl.text.trim().isEmpty ? 'Unknown' : _villageCtrl.text.trim(),
         mobile:  _mobileCtrl.text.trim(),
         age:     _ageCtrl.text.trim(),
+        ageUnit: _ageUnit,
         gender:  _gender,
       );
       final result = await _ctrl.updatePatient(updated);
       if (!mounted) return;
       if (result == 'duplicate') {
-        _showSnack(
-          'Cannot Save',
-          'Another patient already has this name and mobile number.',
-          AppColors.warningYellow,
-        );
+        _showSnack('cannot_save'.tr, 'duplicate_patient_msg'.tr, AppColors.warningYellow);
         return;
       }
       Get.back();
-      _showSnack('Patient Updated', '${updated.name} updated successfully.', AppColors.safeGreen);
+      _showSnack('patient_updated'.tr,
+          'patient_updated_msg'.trParams({'name': updated.name}), AppColors.safeGreen);
       return;
     }
 
@@ -126,10 +224,12 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       village: _villageCtrl.text.trim().isEmpty ? 'Unknown' : _villageCtrl.text.trim(),
       mobile: _mobileCtrl.text.trim(),
       age: _ageCtrl.text.trim(),
+      ageUnit: _ageUnit,
       gender: _gender,
     );
     Get.back();
-    _showSnack('Patient Added', '${_nameCtrl.text.trim()} has been added successfully.', AppColors.safeGreen);
+    _showSnack('patient_added'.tr,
+        'patient_added_msg'.trParams({'name': _nameCtrl.text.trim()}), AppColors.safeGreen);
   }
 
   void _saveAndCheckup() {
@@ -140,6 +240,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       village: _villageCtrl.text.trim().isEmpty ? 'Unknown' : _villageCtrl.text.trim(),
       mobile: _mobileCtrl.text.trim(),
       age: _ageCtrl.text.trim(),
+      ageUnit: _ageUnit,
       gender: _gender,
     );
     Get.toNamed(AppRoutes.selectCase, arguments: {
@@ -172,7 +273,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: _isEditing ? 'Edit Patient' : 'Add Patient'),
+              AppHeader(title: (_isEditing ? 'edit_patient' : 'add_patient').tr),
               const SizedBox(height: 12),
               Expanded(
                 child: SingleChildScrollView(
@@ -182,19 +283,24 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     child: Column(
                       children: [
                         AppInput(
-                          hint: 'Full name',
-                          label: 'Patient Name',
+                          hint: 'full_name'.tr,
+                          label: 'patient_name'.tr,
                           controller: _nameCtrl,
                           prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.primary, size: 20),
-                          validator: (v) => v == null || v.isEmpty ? 'Name is required' : null,
+                          suffixIcon: _micSuffix('name', _nameCtrl),
+                          validator: (v) => v == null || v.trim().isEmpty ? 'name_required'.tr : null,
                         ),
                         const SizedBox(height: 16),
+                        // ── Age + unit ──────────────────────────────────────
+                        Text('age'.tr, style: AppTextStyles.label),
+                        const SizedBox(height: 6),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
+                              flex: 5,
                               child: AppInput(
-                                hint: 'Age',
-                                label: 'Age',
+                                hint: 'age'.tr,
                                 controller: _ageCtrl,
                                 keyboardType: TextInputType.number,
                                 prefixIcon: const Icon(Icons.cake_outlined, color: AppColors.primary, size: 20),
@@ -202,38 +308,53 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('gender'.tr, style: AppTextStyles.label),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<String>(
-                                    initialValue: _gender,
-                                    onChanged: (v) => setState(() => _gender = v!),
-                                    style: AppTextStyles.body,
-                                    decoration: const InputDecoration(),
-                                    // Value stays English (stored in the model);
-                                    // only the shown label is localized.
-                                    items: ['Female', 'Male', 'Other']
-                                        .map((g) => DropdownMenuItem(value: g, child: Text(_genderLabel(g))))
-                                        .toList(),
-                                  ),
-                                ],
+                              flex: 5,
+                              child: DropdownButtonFormField<String>(
+                                initialValue: _ageUnit,
+                                isExpanded: true,
+                                onChanged: (v) => setState(() => _ageUnit = v ?? _ageUnit),
+                                style: AppTextStyles.body,
+                                decoration: const InputDecoration(),
+                                items: ['days', 'months', 'years']
+                                    .map((u) => DropdownMenuItem(value: u, child: Text(_ageUnitLabel(u))))
+                                    .toList(),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
-                        AppInput(
-                          hint: 'Village / Area name',
-                          label: 'Village',
-                          controller: _villageCtrl,
-                          prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
+                        // ── Gender ──────────────────────────────────────────
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('gender'.tr, style: AppTextStyles.label),
+                            const SizedBox(height: 6),
+                            DropdownButtonFormField<String>(
+                              initialValue: _gender,
+                              isExpanded: true,
+                              onChanged: (v) => setState(() => _gender = v!),
+                              style: AppTextStyles.body,
+                              decoration: const InputDecoration(),
+                              // Value stays English (stored in the model);
+                              // only the shown label is localized.
+                              items: ['Female', 'Male', 'Other']
+                                  .map((g) => DropdownMenuItem(value: g, child: Text(_genderLabel(g))))
+                                  .toList(),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 16),
                         AppInput(
-                          hint: '10-digit mobile number',
-                          label: 'Mobile Number',
+                          hint: 'village_hint'.tr,
+                          label: 'village'.tr,
+                          controller: _villageCtrl,
+                          prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
+                          suffixIcon: _micSuffix('village', _villageCtrl),
+                        ),
+                        const SizedBox(height: 16),
+                        AppInput(
+                          hint: 'mobile_hint'.tr,
+                          label: 'mobile_number'.tr,
                           controller: _mobileCtrl,
                           keyboardType: TextInputType.phone,
                           maxLength: 10,
@@ -255,7 +376,14 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                                   color: sel ? AppColors.primary : AppColors.surface,
                                   borderRadius: AppRadius.pillR,
                                   child: InkWell(
-                                    onTap: () => setState(() => _caseType = c),
+                                    onTap: () => setState(() {
+                                      _caseType = c;
+                                      // Re-default the age unit to match the case,
+                                      // but only while the worker hasn't typed an age.
+                                      if (_ageCtrl.text.trim().isEmpty) {
+                                        _ageUnit = _defaultAgeUnit(c);
+                                      }
+                                    }),
                                     borderRadius: AppRadius.pillR,
                                     child: AnimatedContainer(
                                       duration: const Duration(milliseconds: 180),
@@ -284,7 +412,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                         Column(
                           children: [
                             AppButton(
-                              label: _isEditing ? 'Save Changes' : 'Save Patient',
+                              label: (_isEditing ? 'save_changes' : 'save_patient').tr,
                               onPressed: _save,
                               outlined: !_isEditing, // edit mode: primary; add mode: secondary (paired with checkup)
                               width: double.infinity,
@@ -294,7 +422,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                             if (!_isEditing) ...[
                               const SizedBox(height: 10),
                               AppButton(
-                                label: 'Save & Start Checkup',
+                                label: 'save_and_start_checkup'.tr,
                                 onPressed: _saveAndCheckup,
                                 icon: Icons.mic_rounded,
                                 width: double.infinity,

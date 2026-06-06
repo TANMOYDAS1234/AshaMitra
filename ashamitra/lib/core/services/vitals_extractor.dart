@@ -239,6 +239,14 @@ class VitalsExtractor {
     }
   }
 
+  /// Body temperature is shown and spoken in Fahrenheit — the unit ASHA
+  /// workers and rural families in India actually use ("১০১ জ্বর"). The
+  /// clinical engine and the stored decision trace keep Celsius
+  /// (`temperature_c`) internally, so thresholds and the audit record are
+  /// unchanged; only worker-facing text switches to °F.
+  static String _fmtF(double celsius) =>
+      (celsius * 9 / 5 + 32).toStringAsFixed(1);
+
   /// Returns a human-readable Bengali summary of extracted vitals
   /// for display in the chat bubble and for Gemini context.
   static String summarise(Map<String, double> vitals) {
@@ -250,7 +258,7 @@ class VitalsExtractor {
       parts.add(dia != null ? 'BP: $sys/$dia mmHg' : 'Systolic BP: $sys mmHg');
     }
     if (vitals.containsKey('temperature_c')) {
-      parts.add('তাপমাত্রা: ${vitals['temperature_c']}°C');
+      parts.add('তাপমাত্রা: ${_fmtF(vitals['temperature_c']!)}°F');
     }
     if (vitals.containsKey('muac_cm')) {
       parts.add('MUAC: ${vitals['muac_cm']} cm');
@@ -290,13 +298,13 @@ class VitalsExtractor {
     final temp = vitals['temperature_c'];
     if (temp != null) {
       if (moduleId == 'newborn' && temp >= 37.5) {
-        alerts.add('জ্বর $temp°C — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।');
+        alerts.add('জ্বর ${_fmtF(temp)}°F — নবজাতকের জন্য বিপদচিহ্ন! এখনই SNCU-তে রেফার করুন।');
       } else if (moduleId == 'delivery_pnc' && temp >= 38.0) {
-        alerts.add('জ্বর $temp°C — পিউরপেরাল সেপসিসের ঝুঁকি! FRU-তে রেফার করুন।');
+        alerts.add('জ্বর ${_fmtF(temp)}°F — পিউরপেরাল সেপসিসের ঝুঁকি! FRU-তে রেফার করুন।');
       } else if (temp >= 40.0) {
-        alerts.add('জ্বর $temp°C — হাইপারপায়রেক্সিয়া! FRU-তে রেফার করুন, ম্যালেরিয়া পরীক্ষা করুন।');
+        alerts.add('জ্বর ${_fmtF(temp)}°F — হাইপারপায়রেক্সিয়া! FRU-তে রেফার করুন, ম্যালেরিয়া পরীক্ষা করুন।');
       } else if (temp >= 38.5) {
-        alerts.add('জ্বর $temp°C — উচ্চ জ্বর। PHC-তে নিয়ে যান।');
+        alerts.add('জ্বর ${_fmtF(temp)}°F — উচ্চ জ্বর। PHC-তে নিয়ে যান।');
       }
     }
 

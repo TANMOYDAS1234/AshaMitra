@@ -61,7 +61,13 @@ extension AssistantLangX on AssistantLang {
 class AssistantTurn {
   final String role; // 'user' or 'assistant'
   final String text;
-  const AssistantTurn({required this.role, required this.text});
+  /// The exact text spoken aloud, when it differs from the on-screen [text].
+  /// Triage questions display a "[2/8]" progress prefix that is NOT spoken,
+  /// and triage outcomes display the action card but speak only the summary.
+  /// The "listen again" replay uses [spokenText] ?? [text] so it re-speaks
+  /// what was actually said, not the on-screen decoration. Null → use [text].
+  final String? spokenText;
+  const AssistantTurn({required this.role, required this.text, this.spokenText});
 }
 
 class AssistantResponse {

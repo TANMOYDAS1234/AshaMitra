@@ -158,6 +158,19 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
     _              => 'রোগীর',
   };
 
+  // ── National-protocol basis per module ───────────────────────────────────
+  // Shown in the "why this decision" card so the worker (and any reviewer)
+  // sees the decision is grounded in a recognised MoHFW protocol, not an
+  // opaque model. Matches the module → protocol mapping in the project spec.
+  static String _protocolBasis(String moduleId) => switch (moduleId) {
+    'newborn'      => 'IMNCI ও HBNC প্রোটোকল',
+    'child'        => 'IMNCI ও HBYC প্রোটোকল',
+    'pregnancy'    => 'MCP কার্ড ও PMSMA নির্দেশিকা',
+    'delivery_pnc' => 'SBA ও PPH নির্দেশিকা',
+    'immunisation' => 'জাতীয় টিকা সূচি (UIP)',
+    _              => 'জাতীয় স্বাস্থ্য প্রোটোকল',
+  };
+
   static List<({String question, String answer})> _parseQaPairs(
       Map<String, dynamic> args) {
     final result = <({String question, String answer})>[];
@@ -335,6 +348,19 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
                   outcome: _outcome,
                   reason: _reasonText,
                   nextStep: _nextStepText,
+                ),
+                const SizedBox(height: 16),
+
+                // ── Why this decision? (clinical explainability) ─────────────
+                // Plain-Bengali reasoning the worker can read aloud and a
+                // reviewer can trust: the danger signs the engine matched, any
+                // suspected condition, and the national protocol behind it.
+                // The deeper rule-by-rule audit trace lives further down.
+                _WhyThisDecision(
+                  outcome: _outcome,
+                  dangerSigns: _engineResult.dangerSigns,
+                  suspectedConditions: _engineResult.suspectedConditions,
+                  protocolBasis: _protocolBasis(_moduleId),
                 ),
                 const SizedBox(height: 16),
 
@@ -860,6 +886,143 @@ class _QaSummary extends StatelessWidget {
                   ],
                 ),
               )),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Why this decision? (plain-language clinical explainability) ───────────────
+// A prominent, worker-readable card that answers the question every reviewer
+// (and every ASHA) asks: *why* this band? It lists the danger signs the
+// deterministic engine actually matched, any suspected condition, and the
+// national protocol the rule comes from — turning a verdict into a defensible,
+// teachable explanation. The exhaustive rule-by-rule [_DecisionTrace] below is
+// the audit companion for clinical review.
+class _WhyThisDecision extends StatelessWidget {
+  final TriageOutcome outcome;
+  final List<String> dangerSigns;
+  final List<String> suspectedConditions;
+  final String protocolBasis;
+  const _WhyThisDecision({
+    required this.outcome,
+    required this.dangerSigns,
+    required this.suspectedConditions,
+    required this.protocolBasis,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (outcome) {
+      TriageOutcome.emergency => AppColors.emergencyRed,
+      TriageOutcome.attention => AppColors.warningYellow,
+      TriageOutcome.safe      => AppColors.safeGreen,
+    };
+    final bandLine = switch (outcome) {
+      TriageOutcome.emergency => '🔴 লাল ব্যান্ড — জরুরি রেফার প্রয়োজন',
+      TriageOutcome.attention => '🟡 হলুদ ব্যান্ড — মনোযোগ ও ফলো-আপ প্রয়োজন',
+      TriageOutcome.safe      => '🟢 সবুজ ব্যান্ড — এখন নিরাপদ',
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.lgR,
+        boxShadow: AppShadows.low,
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.fact_check_rounded, size: 18, color: color),
+              const SizedBox(width: 8),
+              Text(
+                'কেন এই সিদ্ধান্ত?',
+                style: AppTextStyles.labelLg
+                    .copyWith(color: color, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            bandLine,
+            style: AppTextStyles.bodySm.copyWith(fontWeight: FontWeight.w700),
+          ),
+          if (dangerSigns.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              'শনাক্ত হওয়া বিপদচিহ্ন:',
+              style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textSecondary, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            ...dangerSigns.map(
+              (s) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Icon(Icons.circle, size: 6, color: color),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(s, style: AppTextStyles.bodySm)),
+                  ],
+                ),
+              ),
+            ),
+          ] else if (outcome == TriageOutcome.safe) ...[
+            const SizedBox(height: 8),
+            Text(
+              'স্ক্রিনিং সম্পূর্ণ — কোনো বিপদচিহ্ন পাওয়া যায়নি।',
+              style: AppTextStyles.bodySm
+                  .copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+          if (suspectedConditions.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'সম্ভাব্য অবস্থা: ',
+                  style: AppTextStyles.caption.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w700),
+                ),
+                Expanded(
+                  child: Text(suspectedConditions.join(', '),
+                      style: AppTextStyles.bodySm),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.06),
+              borderRadius: AppRadius.mdR,
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.menu_book_rounded,
+                    size: 14, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'ভিত্তি: $protocolBasis অনুযায়ী',
+                    style: AppTextStyles.caption.copyWith(
+                        color: AppColors.primary, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

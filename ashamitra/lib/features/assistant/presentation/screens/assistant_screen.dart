@@ -987,6 +987,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
         role: 'assistant',
         text: outcome.spokenSummary +
             (outcome.action.isNotEmpty ? '\n\n${outcome.action}' : ''),
+        // Replay speaks the summary only (matches what was spoken aloud).
+        spokenText: outcome.spokenSummary,
       ));
       // Offer save — same chip the LLM-driven save flow uses.
       _showSaveChip = true;
@@ -1007,7 +1009,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
     final total = _triageEngine.totalQuestions;
     final displayed = total > 0 ? '[$n / $total]  $questionText' : questionText;
     setState(() {
-      _history.add(AssistantTurn(role: 'assistant', text: displayed));
+      _history.add(AssistantTurn(
+        role: 'assistant',
+        text: displayed,
+        // Replay must speak the question only — never the "[2/8]" prefix.
+        spokenText: questionText,
+      ));
     });
     try {
       await _tts.stop();
@@ -1240,6 +1247,22 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   void _dismissSave() => setState(() => _showSaveChip = false);
 
+  /// "Listen again" — re-speaks an assistant turn. Uses the exact spoken text
+  /// (spokenText ?? text) so it never reads on-screen decoration like the
+  /// "[2/8]" triage-progress prefix, and it's a pure cache hit (no LLM, no
+  /// network cost) for phrases already spoken this session. No-op while the
+  /// mic is open so a replay can't bleed into a live capture.
+  Future<void> _replayTurn(AssistantTurn turn) async {
+    if (_isListening) return;
+    final say = (turn.spokenText ?? turn.text).trim();
+    if (say.isEmpty) return;
+    HapticFeedback.lightImpact();
+    try {
+      await _tts.stop();
+    } catch (_) {}
+    await _tts.speak(say, tone: TtsTone.normal);
+  }
+
   @override
   void dispose() {
     // Flip auto-listen off first so the delayed restart callback can't
@@ -1270,7 +1293,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
               Expanded(
                 child: Column(
                   children: [
-                    Expanded(child: _ConversationView(history: _history)),
+                    Expanded(
+                      child: _ConversationView(
+                        history: _history,
+                        lang: _activeLang,
+                        onReplay: _replayTurn,
+                      ),
+                    ),
                     if (_showSaveChip)
                       _SaveAsReportChips(
                         lang: _activeLang,
@@ -1477,7 +1506,13 @@ class _AssistantHeader extends StatelessWidget {
 
 class _ConversationView extends StatelessWidget {
   final List<AssistantTurn> history;
-  const _ConversationView({required this.history});
+  final AssistantLang lang;
+  final void Function(AssistantTurn) onReplay;
+  const _ConversationView({
+    required this.history,
+    required this.lang,
+    required this.onReplay,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1522,7 +1557,7 @@ class _ConversationView extends StatelessWidget {
       itemCount: history.length,
       itemBuilder: (_, i) {
         final turn = history[history.length - 1 - i];
-        return _MessageBubble(turn: turn);
+        return _MessageBubble(turn: turn, lang: lang, onReplay: onReplay);
       },
     );
   }
@@ -1530,11 +1565,33 @@ class _ConversationView extends StatelessWidget {
 
 class _MessageBubble extends StatelessWidget {
   final AssistantTurn turn;
-  const _MessageBubble({required this.turn});
+  final AssistantLang lang;
+  final void Function(AssistantTurn)? onReplay;
+  const _MessageBubble({required this.turn, required this.lang, this.onReplay});
 
   @override
   Widget build(BuildContext context) {
     final isUser = turn.role == 'user';
+    final bubble = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: isUser ? AppColors.primary : AppColors.surface,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(AppRadius.md),
+          topRight: const Radius.circular(AppRadius.md),
+          bottomLeft: Radius.circular(isUser ? AppRadius.md : 4),
+          bottomRight: Radius.circular(isUser ? 4 : AppRadius.md),
+        ),
+        boxShadow: AppShadows.low,
+      ),
+      child: Text(
+        turn.text,
+        style: AppTextStyles.body.copyWith(
+          color: isUser ? Colors.white : AppColors.onBackground,
+          height: 1.5,
+        ),
+      ),
+    );
     return Padding(
       padding: EdgeInsets.only(
         top: 4,
@@ -1575,28 +1632,74 @@ class _MessageBubble extends StatelessWidget {
             const SizedBox(width: 10),
           ],
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isUser ? AppColors.primary : AppColors.surface,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(AppRadius.md),
-                  topRight: const Radius.circular(AppRadius.md),
-                  bottomLeft: Radius.circular(isUser ? AppRadius.md : 4),
-                  bottomRight: Radius.circular(isUser ? 4 : AppRadius.md),
-                ),
-                boxShadow: AppShadows.low,
-              ),
-              child: Text(
-                turn.text,
-                style: AppTextStyles.body.copyWith(
-                  color: isUser ? Colors.white : AppColors.onBackground,
-                  height: 1.5,
-                ),
-              ),
-            ),
+            // Assistant turns carry a "listen again" chip under the bubble so
+            // the worker can re-hear the spoken guidance (cache hit — no LLM /
+            // network cost). User turns are just the bubble.
+            child: isUser
+                ? bubble
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      bubble,
+                      if (onReplay != null)
+                        _ReplayChip(
+                          lang: lang,
+                          onTap: () => onReplay!(turn),
+                        ),
+                    ],
+                  ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Listen again" affordance shown under every assistant reply. A speaker
+/// icon + short label in the active language. Tapping re-speaks the turn's
+/// audio from cache (no network / LLM call).
+class _ReplayChip extends StatelessWidget {
+  final AssistantLang lang;
+  final VoidCallback onTap;
+  const _ReplayChip({required this.lang, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (lang) {
+      AssistantLang.bn => 'আবার শুনুন',
+      AssistantLang.hi => 'फिर सुनें',
+      AssistantLang.en => 'Listen again',
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, left: 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadius.pillR,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.volume_up_rounded,
+                  size: 15,
+                  color: AppColors.primary.withValues(alpha: 0.85),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary.withValues(alpha: 0.95),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

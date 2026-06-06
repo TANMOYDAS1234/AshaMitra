@@ -944,7 +944,9 @@ async function callGemini(prompt) {
     if (deadUntil && Date.now() < deadUntil) continue;
     const key = geminiKeys[idx];
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${key}`,
+      // gemini-2.5-flash: free tier still has quota (gemini-2.0-flash-lite's
+      // free tier is 0 → instant 429). Override with GEMINI_MODEL env if needed.
+      `https://generativelanguage.googleapis.com/v1beta/models/${process.env.GEMINI_MODEL || 'gemini-2.5-flash'}:generateContent?key=${key}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

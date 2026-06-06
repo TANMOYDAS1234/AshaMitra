@@ -31,6 +31,31 @@ android {
             signingConfig signingConfigs.debug
         }
     }
+
+    // Skip release lint entirely on this Windows build host. Lint pulls
+    // in a separate dependency subgraph (profileinstaller, startup-
+    // runtime, etc.) that the SSL-inspection block prevents from being
+    // resolved. Lint is static analysis only — it does not affect
+    // runtime correctness, so it's safe to skip for installable APKs
+    // produced here. CI / another build host with normal network can
+    // run lint instead.
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+// Belt-and-braces: even if lint is configured off above, the AGP task
+// graph still wires `generateReleaseLintModel` into ProcessReleaseRes
+// for some plugins (notably audioplayers_android). Manually skip the
+// whole release lint chain across all subprojects so they don't pull
+// in the unfetchable transitive AARs.
+subprojects {
+    afterEvaluate {
+        tasks.matching { it.name.toLowerCase().contains('lint') }.configureEach {
+            enabled = false
+        }
+    }
 }
 
 flutter {

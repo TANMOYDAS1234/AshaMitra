@@ -11,6 +11,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/voice_orb.dart';
+import '../../../../shared/widgets/user_avatar.dart';
 import '../../../../core/services/gemini_conversation_service.dart';
 import '../../../../core/services/rule_executor.dart';
 import '../../../../core/services/offline_brain.dart';
@@ -194,6 +195,18 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   Future<void> _speakQuestion(String text) => _tts.speakQuestion(text);
   Future<void> _speakEmpathy(String text) => _tts.speakEmpathy(text);
   Future<void> _speakEmergency(String text) => _tts.speakEmergency(text);
+
+  /// "Listen again" — replays an assistant bubble's audio. Cache hit (no
+  /// network / LLM) for phrases spoken this session; the first replay of an
+  /// uncached phrase synthesises once via the VPS then caches. No-op while
+  /// the mic is open so a replay can't bleed into a live capture.
+  Future<void> _replayAssistantTurn(String text) async {
+    if (_isListening) return;
+    final say = text.trim();
+    if (say.isEmpty) return;
+    try { await _tts.stop(); } catch (_) {}
+    await _tts.speak(say, tone: TtsTone.normal);
+  }
 
   // ── STT init ──────────────────────────────────────────────────
   Future<void> _initStt() async {
@@ -1211,6 +1224,25 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   // ── Chat bubble ───────────────────────────────────────────────
   Widget _buildChatBubble(ConversationTurn turn) {
     final isAsha = turn.role == 'asha';
+    final bubble = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      decoration: BoxDecoration(
+        color: isAsha ? AppColors.primary.withValues(alpha: 0.10) : AppColors.surface,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(AppRadius.lg),
+          topRight: const Radius.circular(AppRadius.lg),
+          bottomLeft: Radius.circular(isAsha ? AppRadius.lg : 4),
+          bottomRight: Radius.circular(isAsha ? 4 : AppRadius.lg),
+        ),
+        boxShadow: AppShadows.low,
+      ),
+      child: Text(
+        turn.text,
+        style: AppTextStyles.body.copyWith(
+          color: isAsha ? AppColors.primary : AppColors.onBackground,
+        ),
+      ),
+    );
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -1243,32 +1275,33 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
             const SizedBox(width: 8),
           ],
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-              decoration: BoxDecoration(
-                color: isAsha ? AppColors.primary.withValues(alpha: 0.10) : AppColors.surface,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(AppRadius.lg),
-                  topRight: const Radius.circular(AppRadius.lg),
-                  bottomLeft: Radius.circular(isAsha ? AppRadius.lg : 4),
-                  bottomRight: Radius.circular(isAsha ? 4 : AppRadius.lg),
-                ),
-                boxShadow: AppShadows.low,
-              ),
-              child: Text(
-                turn.text,
-                style: AppTextStyles.body.copyWith(
-                  color: isAsha ? AppColors.primary : AppColors.onBackground,
-                ),
-              ),
-            ),
+            // Assistant bubbles get a "listen again" chip beneath them so the
+            // worker can re-hear safety-critical guidance in a noisy setting.
+            child: isAsha
+                ? bubble
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      bubble,
+                      _TriageReplayChip(
+                        onTap: () => _replayAssistantTurn(turn.text),
+                      ),
+                    ],
+                  ),
           ),
           if (isAsha) ...[
             const SizedBox(width: 8),
-            CircleAvatar(
-              radius: 16,
+            // The worker's own profile photo (base64 from Atlas or local
+            // file) with an initial-letter fallback — makes the conversation
+            // feel personal and clearly shows who is speaking.
+            UserAvatar(
+              user: Get.isRegistered<AuthController>()
+                  ? Get.find<AuthController>().user.value
+                  : null,
+              size: 32,
               backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-              child: const Icon(Icons.person_rounded, size: 16, color: AppColors.primary),
+              textColor: AppColors.primary,
             ),
           ],
         ],
@@ -1336,6 +1369,49 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "Listen again" affordance under each assistant bubble in triage. A speaker
+/// icon + Bengali label; tapping re-plays the spoken audio from cache (no
+/// network / LLM) so the worker can re-hear safety-critical guidance.
+class _TriageReplayChip extends StatelessWidget {
+  final VoidCallback onTap;
+  const _TriageReplayChip({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, left: 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: AppRadius.pillR,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.volume_up_rounded,
+                  size: 15,
+                  color: AppColors.primary.withValues(alpha: 0.85),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'আবার শুনুন',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

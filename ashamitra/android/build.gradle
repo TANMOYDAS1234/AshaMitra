@@ -9,13 +9,29 @@ allprojects {
         // POM + JAR pair is enough to satisfy the dexing transforms.
         maven {
             url uri("$rootDir/local-maven")
-            metadataSources { mavenPom(); artifact() }
+            // Many newer androidx libraries are KMP multiplatform and
+            // declare their actual AAR filenames in .module variants
+            // (e.g. datastore-release.aar instead of the Maven-layout
+            // datastore-android-1.1.7.aar). Use gradleMetadata FIRST so
+            // those non-standard filenames get picked up correctly from
+            // the local repo; mavenPom is the fallback for older libs
+            // that don't ship a .module file. NOTE: artifact() is
+            // deliberately omitted — it skips metadata and looks for
+            // {artifactId}-{version}.aar by Maven convention, which is
+            // wrong for KMP and produces "could not find" errors.
+            metadataSources {
+                gradleMetadata()
+                mavenPom()
+            }
             content {
-                includeModule("androidx.datastore", "datastore-preferences-external-protobuf")
-                includeModule("androidx.datastore", "datastore-preferences-proto")
-                includeModule("androidx.resourceinspection", "resourceinspection-annotation")
-                includeModule("androidx.collection", "collection-ktx")
-                includeModule("androidx.concurrent", "concurrent-futures")
+                // Mirror the entire androidx subgraph from the global Gradle
+                // cache (see android/local-maven/androidx). Release builds
+                // pull in many more androidx AARs than debug (lint chain,
+                // startup, tracing, profileinstaller, etc.) and the SSL
+                // block prevents fetching any of them — even though they're
+                // already on disk. Resolving all androidx from local-maven
+                // sidesteps the variant-resolution issue uniformly.
+                includeGroupByRegex("androidx\\..*")
                 includeModuleByRegex("org\\.jetbrains\\.kotlin", "kotlin-parcelize-runtime")
                 includeModuleByRegex("org\\.jetbrains\\.kotlin", "kotlin-android-extensions-runtime")
             }

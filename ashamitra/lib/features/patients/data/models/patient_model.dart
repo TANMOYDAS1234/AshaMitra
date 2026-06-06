@@ -15,6 +15,9 @@ class PatientModel {
   final String mobile;
   final String lastVisit;
   final String age;
+  /// Unit for [age]: 'days' | 'months' | 'years' (defaults to years). Keeps a
+  /// newborn's "6 days" from ever being read as "6 years".
+  final String ageUnit;
   final String gender;
   final RiskLevel risk;
   final String? situation;
@@ -37,6 +40,7 @@ class PatientModel {
     required this.mobile,
     required this.lastVisit,
     this.age = '',
+    this.ageUnit = 'years',
     this.gender = '',
     required this.risk,
     this.situation,
@@ -56,6 +60,19 @@ class PatientModel {
     return risk;
   }
 
+  /// Best-effort age normalised to days for age-gated clinical rules
+  /// (newborn 0–28 d, child 2 mo–5 y). Null when [age] isn't numeric.
+  int? get ageInDays {
+    final n = int.tryParse(age.trim());
+    if (n == null) return null;
+    return switch (ageUnit) {
+      'days'   => n,
+      'months' => n * 30,
+      'years'  => n * 365,
+      _        => n * 365,
+    };
+  }
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -64,6 +81,7 @@ class PatientModel {
         'mobile': mobile,
         'lastVisit': lastVisit,
         'age': age,
+        'ageUnit': ageUnit,
         'gender': gender,
         'risk': risk.name,
         if (situation != null) 'situation': situation,
@@ -84,6 +102,7 @@ class PatientModel {
         mobile: json['mobile'] as String? ?? '',
         lastVisit: json['lastVisit'] as String,
         age: json['age'] as String? ?? '',
+        ageUnit: json['ageUnit'] as String? ?? 'years',
         gender: json['gender'] as String? ?? '',
         risk: RiskLevel.values.firstWhere(
           (r) => r.name == json['risk'],
@@ -116,6 +135,7 @@ class PatientModel {
     String? mobile,
     String? lastVisit,
     String? age,
+    String? ageUnit,
     String? gender,
     RiskLevel? risk,
     String? situation,
@@ -134,6 +154,7 @@ class PatientModel {
         mobile: mobile ?? this.mobile,
         lastVisit: lastVisit ?? this.lastVisit,
         age: age ?? this.age,
+        ageUnit: ageUnit ?? this.ageUnit,
         gender: gender ?? this.gender,
         risk: risk ?? this.risk,
         situation: situation ?? this.situation,
