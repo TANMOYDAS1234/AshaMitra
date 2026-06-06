@@ -126,14 +126,39 @@ class IntentDispatcher {
         );
 
       case AssistantIntent.openReports:
-        Get.toNamed(AppRoutes.reports);
+        // Parse the spoken request into Reports filters (time / band / search)
+        // so "আজকের রিপোর্ট" or "আফানের রিপোর্ট" open the list pre-filtered.
+        final rf = _reportFilters(rawInput);
+        Get.toNamed(AppRoutes.reports, arguments: {
+          if (rf.time != null) 'time': rf.time,
+          if (rf.band != null) 'band': rf.band,
+          if (rf.search != null) 'search': rf.search,
+        });
         return DispatchResult(
           handled: true,
-          spokenConfirmation: _confirm(
-            bn: 'রিপোর্ট খুলছি।',
-            hi: 'रिपोर्ट खोल रही हूँ।',
-            en: 'Opening reports.',
-          ),
+          spokenConfirmation: rf.search != null
+              ? _confirm(
+                  bn: '${rf.search}-এর রিপোর্ট দেখাচ্ছি।',
+                  hi: '${rf.search} की रिपोर्ट दिखा रही हूँ।',
+                  en: 'Showing reports for ${rf.search}.',
+                )
+              : rf.time == 'today'
+                  ? _confirm(
+                      bn: 'আজকের রিপোর্ট দেখাচ্ছি।',
+                      hi: 'आज की रिपोर्ट दिखा रही हूँ।',
+                      en: "Showing today's reports.",
+                    )
+                  : rf.band == 'emergency'
+                      ? _confirm(
+                          bn: 'জরুরি রিপোর্ট দেখাচ্ছি।',
+                          hi: 'जरूरी रिपोर्ट दिखा रही हूँ।',
+                          en: 'Showing urgent reports.',
+                        )
+                      : _confirm(
+                          bn: 'রিপোর্ট খুলছি।',
+                          hi: 'रिपोर्ट खोल रही हूँ।',
+                          en: 'Opening reports.',
+                        ),
         );
 
       case AssistantIntent.openProfile:
@@ -253,6 +278,54 @@ class IntentDispatcher {
     if (tokens.isEmpty || tokens.length > 4) return null;
     final name = tokens.join(' ').trim();
     return name.length < 2 ? null : name;
+  }
+
+  /// Parse a "show reports" utterance into Reports filters.
+  /// Returns (time ∈ today/week/month, band ∈ emergency/attention/safe,
+  /// search = patient name or case word). Any field may be null.
+  static ({String? time, String? band, String? search}) _reportFilters(String input) {
+    final s = ' ${input.toLowerCase()} ';
+    String? time;
+    if (RegExp(r'আজ|today|aaj').hasMatch(s)) {
+      time = 'today';
+    } else if (RegExp(r'সপ্তাহ|week|saptah').hasMatch(s)) {
+      time = 'week';
+    } else if (RegExp(r'মাস|month|maah').hasMatch(s)) {
+      time = 'month';
+    }
+    String? band;
+    if (RegExp(r'জরুরি|জরুরী|লাল|emergency|urgent|red').hasMatch(s)) {
+      band = 'emergency';
+    } else if (RegExp(r'মনোযোগ|হলুদ|attention|yellow').hasMatch(s)) {
+      band = 'attention';
+    } else if (RegExp(r'নিরাপদ|সবুজ|safe|green').hasMatch(s)) {
+      band = 'safe';
+    }
+    return (time: time, band: band, search: _extractReportSearch(input));
+  }
+
+  /// Free-text search term (patient name / case word) from a reports command.
+  /// Strips command/time/band words; trailing possessive suffixes are trimmed
+  /// (substring matching on the screen is forgiving, so over-trimming is safe).
+  static String? _extractReportSearch(String input) {
+    final s = input.replaceAll(RegExp(r'[।,.!?;:"()\[\]{}]+'), ' ');
+    const stop = {
+      'রিপোর্ট', 'রিপোর্টের', 'রিপোর্টগুলো', 'রিপোর্টগুলি', 'সব', 'সবগুলো',
+      'যতগুলো', 'আছে', 'দেখাও', 'দেখ', 'দেখান', 'দাও', 'চাই', 'দরকার',
+      'খোলো', 'খোল', 'আমাকে', 'আমার', 'তুমি', 'আজ', 'আজকের', 'সপ্তাহ', 'মাস',
+      'জরুরি', 'জরুরী',
+      'रिपोर्ट', 'दिखा', 'दो', 'सब', 'मुझे', 'मेरा',
+      'report', 'reports', 'show', 'open', 'give', 'all', 'me', 'my', 'the',
+      'of', 'please', 'today', 'week', 'month',
+    };
+    final tokens = s
+        .split(RegExp(r'\s+'))
+        .map((t) => t.replaceAll(RegExp(r'(এর|কে|র)$'), '').trim())
+        .where((t) => t.isNotEmpty && !stop.contains(t.toLowerCase()))
+        .toList();
+    if (tokens.isEmpty || tokens.length > 3) return null;
+    final term = tokens.join(' ').trim();
+    return term.length < 2 ? null : term;
   }
 
   String _confirm({required String bn, required String hi, required String en}) {

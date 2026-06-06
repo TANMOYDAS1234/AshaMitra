@@ -203,15 +203,15 @@ class RuleBasedIntentClassifier {
       intent: AssistantIntent.openReports,
       keywordGroups: [
         [
-          'রিপোর্ট', 'রিপোর্টের',
+          'রিপোর্ট', 'রিপোর্টের', 'রিপোর্টগুলো', 'রিপোর্টগুলি',
           'रिपोर्ट',
           'report', 'reports',
         ],
         [
-          'দেখ', 'খোল', 'সব', 'তালিকা', 'লিস্ট',
-          'दिखा', 'खोल', 'सभी', 'सूची', 'लिस्ट',
-          'show', 'open', 'list', 'all', 'view',
-          'dekhao', 'dekhan', 'kholo',
+          'দেখ', 'খোল', 'সব', 'তালিকা', 'লিস্ট', 'দাও', 'চাই', 'দরকার',
+          'दिखा', 'खोल', 'सभी', 'सूची', 'लिस्ट', 'दो', 'चाहिए',
+          'show', 'open', 'list', 'all', 'view', 'give', 'want',
+          'dekhao', 'dekhan', 'kholo', 'dao',
         ],
       ],
       minGroupsMatched: 2,

@@ -653,6 +653,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String _bandFilter = 'all';
   String _timeFilter = 'all';
   String _sortOrder  = 'newest';
+  // Free-text filter (patient name / case word). Set when the assistant opens
+  // Reports with a spoken query like "আফানের রিপোর্ট" or "শিশুর রিপোর্ট".
+  String _search = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // The assistant may open Reports pre-filtered: {time, band, search}.
+    final args = Get.arguments;
+    if (args is Map) {
+      final t = args['time']?.toString();
+      if (t != null && const ['today', 'week', 'month', 'all'].contains(t)) {
+        _timeFilter = t;
+      }
+      final b = args['band']?.toString();
+      if (b != null &&
+          const ['emergency', 'attention', 'safe', 'all'].contains(b)) {
+        _bandFilter = b;
+      }
+      final s = args['search']?.toString();
+      if (s != null && s.trim().isNotEmpty) _search = s.trim().toLowerCase();
+    }
+  }
 
   @override
   void dispose() {
@@ -663,6 +686,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   bool _matchesFilters(Map<String, dynamic> r) {
     if (_bandFilter != 'all' && r['outcome']?.toString() != _bandFilter) {
       return false;
+    }
+    if (_search.isNotEmpty) {
+      // Match the spoken query against any field (patient name, case type,
+      // situation, reason…) so "আফান" or "শিশু"/"child" both work.
+      final hay =
+          r.values.map((e) => (e?.toString() ?? '').toLowerCase()).join(' ');
+      if (!hay.contains(_search)) return false;
     }
     if (_timeFilter == 'all') return true;
     final created = DateTime.tryParse(r['createdAt']?.toString() ?? '');
@@ -1270,6 +1300,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         onPressed: () => setState(() {
                           _bandFilter = 'all';
                           _timeFilter = 'all';
+                          _search = '';
                         }),
                         icon: const Icon(Icons.clear_rounded, size: 18),
                         label: Text('clear_filter'.tr),
