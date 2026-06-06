@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_shadows.dart';
@@ -30,6 +31,17 @@ class PatientCard extends StatelessWidget {
     this.onCallTap,
     this.heroTag,
   });
+
+  // Localize the stored case-type for display. Manually-added patients store
+  // an English type ('Newborn'); triage-created ones store a Bengali label —
+  // pass those through unchanged.
+  String _caseLabel(String c) => switch (c) {
+        'Pregnancy' => 'case_pregnancy'.tr,
+        'Newborn' => 'case_newborn'.tr,
+        'Child' => 'case_child'.tr,
+        'Other' => 'case_other'.tr,
+        _ => c,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +95,7 @@ class PatientCard extends StatelessWidget {
                       Text(name, style: AppTextStyles.labelLg),
                       const SizedBox(height: 3),
                       Text(
-                        '$caseType · $village',
+                        '${_caseLabel(caseType)} · $village',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: AppTextStyles.bodySm,

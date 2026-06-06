@@ -1098,7 +1098,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   actions: [
                     HeaderActionPill(
                       icon: Icons.flash_on_rounded,
-                      label: 'Quick',
+                      label: 'quick'.tr,
                       onTap: () => _quickPdf(visibleReports),
                     ),
                     const SizedBox(width: 6),

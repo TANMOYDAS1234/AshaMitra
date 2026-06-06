@@ -57,7 +57,7 @@ class IntentDispatcher {
   /// for [AssistantIntent.unknown] so the caller knows to fall through
   /// to the LLM. All other intents return [handled] = true with a
   /// language-matched spoken confirmation.
-  Future<DispatchResult> dispatch(ClassifiedIntent intent) async {
+  Future<DispatchResult> dispatch(ClassifiedIntent intent, {String rawInput = ''}) async {
     HapticFeedback.lightImpact();
     switch (intent.intent) {
       case AssistantIntent.callAmbulance:
@@ -67,16 +67,17 @@ class IntentDispatcher {
         return _callNumber('108');
 
       case AssistantIntent.findNearestPHC:
-        // No standalone "nearest PHC" screen yet — emergency screen
-        // already has facility info / map. When facility JSON ships,
-        // swap this for a dedicated route.
-        Get.toNamed(AppRoutes.emergency);
+        // Open the live facilities map (device GPS + OSRM) so the worker sees
+        // REAL road distances and drive times. The assistant deliberately does
+        // NOT speak any number itself — it points to the map, which has the
+        // actual figures, instead of inventing "৫-৭ কিমি, ১৫-২০ মিনিট".
+        Get.toNamed(AppRoutes.nearestFacilities);
         return DispatchResult(
           handled: true,
           spokenConfirmation: _confirm(
-            bn: 'কাছের হাসপাতাল দেখাচ্ছি।',
-            hi: 'पास का अस्पताल दिखा रही हूँ।',
-            en: 'Showing the nearest hospital.',
+            bn: 'কাছের স্বাস্থ্যকেন্দ্র ম্যাপে দেখাচ্ছি — দূরত্ব আর সময় ওখানে দেখুন।',
+            hi: 'पास के स्वास्थ्य केंद्र मैप पर दिखा रही हूँ — दूरी और समय वहाँ देखें।',
+            en: 'Showing nearby health centres on the map — distance and time are there.',
           ),
         );
 
@@ -92,14 +93,25 @@ class IntentDispatcher {
         );
 
       case AssistantIntent.addPatient:
-        Get.toNamed(AppRoutes.addPatient);
+        // Pull a name out of the spoken command ("সায়নি দাস কে অ্যাড করো" →
+        // "সায়নি দাস") and pre-fill the form so the worker doesn't retype it.
+        final addName = _extractPatientName(rawInput);
+        Get.toNamed(AppRoutes.addPatient, arguments: {
+          if (addName != null && addName.isNotEmpty) 'name': addName,
+        });
         return DispatchResult(
           handled: true,
-          spokenConfirmation: _confirm(
-            bn: 'নতুন রোগী যোগ করার পাতা খুলছি।',
-            hi: 'नया मरीज़ जोड़ने का पन्ना खोल रही हूँ।',
-            en: 'Opening the add-patient screen.',
-          ),
+          spokenConfirmation: (addName != null && addName.isNotEmpty)
+              ? _confirm(
+                  bn: '$addName-কে যোগ করছি — বাকি তথ্য পূরণ করুন।',
+                  hi: '$addName को जोड़ रही हूँ — बाक़ी जानकारी भरें।',
+                  en: 'Adding $addName — fill in the rest.',
+                )
+              : _confirm(
+                  bn: 'নতুন রোগী যোগ করার পাতা খুলছি।',
+                  hi: 'नया मरीज़ जोड़ने का पन्ना खोल रही हूँ।',
+                  en: 'Opening the add-patient screen.',
+                ),
         );
 
       case AssistantIntent.openPatientList:
@@ -213,6 +225,34 @@ class IntentDispatcher {
               en: 'Could not open the dialer — please dial $number yourself.',
             ),
     );
+  }
+
+  /// Best-effort patient-name extraction from an "add patient" command.
+  /// Strips command / filler words; the readable remainder is treated as the
+  /// name ("সায়নি দাস কে অ্যাড করো" → "সায়নি দাস"). Returns null when nothing
+  /// name-like is left (e.g. "এই পেশেন্ট অ্যাড করো" — the name was in earlier
+  /// context, so we open the form blank rather than guess wrong).
+  static String? _extractPatientName(String input) {
+    if (input.trim().isEmpty) return null;
+    final s = input.replaceAll(RegExp(r'[।,.!?;:"()\[\]{}]+'), ' ');
+    const stop = {
+      'তুমি', 'আপনি', 'এই', 'এটা', 'এটাকে', 'ওই', 'একটা', 'একজন', 'নতুন',
+      'রোগী', 'রোগীকে', 'রুগী', 'পেশেন্ট', 'পেশেন্টকে', 'প্যাশেন্ট', 'কে',
+      'অ্যাড', 'এড', 'যোগ', 'করে', 'করো', 'কর', 'করুন', 'দাও', 'দিন', 'দে',
+      'রেজিস্টার', 'নাম', 'করছি', 'দিচ্ছি',
+      'मरीज़', 'मरीज', 'नया', 'जोड़', 'जोड़ो', 'करो', 'दो', 'को', 'यह', 'इस',
+      'नाम', 'रजिस्टर',
+      'add', 'new', 'patient', 'register', 'create', 'enroll', 'this', 'the',
+      'a', 'an', 'please', 'naam', 'natun', 'joro', 'rogi', 'mariz',
+    };
+    final tokens = s
+        .split(RegExp(r'\s+'))
+        .map((t) => t.replaceAll(RegExp(r'(কে|को)$'), '').trim())
+        .where((t) => t.isNotEmpty && !stop.contains(t.toLowerCase()))
+        .toList();
+    if (tokens.isEmpty || tokens.length > 4) return null;
+    final name = tokens.join(' ').trim();
+    return name.length < 2 ? null : name;
   }
 
   String _confirm({required String bn, required String hi, required String en}) {

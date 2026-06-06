@@ -41,6 +41,16 @@ class _PatientListScreenState extends State<PatientListScreen> {
 
   static const _filters = ['All', 'Pregnancy', 'Newborn', 'Child', 'High Risk'];
 
+  // Logic keys stay English (above); only the chip's display text is localized.
+  String _filterLabel(String f) => switch (f) {
+        'All' => 'filter_all'.tr,
+        'Pregnancy' => 'case_pregnancy'.tr,
+        'Newborn' => 'case_newborn'.tr,
+        'Child' => 'case_child'.tr,
+        'High Risk' => 'filter_high_risk'.tr,
+        _ => f,
+      };
+
   List<PatientModel> get _filtered => _ctrl.patients.where((p) {
         final name = p.name;
         final type = p.type;
@@ -119,7 +129,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
           child: Column(
             children: [
               AppHeader(
-                title: 'Patients',
+                title: 'patients'.tr,
                 actions: [
                   HeaderActionPill(
                     icon: Icons.download_rounded,
@@ -129,7 +139,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                   HeaderActionCircle(
                     icon: Icons.person_add_rounded,
                     onTap: () => Get.toNamed(AppRoutes.addPatient),
-                    tooltip: 'Add patient',
+                    tooltip: 'add_patient'.tr,
                   ),
                 ],
               ),
@@ -170,7 +180,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                               boxShadow: sel ? AppShadows.tinted(AppColors.primary, strength: 2) : AppShadows.low,
                             ),
                             child: Text(
-                              _filters[i],
+                              _filterLabel(_filters[i]),
                               style: AppTextStyles.label.copyWith(
                                 color: sel ? AppColors.onPrimary : AppColors.textSecondary,
                               ),

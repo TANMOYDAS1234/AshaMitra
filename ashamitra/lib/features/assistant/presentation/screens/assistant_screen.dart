@@ -740,7 +740,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
         return;
       }
       final dispatcher = IntentDispatcher(lang: _activeLang);
-      final result = await dispatcher.dispatch(classified);
+      final result = await dispatcher.dispatch(classified, rawInput: input);
       if (result.handled) {
         setState(() {
           _isThinking = false;

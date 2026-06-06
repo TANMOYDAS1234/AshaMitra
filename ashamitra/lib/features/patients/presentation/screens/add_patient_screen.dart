@@ -78,6 +78,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           ['Pregnancy', 'Newborn', 'Child', 'Other'].contains(preselected)) {
         _caseType = preselected;
       }
+      // Assistant pre-fill: name spoken via an "add <name>" voice command.
+      final prefName = args['name']?.toString();
+      if (prefName != null && prefName.trim().isNotEmpty) {
+        _nameCtrl.text = prefName.trim();
+      }
       _ageUnit = _defaultAgeUnit(_caseType);
     } else {
       _ageUnit = _defaultAgeUnit(_caseType);
@@ -309,7 +314,12 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               flex: 5,
+                              // ValueKey(_ageUnit) forces the field to rebuild when
+                              // the case chip changes the unit programmatically —
+                              // otherwise `initialValue` is init-only and the shown
+                              // unit wouldn't follow the case type.
                               child: DropdownButtonFormField<String>(
+                                key: ValueKey('ageUnit_$_ageUnit'),
                                 initialValue: _ageUnit,
                                 isExpanded: true,
                                 onChanged: (v) => setState(() => _ageUnit = v ?? _ageUnit),
@@ -378,11 +388,10 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                                   child: InkWell(
                                     onTap: () => setState(() {
                                       _caseType = c;
-                                      // Re-default the age unit to match the case,
-                                      // but only while the worker hasn't typed an age.
-                                      if (_ageCtrl.text.trim().isEmpty) {
-                                        _ageUnit = _defaultAgeUnit(c);
-                                      }
+                                      // Age unit follows the case type dynamically:
+                                      // newborn→days, child→months, pregnancy/other→
+                                      // years. Worker can still override the dropdown.
+                                      _ageUnit = _defaultAgeUnit(c);
                                     }),
                                     borderRadius: AppRadius.pillR,
                                     child: AnimatedContainer(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_text_styles.dart';
@@ -56,10 +57,10 @@ class _RiskBadgeState extends State<RiskBadge> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final (label, color, icon) = switch (widget.level) {
-      RiskLevel.safe => ('Safe', AppColors.safeGreen, Icons.check_circle_outline_rounded),
-      RiskLevel.moderate => ('Moderate', AppColors.warningYellow, Icons.warning_amber_outlined),
-      RiskLevel.high => ('High Risk', const Color(0xFFF97316), Icons.error_outline_rounded),
-      RiskLevel.emergency => ('Emergency', AppColors.emergencyRed, Icons.emergency_outlined),
+      RiskLevel.safe => ('risk_safe'.tr, AppColors.safeGreen, Icons.check_circle_outline_rounded),
+      RiskLevel.moderate => ('risk_moderate'.tr, AppColors.warningYellow, Icons.warning_amber_outlined),
+      RiskLevel.high => ('risk_high'.tr, const Color(0xFFF97316), Icons.error_outline_rounded),
+      RiskLevel.emergency => ('risk_emergency'.tr, AppColors.emergencyRed, Icons.emergency_outlined),
     };
 
     final badge = Container(

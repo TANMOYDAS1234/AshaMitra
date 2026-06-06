@@ -15,6 +15,7 @@ import '../features/patients/presentation/screens/patient_list_screen.dart';
 import '../features/patients/presentation/screens/add_patient_screen.dart';
 import '../features/patients/presentation/screens/patient_profile_screen.dart';
 import '../features/emergency/presentation/screens/emergency_screen.dart';
+import '../features/emergency/presentation/screens/nearby_facilities_screen.dart';
 import '../features/reports/presentation/screens/reports_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/admin/presentation/screens/admin_shell.dart';
@@ -47,6 +48,7 @@ class AppRoutes {
   static const addPatient      = '/patients/add';
   static const patientProfile  = '/patients/profile';
   static const emergency       = '/emergency';
+  static const nearestFacilities = '/nearest-facilities';
   static const reports         = '/reports';
   static const profile         = '/profile';
   static const assistant       = '/assistant';
@@ -194,6 +196,16 @@ class AppRoutes {
       page: () => const EmergencyScreen(),
       transition: Transition.downToUp,
       transitionDuration: _calm,
+      curve: Curves.easeOutCubic,
+    ),
+
+    // Nearby facilities map — opened by the assistant for "nearest hospital /
+    // how far / how long" queries (real GPS + OSRM distances).
+    GetPage(
+      name: nearestFacilities,
+      page: () => const NearbyFacilitiesScreen(),
+      transition: Transition.rightToLeftWithFade,
+      transitionDuration: _medium,
       curve: Curves.easeOutCubic,
     ),
 

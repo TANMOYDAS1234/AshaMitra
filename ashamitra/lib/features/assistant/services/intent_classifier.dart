@@ -122,18 +122,30 @@ class RuleBasedIntentClassifier {
     ),
     _IntentRule(
       intent: AssistantIntent.findNearestPHC,
+      // 3 groups, any 2 fire it: proximity+facility, facility+distance, or
+      // proximity+distance. Covers "কাছের হাসপাতাল", "হাসপাতালে পৌঁছাতে
+      // কতক্ষণ", "নিয়ারেস্ট হসপিটাল কতদূর" — all route to the live map
+      // instead of the LLM inventing a distance.
       keywordGroups: [
         [
           // proximity
-          'কাছের', 'কাছাকাছি', 'নিকটতম', 'নিকটস্থ',
-          'पास', 'नज़दीकी', 'नजदीकी', 'सबसे पास',
-          'nearest', 'closest', 'near',
+          'কাছের', 'কাছাকাছি', 'নিকটতম', 'নিকটস্থ', 'নিকটবর্তী', 'আশেপাশে', 'আশপাশ', 'নিয়ারেস্ট',
+          'पास', 'नज़दीकी', 'नजदीकी', 'सबसे पास', 'आसपास',
+          'nearest', 'closest', 'near', 'nearby',
         ],
         [
-          // facility
-          'হাসপাতাল', 'স্বাস্থ্য কেন্দ্র', 'পিএইচসি', 'ক্লিনিক', 'কেন্দ্র',
-          'अस्पताल', 'स्वास्थ्य केंद्र', 'पीएचसी', 'क्लिनिक',
-          'hospital', 'phc', 'health centre', 'health center', 'clinic',
+          // facility — include the transliterations workers actually say
+          'হাসপাতাল', 'হসপিটাল', 'স্বাস্থ্য কেন্দ্র', 'স্বাস্থ্যকেন্দ্র', 'হেলথ সেন্টার', 'হেল্থ সেন্টার',
+          'হেল্প সেন্টার', 'হেলথ', 'মেডিকেল', 'পিএইচসি', 'ক্লিনিক', 'কেন্দ্র',
+          'अस्पताल', 'हॉस्पिटल', 'स्वास्थ्य केंद्र', 'हेल्थ सेंटर', 'पीएचसी', 'क्लिनिक',
+          'hospital', 'phc', 'chc', 'sncu', 'fru', 'health centre', 'health center', 'clinic', 'medical',
+        ],
+        [
+          // distance / time / route — turns "how far / how long to reach" into
+          // a real-map lookup instead of an invented LLM answer.
+          'কতদূর', 'কত দূর', 'দূরত্ব', 'ডিসটেন্স', 'কতক্ষণ', 'কত ক্ষণ', 'পৌঁছাতে', 'পৌছাতে', 'রাস্তা', 'পথ',
+          'दूरी', 'कितनी दूर', 'कितना समय', 'पहुँचने', 'रास्ता',
+          'distance', 'how far', 'how long', 'route', 'kotodur', 'kotokkhon',
         ],
       ],
       minGroupsMatched: 2,

@@ -380,7 +380,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 12),
                     Obx(() => Text(
-                          auth.user.value?.name ?? 'ASHA Worker',
+                          auth.user.value?.name ?? 'role_worker'.tr,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.h2.copyWith(color: Colors.white),
