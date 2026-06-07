@@ -513,6 +513,27 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     }
   }
 
+  // Single Gemini/backend conversation call — extracted so the online path can
+  // retry it once before falling back, without duplicating the request args.
+  // Idempotent: history is copied (not mutated), so calling it twice is safe.
+  Future<ConversationResponse> _callGemini(String input) async {
+    final authToken = LocalStorageService.get('jwt_token');
+    if (mounted) setState(() => _statusText = 'connecting'.tr);
+    return _conversationService.respond(
+      caseType: _caseType,
+      moduleId: _moduleId,
+      history: List.from(_history)..removeLast(),
+      newInput: input,
+      currentAnswers: Map.from(_extractedAnswers),
+      turnNumber: _turnCount,
+      maxTurns: _kMaxTurns,
+      authToken: authToken,
+      onPartialResponse: (partial) {
+        if (mounted) setState(() => _streamingPartial = partial);
+      },
+    );
+  }
+
   // ── Online: true Gemini conversation ──────────────────────────
   Future<void> _processOnline(String input) async {
     // Ensure offline question list is populated for yes/no capture
@@ -543,37 +564,50 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     // and must NOT trigger the offline fallback — otherwise a TTS hiccup
     // would add a second contradictory message to the conversation
     // (the original cause of the "online + offline together" bug).
-    ConversationResponse response;
+    late ConversationResponse response;
     try {
-      final authToken = LocalStorageService.get('jwt_token');
-      if (mounted) setState(() => _statusText = 'connecting'.tr);
-      response = await _conversationService.respond(
-        caseType: _caseType,
-        moduleId: _moduleId,
-        history: List.from(_history)..removeLast(),
-        newInput: input,
-        currentAnswers: Map.from(_extractedAnswers),
-        turnNumber: _turnCount,
-        maxTurns: _kMaxTurns,
-        authToken: authToken,
-        onPartialResponse: (partial) {
-          if (mounted) setState(() => _streamingPartial = partial);
-        },
-      );
+      response = await _callGemini(input);
     } catch (e) {
-      // Online path failed — server cold-start, AI quota (503), or weak
-      // signal. Fall back to the offline engine ONLY here (true network
-      // failure), not for any later TTS / UI errors.
+      // Gemini/backend call failed. Mode is decided ONLY by real connectivity,
+      // re-probed here (skipping the 30s cache):
+      //   • genuinely offline      → offline rules engine.
+      //   • still online (a hiccup: cold-start / 503 / weak signal) → retry
+      //     Gemini ONCE; if it still fails, finish THIS turn on the offline
+      //     rules so triage never stalls (the band is the same deterministic
+      //     engine) and STAY online — the next turn tries Gemini again. We
+      //     never silently drop to offline while the device has internet.
       if (!mounted) return;
       _coldStartHintTimer?.cancel();
-      _turnCount--; // do not burn a wasted turn
-      setState(() {
-        _isProcessing = false;
-        _orbState = OrbState.idle;
-        _streamingPartial = '';
-      });
-      await _processOffline(input);
-      return;
+      _cachedOnline = null;
+      final stillOnline = await _hasInternet();
+      if (!mounted) return;
+      if (stillOnline) {
+        try {
+          response = await _callGemini(input); // retry once, still online
+        } catch (_) {
+          if (!mounted) return;
+          _turnCount--; // do not burn a wasted turn
+          setState(() {
+            _isProcessing = false;
+            _orbState = OrbState.idle;
+            _streamingPartial = '';
+            _isOffline = false; // still online — only used rules for this turn
+          });
+          await _processOffline(input);
+          return;
+        }
+        // retry succeeded → fall through to Phase 2 with `response`.
+      } else {
+        _turnCount--;
+        setState(() {
+          _isProcessing = false;
+          _orbState = OrbState.idle;
+          _streamingPartial = '';
+          _isOffline = true; // genuinely offline
+        });
+        await _processOffline(input);
+        return;
+      }
     }
 
     // ── Phase 2: process the successful response ────────────────────────
@@ -1108,10 +1142,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
                       onPointerCancel: (_) => _onHoldEnd(),
                       child: VoiceOrb(size: orbSize, state: _orbState),
                     ),
-                    const SizedBox(height: 10),
-                    // Graded answer chips for the worker's reply (tap fallback
-                    // for speaking into the orb above).
-                    _buildAnswerChips(),
+                    const SizedBox(height: 8),
                     if (_transcript.isNotEmpty)
                       Container(
                         width: double.infinity,
@@ -1176,54 +1207,8 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     );
   }
 
-  // ── Graded answer chips — tap fallback for the orb's spoken reply ─────────
-  // The orb (hold-to-talk) is the primary reply; these chips let the worker
-  // tap a graded answer when speaking is hard. Each feeds the canonical phrase
-  // through _processInput, so AnswerCodes.fromSpeech maps it identically to
-  // speech: হ্যাঁ→yes (RED), মাঝে মাঝে→mild (≥YELLOW), না→no, নিশ্চিত নই→unsure
-  // (blocks GREEN). Shown only while an assistant question awaits an answer.
-  Widget _buildAnswerChips() {
-    final show = !_isProcessing &&
-        !_isListening &&
-        _history.isNotEmpty &&
-        _history.last.role == 'assistant';
-    if (!show) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        alignment: WrapAlignment.center,
-        children: [
-          _answerChip('হ্যাঁ', 'হ্যাঁ', AppColors.emergencyRed),
-          _answerChip('মাঝে মাঝে', 'মাঝে মাঝে', AppColors.warningYellow),
-          _answerChip('না', 'না', AppColors.safeGreen),
-          _answerChip('নিশ্চিত নই', 'নিশ্চিত না', AppColors.textSecondary),
-        ],
-      ),
-    );
-  }
-
-  Widget _answerChip(String label, String phrase, Color color) {
-    return Material(
-      color: color.withValues(alpha: 0.10),
-      shape: StadiumBorder(side: BorderSide(color: color.withValues(alpha: 0.45))),
-      child: InkWell(
-        customBorder: const StadiumBorder(),
-        onTap: _isProcessing ? null : () => _processInput(phrase),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          child: Text(
-            label,
-            style: AppTextStyles.label.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // Triage reply is voice-only via the orb (hold-to-talk). Graded answers are
+  // captured from speech by AnswerCodes.fromSpeech — no on-screen option chips.
 
   // ── Chat bubble ───────────────────────────────────────────────
   Widget _buildChatBubble(ConversationTurn turn) {
