@@ -1,6 +1,6 @@
 {
   "engine_id": "asha_cdss_engine_v2",
-  "version": "2.3.0-draft",
+  "version": "2.4.0-draft",
   "deterministic": true,
   "offline_capable": true,
   "engine_rules": {
@@ -1688,32 +1688,6 @@
           ]
         },
         {
-          "ruleId": "ANC-009",
-          "priority": 7,
-          "clinical_sign_off_pending": true,
-          "status": "draft",
-          "source": "v3_draft",
-          "condition_set": [
-            {
-              "question_id": "p9",
-              "operator": "EQUALS",
-              "value": true
-            }
-          ],
-          "band": "RED",
-          "referral": "FRU / DH immediately",
-          "action_bn": "গর্ভাবস্থায় উচ্চ জ্বর/কাঁপুনি = সেপসিস/ম্যালেরিয়া/ক্রিয়োঅ্যামনিওনাইটিসের ঝুঁকি। এখনই FRU/DH-তে রেফার করুন।",
-          "action_en": "High fever/rigors in pregnancy = sepsis/malaria/chorioamnionitis risk. Refer FRU/DH immediately.",
-          "suspected_conditions": [
-            "Maternal sepsis",
-            "Malaria in pregnancy",
-            "Chorioamnionitis"
-          ],
-          "danger_signs": [
-            "Fever with rigors"
-          ]
-        },
-        {
           "ruleId": "ANC-010",
           "priority": 8,
           "clinical_sign_off_pending": true,
@@ -1987,6 +1961,30 @@
           ],
           "danger_signs": [
             "Dizziness"
+          ]
+        },
+        {
+          "ruleId": "ANC-009",
+          "priority": 5,
+          "clinical_sign_off_pending": true,
+          "status": "draft",
+          "source": "v3_draft",
+          "condition_set": [
+            {
+              "question_id": "p9",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "YELLOW",
+          "referral": "PHC within 24 h",
+          "action_bn": "গর্ভাবস্থায় জ্বর — ২৪ ঘণ্টার মধ্যে PHC-তে দেখান (ম্যালেরিয়া/UTI/সংক্রমণ পরীক্ষা)। কাঁপুনি দিয়ে জ্বর, খুব বেশি জ্বর, বা অন্য বিপদচিহ্নের সাথে হলে = এখনই FRU/DH।",
+          "action_en": "Fever in pregnancy — refer PHC within 24 h (check malaria/UTI/infection). With rigors, very high fever, or any other danger sign = FRU/DH now.",
+          "suspected_conditions": [
+            "Fever in pregnancy (rule out malaria/UTI/sepsis)"
+          ],
+          "danger_signs": [
+            "Fever"
           ]
         }
       ],

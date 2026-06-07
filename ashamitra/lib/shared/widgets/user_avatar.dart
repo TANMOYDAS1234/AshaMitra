@@ -19,28 +19,39 @@ class UserAvatar extends StatelessWidget {
     required this.textColor,
   });
 
+  // Decode each photo only ONCE and reuse the same ImageProvider instance
+  // across rebuilds. Without this, every rebuild created a new MemoryImage
+  // (a fresh Uint8List), so Flutter re-decoded the image and the avatar
+  // flickered — very visible on the triage screen, which rebuilds many times
+  // a second while the mic is open. Keyed by the photo string so it's shared
+  // across all avatars and survives parent rebuilds.
+  static final Map<String, ImageProvider> _providerCache = {};
+
+  static ImageProvider? _providerFor(UserModel user) {
+    final photoPath = user.profileImagePath;
+    if (photoPath == null) return null;
+    final cached = _providerCache[photoPath];
+    if (cached != null) return cached;
+    ImageProvider? p;
+    if (user.isBase64Photo) {
+      final base64Str =
+          photoPath.contains(',') ? photoPath.split(',').last : photoPath;
+      try {
+        p = MemoryImage(base64Decode(base64Str));
+      } catch (_) {}
+    } else {
+      try {
+        p = FileImage(File(photoPath));
+      } catch (_) {}
+    }
+    if (p != null) _providerCache[photoPath] = p;
+    return p;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final photoPath = user?.profileImagePath;
     final name = user?.name ?? '';
-
-    ImageProvider? imageProvider;
-    if (photoPath != null) {
-      if (user!.isBase64Photo) {
-        // Strip the data URI prefix and decode
-        final base64Str = photoPath.contains(',')
-            ? photoPath.split(',').last
-            : photoPath;
-        try {
-          imageProvider = MemoryImage(base64Decode(base64Str));
-        } catch (_) {}
-      } else {
-        // Legacy local file path
-        try {
-          imageProvider = FileImage(File(photoPath));
-        } catch (_) {}
-      }
-    }
+    final imageProvider = user == null ? null : _providerFor(user!);
 
     return Container(
       width: size,

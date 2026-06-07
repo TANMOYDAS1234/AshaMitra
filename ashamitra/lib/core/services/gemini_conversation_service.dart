@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../utils/logger.dart';
 import 'ai_response_cache.dart';
+import 'answer_codes.dart';
 import 'api_service.dart';
 import 'vitals_extractor.dart';
 
@@ -314,7 +315,7 @@ cancel_session: true সেট করলে should_finish ও extracted_answers
     required String moduleId,
     required List<ConversationTurn> history,
     required String newInput,
-    required Map<String, bool> currentAnswers,
+    required Map<String, dynamic> currentAnswers,
     required int turnNumber,
     int maxTurns = 8,
     String? authToken,
@@ -338,17 +339,17 @@ cancel_session: true সেট করলে should_finish ও extracted_answers
 
     final answeredIds = currentAnswers.keys.toSet();
     const priorityOrder = {
-      'pregnancy':    ['p7','p1','p3','p6','p4','p2','p5'],
-      'delivery_pnc': ['pp1','pp7','pp8','pp2','pp4','pp6','pp3','pp5'],
-      'newborn':      ['n7','n1','n2','n3','n5','n4','n6'],
-      'child':        ['c7','c8','c1','c5','c2','c3','c4','c6'],
-      'emergency':    ['e1','e2','e3','e4'],
-      'immunisation': ['im4','im2','im1','im5','im3'],
+      'pregnancy':    ['p7','p1','p3','p6','p9','p10','p8','p4','p11','p11d','p2','p12','p5'],
+      'delivery_pnc': ['pp1','pp7','pp8','pp2','pp4','pp6','pp3','pp5','pp9'],
+      'newborn':      ['n7','n1','n2','n3','n5','n4','n6','n8','n9','n10'],
+      'child':        ['c7','c8','c9','c10','c1','c5','c2','c3','c11','c4','c6','c12'],
+      'emergency':    ['e1','e2','e3','e4','e5','e6','e7','e8'],
+      'immunisation': ['im4','im2','im1','im5','im3','im6'],
     };
     final order = priorityOrder[moduleId] ?? <String>[];
     final unanswered = order.where((id) => !answeredIds.contains(id)).toList();
     final confirmedDanger = currentAnswers.entries
-        .where((e) => e.value)
+        .where((e) => AnswerCodes.isAffirmative(e.value))
         .map((e) => questionDescs[e.key] ?? e.key)
         .join(', ');
     final mostUrgent = unanswered.isNotEmpty

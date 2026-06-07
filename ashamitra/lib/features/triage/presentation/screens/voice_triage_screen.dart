@@ -346,7 +346,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       onSoundLevelChange: (level) {
         if (mounted && _isListening) {
           final n = ((level + 2) / 12).clamp(0.0, 1.0);
-          if (n > 0.15) setState(() => _orbState = OrbState.listening);
+          if (n > 0.15 && _orbState != OrbState.listening) setState(() => _orbState = OrbState.listening);
         }
       },
     );
@@ -403,7 +403,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       onSoundLevelChange: (level) {
         if (mounted && _isListening) {
           final n = ((level + 2) / 12).clamp(0.0, 1.0);
-          if (n > 0.15) setState(() => _orbState = OrbState.listening);
+          if (n > 0.15 && _orbState != OrbState.listening) setState(() => _orbState = OrbState.listening);
         }
       },
     );

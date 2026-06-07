@@ -56,37 +56,52 @@ class AnswerCodes {
     'maybe', 'not sure', 'unsure', 'dont know', "don't know", 'pata nahi',
     'pata nahin', 'shayad', 'lagta hai',
   };
+  // Clear, unambiguous "yes".
   static const _yesWords = {
-    'হ্যাঁ', 'হ্যা', 'হাঁ', 'হা', 'আছে', 'হয়েছে', 'হইছে', 'হয়', 'করছে',
-    'yes', 'haan', 'han', 'ji', 'hticche', 'achhe', 'ache',
+    'হ্যাঁ', 'হ্যা', 'হাঁ', 'হা', 'হুঁ', 'yes', 'haan', 'han', 'ji',
+  };
+  // Verbs that mean "yes" ONLY when no negation/"normal" phrase is present
+  // (e.g. "জ্বর আছে" = yes, but "নরমাল আছে" / "ভালো আছে" = no).
+  static const _affirmVerbs = {
+    'আছে', 'হয়েছে', 'হইছে', 'হচ্ছে', 'হয়', 'করছে', 'করেছে', 'achhe', 'ache',
   };
   static const _noWords = {
-    'না', 'নেই', 'নাই', 'হয়নি', 'করেনি',
+    'না', 'নেই', 'নাই', 'হয়নি', 'করেনি', 'নো',
     'no', 'nahi', 'nahin', 'nai', 'nei', 'nahito',
   };
+  // Colloquial "all clear" phrases — recorded as NO even in a long reply, so the
+  // same question is not asked again ("না তেমন কোন ব্যাপার নেই, নরমালি আছে").
+  static const _normalPhrases = {
+    'নরমাল', 'স্বাভাবিক', 'সুস্থ', 'ভালো আছে', 'ভাল আছে', 'ঠিক আছে',
+    'কিছু নেই', 'কিছু হয়নি', 'কিছু হচ্ছে না', 'সমস্যা নেই', 'ব্যাপার নেই',
+    'কোনো কিছু নেই', 'কোন কিছু নেই', 'normal', 'fine', 'nothing', 'no problem',
+    'all good',
+  };
 
-  /// Returns the graded code for a terse reply, or null when the reply is not a
-  /// clear single answer (long multi-symptom free text → let the extractor work).
+  /// Maps a spoken reply to a graded code, or null when it isn't a clear single
+  /// answer (long multi-symptom free text → let the extractor handle it). Robust
+  /// to verbose/colloquial negatives so a question isn't asked twice.
   static String? fromSpeech(String input) {
     final lower = input.toLowerCase().trim();
     if (lower.isEmpty) return null;
-    final wordCount = lower.split(RegExp(r'[\s।,!?.]+')).where((w) => w.isNotEmpty).length;
-    if (wordCount > 6) return null; // not a terse reply
-
     bool has(Set<String> set) => set.any((w) => lower.contains(w));
-    final hasUnsure = has(_unsureWords);
-    final hasSevere = has(_severeWords);
-    final hasMild = has(_mildWords);
-    final hasYes = has(_yesWords);
-    final hasNo = has(_noWords);
+    final wordCount =
+        lower.split(RegExp(r'[\s।,!?.]+')).where((w) => w.isNotEmpty).length;
 
-    // Precedence (safety-biased): an explicit degree wins over a plain yes;
-    // genuine uncertainty beats a bare "না" inside "নিশ্চিত না".
-    if (hasSevere) return severe;
-    if (hasYes) return hasMild ? mild : yes; // "হ্যাঁ একটু" → mild
-    if (hasMild) return mild;
-    if (hasUnsure) return unsure;
-    if (hasNo) return no;
+    final hasYes = has(_yesWords);
+
+    // Genuine uncertainty first ("নিশ্চিত না" also contains "না").
+    if (has(_unsureWords)) return unsure;
+    // Explicit severe degree.
+    if (has(_severeWords) && !has(_normalPhrases)) return severe;
+    // Clear/colloquial NO — safe to record even when verbose, as long as there
+    // is no explicit "হ্যাঁ" (handles "না তেমন কিছু নেই, নরমাল আছে").
+    if ((has(_normalPhrases) || has(_noWords)) && !hasYes) return no;
+    // Beyond a terse reply, leave multi-symptom free text to the extractor.
+    if (wordCount > 6) return null;
+    if (hasYes) return has(_mildWords) ? mild : yes; // "হ্যাঁ একটু" → mild
+    if (has(_affirmVerbs)) return has(_mildWords) ? mild : yes; // "জ্বর আছে"
+    if (has(_mildWords)) return mild;
     return null;
   }
 }
