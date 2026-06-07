@@ -157,6 +157,22 @@ class SituationExtractor {
         // English
         'jaundice', 'yellow skin', 'cyanosis', 'blue lips', 'yellow eyes',
       ], questionId: 'n6', answer: true, label: 'ত্বকের রঙ পরিবর্তন'),
+      _SymptomRule(triggers: [
+        'খিঁচুনি', 'খিচুনি', 'খিঁচুনি হচ্ছে', 'হাত-পা শক্ত', 'পিছনে বেঁকে', 'কাঁপছে',
+        'convulsion', 'fits', 'seizure', 'jhinkuni',
+      ], questionId: 'n7', answer: true, label: 'খিঁচুনি'),
+      _SymptomRule(triggers: [
+        'শরীর ঠান্ডা', 'গা ঠান্ডা', 'ঠান্ডা হয়ে গেছে', 'গা গরম নেই', 'শরীর গরম নেই',
+        'ঠান্ডা লাগছে', 'cold to touch', 'hypothermia', 'sharir thanda', 'ga thanda',
+      ], questionId: 'n8', answer: true, label: 'শরীর ঠান্ডা (হাইপোথার্মিয়া)'),
+      _SymptomRule(triggers: [
+        'ফুসকুড়ি', 'পুঁজভরা', 'ফোস্কা', 'চামড়ায় পুঁজ', 'কান থেকে পুঁজ', 'কানে পুঁজ',
+        'পুঁজ পড়ছে', 'pustules', 'blisters', 'ear pus', 'skin infection',
+      ], questionId: 'n9', answer: true, label: 'ফুসকুড়ি/পুঁজ'),
+      _SymptomRule(triggers: [
+        'তালু ফুলে', 'মাথার তালু ফুলে', 'মাথার নরম অংশ ফুলে', 'ফন্টানেল', 'মাথা ফুলে উঁচু',
+        'bulging fontanelle', 'soft spot bulging', 'fontanelle',
+      ], questionId: 'n10', answer: true, label: 'তালু ফুলে উঁচু'),
     ],
     'child': [
       _SymptomRule(triggers: [
@@ -271,6 +287,35 @@ class SituationExtractor {
         // English
         'weight loss', 'wasting', 'malnourished', 'thin', 'underweight',
       ], questionId: 'c6', answer: true, label: 'ওজন কম'),
+      _SymptomRule(triggers: [
+        'খিঁচুনি', 'খিচুনি', 'খিঁচুনি হচ্ছে', 'ফিট', 'হাত-পা শক্ত',
+        'convulsion', 'fits', 'seizure',
+      ], questionId: 'c7', answer: true, label: 'খিঁচুনি'),
+      _SymptomRule(triggers: [
+        'নিস্তেজ', 'অজ্ঞান', 'সাড়া দিচ্ছে না', 'অস্বাভাবিক ঘুমন্ত', 'ঝিমিয়ে',
+        'ডাকে সাড়া নেই', 'lethargic', 'unconscious', 'drowsy', 'not responding',
+      ], questionId: 'c8', answer: true, label: 'নিস্তেজ/অজ্ঞান'),
+      _SymptomRule(triggers: [
+        'সব বমি', 'যা খাচ্ছে বমি', 'সব কিছু বমি', 'সব বমি করে', 'যা-ই খাচ্ছে বমি',
+        'vomits everything', 'vomiting everything',
+      ], questionId: 'c9', answer: true, label: 'সব বমি করছে'),
+      // c10 = meningitis: keyword-match only the SPECIFIC signs (stiff neck /
+      // photophobia). Isolated headache must NOT auto-fire RED here — the online
+      // (Gemini) path handles the nuanced "severe headache WITH fever" case.
+      _SymptomRule(triggers: [
+        'ঘাড় শক্ত', 'ঘাড় টান', 'ঘাড়ে শক্ত', 'ঘাড় নাড়াতে পারছে না',
+        'আলোয় কষ্ট', 'আলো সহ্য হচ্ছে না', 'stiff neck', 'meningitis',
+        'neck stiffness', 'photophobia',
+      ], questionId: 'c10', answer: true, label: 'ঘাড় শক্ত/মেনিনজাইটিস'),
+      _SymptomRule(triggers: [
+        'আমাশা', 'আমাশয়', 'পায়খানায় রক্ত', 'রক্ত পায়খানা', 'রক্ত আমাশা',
+        'পায়খানার সাথে রক্ত', 'রক্ত মিশ্রিত পায়খানা', 'dysentery', 'blood in stool',
+        'bloody stool', 'khoon pakhana', 'amasha',
+      ], questionId: 'c11', answer: true, label: 'আমাশা/রক্ত পায়খানা'),
+      _SymptomRule(triggers: [
+        'ফ্যাকাশে', 'রক্তশূন্য', 'রক্তাল্পতা', 'চোখের পাতা ফ্যাকাশে', 'হাতের তালু ফ্যাকাশে',
+        'রক্ত কম', 'pale', 'pallor', 'anaemia', 'anemia',
+      ], questionId: 'c12', answer: true, label: 'ফ্যাকাশে/রক্তাল্পতা'),
     ],
     'pregnancy': [
       // BP only (headache split out to p11 so an ISOLATED headache is not RED).
@@ -395,6 +440,23 @@ class SituationExtractor {
         'chakkar aa raha', 'sir ghoom raha', 'chakkar aagel',
         'matha ghuruchi', 'matha ghoomth', 'dizziness', 'dizzy', 'head spinning',
       ], questionId: 'p12', answer: true, label: 'মাথা ঘোরা/দুর্বলতা'),
+      _SymptomRule(triggers: [
+        'খিঁচুনি', 'খিচুনি', 'খিঁচুনি হচ্ছে', 'ফিট', 'হাত-পা শক্ত',
+        'convulsion', 'fits', 'eclampsia',
+      ], questionId: 'p7', answer: true, label: 'খিঁচুনি (এক্লাম্পসিয়া)'),
+      _SymptomRule(triggers: [
+        'খুব ফ্যাকাশে', 'ফ্যাকাশে', 'হাঁপিয়ে যাচ্ছে', 'হাঁপাচ্ছে', 'দম ফুরিয়ে',
+        'খুব দুর্বল', 'রক্তস্বল্পতা', 'রক্তশূন্য', 'রক্ত কম', 'pale', 'breathless',
+        'severe anaemia', 'anemia',
+      ], questionId: 'p8', answer: true, label: 'গুরুতর রক্তাল্পতা'),
+      _SymptomRule(triggers: [
+        'জ্বর', 'জ্বর আসছে', 'কাঁপুনি দিয়ে জ্বর', 'কাঁপুনি', 'গা গরম', 'fever',
+        'rigors', 'chills', 'jor',
+      ], questionId: 'p9', answer: true, label: 'জ্বর/কাঁপুনি'),
+      _SymptomRule(triggers: [
+        'জল ভেঙেছে', 'জল ভাঙছে', 'জল ঝরছে', 'পানি ভেঙেছে', 'পানি ঝরছে', 'লিকেজ',
+        'জল পড়ছে', 'water broke', 'leaking', 'prom', 'liquor',
+      ], questionId: 'p10', answer: true, label: 'জল ভাঙা (PROM)'),
     ],
     'delivery_pnc': [
       _SymptomRule(triggers: [
@@ -506,6 +568,18 @@ class SituationExtractor {
         // English
         'weakness', 'dizziness', 'pallor', 'very weak', 'no energy',
       ], questionId: 'pp6', answer: true, label: 'দুর্বলতা'),
+      _SymptomRule(triggers: [
+        'খিঁচুনি', 'খিচুনি', 'ফিট', 'খিঁচুনি হচ্ছে', 'হাত-পা শক্ত',
+        'convulsion', 'fits', 'eclampsia',
+      ], questionId: 'pp7', answer: true, label: 'খিঁচুনি (পোস্টপার্টাম এক্লাম্পসিয়া)'),
+      _SymptomRule(triggers: [
+        'শ্বাসকষ্ট', 'শ্বাস নিতে কষ্ট', 'দম বন্ধ', 'হাঁপাচ্ছে', 'বুকে ব্যথা',
+        'breathlessness', 'difficulty breathing', 'chest pain',
+      ], questionId: 'pp8', answer: true, label: 'শ্বাসকষ্ট'),
+      _SymptomRule(triggers: [
+        'মন খারাপ', 'মন খুব খারাপ', 'কান্না', 'কাঁদছে', 'বাচ্চার প্রতি আগ্রহ নেই',
+        'ঘুম হচ্ছে না', 'খাওয়া কমে', 'বিষণ্ণ', 'depression', 'low mood', 'crying',
+      ], questionId: 'pp9', answer: true, label: 'প্রসব-পরবর্তী বিষণ্নতা'),
     ],
     'immunisation': [
       _SymptomRule(triggers: [
@@ -541,6 +615,10 @@ class SituationExtractor {
         // English
         'booster missed', 'missed booster', 'booster dose',
       ], questionId: 'im5', answer: true, label: 'বুস্টার ডোজ মিস'),
+      _SymptomRule(triggers: [
+        'আগের টিকার পর প্রতিক্রিয়া', 'টিকার পর জ্বর', 'টিকার পর খিঁচুনি',
+        'গুরুতর প্রতিক্রিয়া', 'টিকার পর ফুলে', 'reaction after vaccine', 'aefi',
+      ], questionId: 'im6', answer: true, label: 'AEFI (টিকার পর প্রতিক্রিয়া)'),
     ],
     'emergency': [
       _SymptomRule(triggers: [
@@ -615,6 +693,24 @@ class SituationExtractor {
         // English
         'unresponsive', 'unconscious', 'no response', 'not responding',
       ], questionId: 'e4', answer: true, label: 'সাড়া নেই'),
+      _SymptomRule(triggers: [
+        'সাপে কামড়', 'সাপ কামড়', 'সাপে কেটেছে', 'পোকা কামড়', 'পশুর কামড়',
+        'কুকুর কামড়', 'বিষাক্ত পোকা', 'snakebite', 'snake bite', 'dog bite',
+        'animal bite', 'sting',
+      ], questionId: 'e5', answer: true, label: 'সাপ/পশুর কামড়'),
+      _SymptomRule(triggers: [
+        'বিষ খেয়েছে', 'বিষ খাওয়া', 'কীটনাশক', 'কীটনাশক খেয়েছে', 'ওষুধ বেশি খেয়েছে',
+        'অতিরিক্ত ওষুধ', 'poison', 'pesticide', 'overdose', 'bish kheyeche',
+      ], questionId: 'e6', answer: true, label: 'বিষ/কীটনাশক'),
+      _SymptomRule(triggers: [
+        'ঠান্ডা ঘাম', 'ঠান্ডা-ঘামে ভেজা', 'দুর্বল নাড়ি', 'নাড়ি পাচ্ছি না',
+        'নাড়ি দুর্বল', 'শক', 'অত্যন্ত নিস্তেজ', 'shock', 'cold clammy', 'weak pulse',
+      ], questionId: 'e7', answer: true, label: 'শক'),
+      _SymptomRule(triggers: [
+        'গুরুতর আঘাত', 'বড় ক্ষত', 'অনেক রক্ত', 'মারাত্মক পোড়া', 'পুড়ে গেছে',
+        'পোড়া', 'দুর্ঘটনা', 'হাড় ভেঙেছে', 'injury', 'burn', 'trauma', 'accident',
+        'major wound', 'fracture',
+      ], questionId: 'e8', answer: true, label: 'আঘাত/পোড়া'),
     ],
   };
 
