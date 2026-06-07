@@ -1,0 +1,1784 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>AshaMitra — Live Engine Rules 2.3.0-draft</title><style>
+  @page { size: A4; margin: 15mm 13mm 16mm 13mm; }
+  * { box-sizing: border-box; }
+  body { font-family:'Segoe UI','Nirmala UI','Noto Sans Bengali',sans-serif; color:#1c2333; font-size:10.2pt; line-height:1.45; margin:0; }
+  code { font-family:'Cascadia Code','Consolas',monospace; font-size:8.6pt; background:#eef0fb; padding:1px 5px; border-radius:4px; color:#2c2f6b; }
+  h1 { font-size:22pt; color:#312e81; margin:2px 0 4px; letter-spacing:-.5px; }
+  h2 { font-size:14.5pt; color:#fff; background:#4f46e5; padding:7px 12px; border-radius:7px; margin:0 0 10px; }
+  h3 { font-size:12pt; color:#312e81; margin:14px 0 6px; }
+  .sub-lead { color:#475569; font-size:10pt; }
+  .lbl { display:inline-block; font-size:7.4pt; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#6366f1; margin-right:4px; }
+  .cover { padding:10px 0 6px; border-bottom:3px solid #4f46e5; margin-bottom:16px; }
+  .pills span { display:inline-block; background:#eef0fb; color:#312e81; border:1px solid #d6d8f5; border-radius:20px; padding:3px 11px; font-size:8.6pt; margin:2px 4px 2px 0; }
+  .draft-banner { background:#fef3c7; border:1.5px solid #fcd34d; border-left:6px solid #d97706; border-radius:8px; padding:10px 14px; margin:10px 0 4px; font-size:9pt; color:#92400e; }
+  .badge { display:inline-block; color:#fff; font-weight:700; font-size:8pt; padding:1px 8px; border-radius:20px; }
+  .badge.red{background:#dc2626;} .badge.yellow{background:#d97706;} .badge.green{background:#16a34a;}
+  .chip { display:inline-block; font-size:7.2pt; font-weight:700; padding:1px 7px; border-radius:20px; text-transform:uppercase; letter-spacing:.3px; }
+  .chip.hard{ background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; } .chip.soft{ background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+  .tag.draft { background:#ffedd5; color:#9a3412; border:1px solid #fdba74; font-size:7.2pt; font-weight:700; padding:1px 7px; border-radius:20px; text-transform:uppercase; }
+  table { border-collapse:collapse; width:100%; margin:6px 0 12px; font-size:8.8pt; }
+  th,td { border:1px solid #dadcef; padding:4px 7px; text-align:left; vertical-align:top; }
+  thead th { background:#eef0fb; color:#312e81; }
+  section.case { page-break-before: always; }
+  .case-meta { display:flex; flex-wrap:wrap; gap:14px; font-size:9pt; color:#475569; margin-bottom:6px; }
+  .draftc { color:#9a3412; }
+  .rule { border:1px solid #e5e7f2; border-left-width:5px; border-radius:7px; padding:8px 11px; margin:0 0 9px; page-break-inside:avoid; background:#fcfcff; }
+  .rule.red{border-left-color:#dc2626;} .rule.yellow{border-left-color:#d97706;} .rule.green{border-left-color:#16a34a;}
+  .rule-head { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-bottom:4px; }
+  .rid { font-weight:800; font-size:10pt; color:#1e1b4b; font-family:'Cascadia Code','Consolas',monospace; }
+  .refer { margin-left:auto; font-size:8.4pt; font-weight:700; color:#b91c1c; }
+  .rule.yellow .refer{ color:#b45309; }
+  .cond,.action,.action-bn,.sub { font-size:9pt; margin:2px 0; }
+  .cond { color:#111827; } .and{ color:#6366f1; font-weight:700; font-size:8pt; }
+  .action { background:#f8fafc; border-radius:5px; padding:3px 7px; }
+  .action-bn { color:#334155; }
+  .sub { color:#64748b; font-size:8.3pt; }
+  .score { font-size:8.4pt; color:#64748b; margin-top:6px; }
+  .foot { margin-top:20px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8pt; color:#94a3b8; }
+</style></head><body>
+  <div class="cover">
+    <h1>AshaMitra — Live Engine Rulebook</h1>
+    <div class="sub-lead">The exact rules the app runs to decide 🟢 Green / 🟡 Yellow / 🔴 Red — generated from <code>asha_engine.json</code> for clinical sign-off.</div>
+    <div class="pills">
+      <span>Engine asha_cdss_engine_v2</span><span>Version 2.3.0-draft</span>
+      <span>6 modules</span><span>117 rules</span>
+      <span>Deterministic</span><span>Red-lock</span>
+    </div>
+    <div class="draft-banner"><b>⚠ 59 rules are DRAFT (clinical_sign_off_pending).</b>
+    They are live in the app but <b>not clinically validated</b> — each must be reviewed and approved by the
+    AIIH&amp;PH / WB Health Secretariat clinical committee. Look for the <span class="tag draft">DRAFT · SIGN-OFF</span> tag.</div>
+  </div>
+
+  <section>
+    <h3>How the engine decides</h3>
+    <p class="sub-lead">Deterministic, offline, no LLM in the decision. Evaluation order:
+    <b>hard_stop → combination_rules → numeric_rules → risk_score</b>; first hard-stop locks
+    <b>RED</b> (never downgraded); fallback <b>GREEN</b>.</p>
+    <h3>Answer model (graded)</h3>
+    <table><thead><tr><th>Worker answer</th><th>Meaning</th><th>Effect</th></tr></thead><tbody>
+      <tr><td>হ্যাঁ / yes</td><td>danger sign present</td><td>fires the rule (usually <span class="badge red">RED</span>)</td></tr>
+      <tr><td>খুব কম / অনেক / একবার (severe)</td><td>severe degree</td><td>fires the rule, same as yes</td></tr>
+      <tr><td>মাঝে মাঝে / কিছুটা / একটু (mild)</td><td>intermittent / partial</td><td>at least <span class="badge yellow">YELLOW</span></td></tr>
+      <tr><td>না / no</td><td>absent</td><td>does not fire</td></tr>
+      <tr><td>নিশ্চিত না / unsure</td><td>worker not certain</td><td><b>blocks GREEN</b> → at least <span class="badge yellow">YELLOW</span></td></tr>
+    </tbody></table>
+    <h3>Patient-profile adaptive layer (escalation only — never downgrades)</h3>
+    <p class="sub-lead">Using the beneficiary profile + prior visits: newborn &lt; 7 days and infant &lt; 3 months escalate any YELLOW → RED;
+    maternal age &lt; 18 or &gt; 35, a prior RED outcome, or ≥ 2 missed ANC escalate GREEN → YELLOW. With no patient selected
+    (urgent walk-in) the engine applies no profile escalation and the rule-based band stands.</p>
+    <h3>Bands → referral</h3>
+    <table><thead><tr><th>Band</th><th>Action</th><th>Referral</th></tr></thead><tbody>
+    <tr><td><span class="badge green">GREEN</span></td><td>Home care. Routine follow-up.</td><td>None</td></tr><tr><td><span class="badge yellow">YELLOW</span></td><td>Refer to PHC within 24 h.</td><td>PHC within 24 h</td></tr><tr><td><span class="badge red">RED</span></td><td>Call 108. Refer FRU/SNCU/DH immediately.</td><td>FRU / SNCU / DH immediately</td></tr>
+    </tbody></table>
+  </section>
+
+  
+  <section class="case">
+    <h2>1. 👶 Newborn Checkup (0–28 days)</h2>
+    <div class="case-meta">
+      <span>নবজাতক চেকআপ (০-২৮ দিন)</span>
+      <span>Module <code>newborn</code></span>
+      <span>10 questions · 24 rules · <b class="draftc">12 draft</b></span>
+    </div>
+    <table class="q"><thead><tr><th>ID</th><th>প্রশ্ন (BN)</th><th>Question (EN)</th><th>Answers</th></tr></thead><tbody><tr><td><code>n1</code></td><td>শিশু বুকের দুধ খেতে পারছে না?</td><td>Is the baby unable to breastfeed?</td><td>হ্যাঁ · না</td></tr><tr><td><code>n2</code></td><td>শিশুর শরীরে জ্বর আছে?</td><td>Does the baby have fever?</td><td>হ্যাঁ · না</td></tr><tr><td><code>n3</code></td><td>শ্বাস-প্রশ্বাস দ্রুত বা কষ্টকর?</td><td>Is breathing fast or difficult?</td><td>হ্যাঁ · না</td></tr><tr><td><code>n4</code></td><td>নাভি লাল, ফোলা বা পুঁজ আছে?</td><td>Is the navel red, swollen, or has pus?</td><td>হ্যাঁ · না</td></tr><tr><td><code>n5</code></td><td>শিশু অনেক কম নড়ছে বা নিস্তেজ?</td><td>Is the baby lethargic or not moving?</td><td>হ্যাঁ · না</td></tr><tr><td><code>n6</code></td><td>ত্বক হলুদ বা নীলাভ দেখাচ্ছে?</td><td>Does the skin look yellow or bluish?</td><td>হ্যাঁ · না</td></tr><tr><td><code>n7</code></td><td>শিশুর খিঁচুনি বা অস্বাভাবিক নড়াচড়া হয়েছে?</td><td>Has the baby had convulsions or abnormal movements?</td><td>হ্যাঁ · না</td></tr><tr><td><code>n8</code></td><td>শিশুর শরীর ঠান্ডা লাগছে বা স্বাভাবিকের চেয়ে কম গরম?</td><td>Is the baby cold to touch / colder than normal (hypothermia)?</td><td>হ্যাঁ · না</td></tr><tr><td><code>n9</code></td><td>ত্বকে অনেক ফুসকুড়ি/পুঁজভরা ফোস্কা, বা কান থেকে পুঁজ পড়ছে?</td><td>Many skin pustules / pus-filled blisters, or pus draining from ear?</td><td>হ্যাঁ · না</td></tr><tr><td><code>n10</code></td><td>মাথার নরম অংশ (তালু) ফুলে উঁচু হয়ে আছে?</td><td>Is the soft spot on the head (fontanelle) bulging?</td><td>হ্যাঁ · না</td></tr></tbody></table>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ SNCU / FRU immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the baby unable to breastfeed?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> PSBI hard-stop. Refer SNCU/FRU immediately.</div>
+    <div class="action-bn">PSBI হার্ড-স্টপ। এখনই SNCU/FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Possible neonatal sepsis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Poor feeding</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ SNCU / FRU immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Does the baby have fever?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> PSBI hard-stop. Any fever in newborn is a danger sign.</div>
+    <div class="action-bn">PSBI হার্ড-স্টপ। যেকোনো জ্বর নবজাতকের জন্য বিপদচিহ্ন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Neonatal fever / sepsis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Fever</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ SNCU / FRU immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is breathing fast or difficult?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> PSBI hard-stop. Count RR — ≥ 60/min = severe.</div>
+    <div class="action-bn">PSBI হার্ড-স্টপ। শ্বাসের হার গণনা করুন — ≥ ৬০/মিনিট = গুরুতর।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Respiratory distress</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Breathing difficulty</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the navel red, swollen, or has pus?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Omphalitis can progress to sepsis within hours.</div>
+    <div class="action-bn">ওম্ফালাইটিস কয়েক ঘণ্টায় সেপসিসে পরিণত হতে পারে।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Omphalitis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Umbilical infection</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-005</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ SNCU / FRU immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the baby lethargic or not moving?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> PSBI hard-stop. Lethargy = severe systemic illness.</div>
+    <div class="action-bn">PSBI হার্ড-স্টপ। নিস্তেজতা = গুরুতর সিস্টেমিক অসুস্থতা।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Possible neonatal sepsis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Lethargy</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-006</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ SNCU / FRU immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Does the skin look yellow or bluish?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Cyanosis or jaundice within 24 h = refer SNCU immediately.</div>
+    <div class="action-bn">সায়ানোসিস বা ২৪ ঘণ্টার মধ্যে জন্ডিস = এখনই SNCU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Jaundice / Cyanosis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Skin colour change</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-007</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ SNCU / FRU immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Has the baby had convulsions or abnormal movements?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> PSBI hard-stop. Convulsions = serious neurological danger sign. Refer SNCU immediately.</div>
+    <div class="action-bn">PSBI হার্ড-স্টপ। খিঁচুনি = গুরুতর নিউরোলজিক বিপদচিহ্ন। এখনই SNCU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Neonatal seizures · Possible sepsis / meningitis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Convulsions</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-008</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ SNCU / FRU immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the baby cold to touch / colder than normal (hypothermia)?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> PSBI hard-stop. Keep warm (skin-to-skin/kangaroo care), cover head. Refer SNCU/FRU immediately. Hypothermia is a major neonatal killer.</div>
+    <div class="action-bn">PSBI হার্ড-স্টপ। শরীর গরম রাখুন (ত্বক-থেকে-ত্বক/কাঙ্গারু কেয়ার), মাথা ঢেকে রাখুন। এখনই SNCU/FRU-তে রেফার করুন। হাইপোথার্মিয়া নবজাতকের বড় ঝুঁকি।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Neonatal hypothermia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Hypothermia · Cold to touch</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-010</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Many skin pustules / pus-filled blisters, or pus draining from ear?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Many pustules/pus-filled blisters or ear pus = PSBI local bacterial infection. Refer FRU/DH immediately.</div>
+    <div class="action-bn">অনেক ফুসকুড়ি/পুঁজভরা ফোস্কা বা কানে পুঁজ = PSBI স্থানীয় ব্যাকটেরিয়াল সংক্রমণ। এখনই FRU/DH-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Local bacterial infection (PSBI)</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Skin pustules · Ear discharge</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-011</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ SNCU / FRU immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the soft spot on the head (fontanelle) bulging?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Bulging fontanelle = possible meningitis. Refer SNCU/FRU immediately.</div>
+    <div class="action-bn">মাথার তালু ফুলে থাকা = মেনিনজাইটিসের সম্ভাবনা। এখনই SNCU/FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Meningitis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Bulging fontanelle</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-COMB-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Does the baby have fever?” = <b>Yes</b> <span class="and">AND</span> “Is breathing fast or difficult?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Fever + breathing difficulty = severe PSBI. Refer immediately.</div>
+    <div class="action-bn">জ্বর + শ্বাসকষ্ট = গুরুতর PSBI। এখনই রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe PSBI</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Fever · Breathing difficulty</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-COMB-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Does the skin look yellow or bluish?” = <b>Yes</b> <span class="and">AND</span> “Is the baby unable to breastfeed?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Jaundice + poor feeding = kernicterus risk. Refer SNCU immediately.</div>
+    <div class="action-bn">জন্ডিস + দুধ খাচ্ছে না = কার্নিকটেরাসের ঝুঁকি। এখনই SNCU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe jaundice / kernicterus risk</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Jaundice · Poor feeding</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-COMB-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the baby lethargic or not moving?” = <b>Yes</b> <span class="and">AND</span> “Is breathing fast or difficult?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Lethargy + breathing difficulty = severe sepsis. Refer SNCU immediately.</div>
+    <div class="action-bn">নিস্তেজতা + শ্বাসকষ্ট = গুরুতর সেপসিস। এখনই SNCU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe neonatal sepsis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Lethargy · Breathing difficulty</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-COMB-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the navel red, swollen, or has pus?” = <b>Yes</b> <span class="and">AND</span> “Does the baby have fever?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Umbilical infection + fever = systemic sepsis risk. Give first dose amoxicillin, refer SNCU.</div>
+    <div class="action-bn">নাভি সংক্রমণ + জ্বর = সিস্টেমিক সেপসিসের ঝুঁকি। প্রথম ডোজ amoxicillin দিয়ে SNCU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Omphalitis with systemic sepsis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Umbilical infection · Fever</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-COMB-005</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the baby unable to breastfeed?” = <b>Yes</b> <span class="and">AND</span> “Does the baby have fever?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Not feeding + fever = PSBI confirmed. First dose amoxicillin + IM gentamicin, refer SNCU.</div>
+    <div class="action-bn">দুধ না খাওয়া + জ্বর = PSBI নিশ্চিত। প্রথম ডোজ amoxicillin + IM gentamicin, এখনই SNCU।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Possible serious bacterial infection (PSBI)</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Poor feeding · Fever</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-VITAL-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>spo2</code> < <b>90</b></div>
+    <div class="action"><span class="lbl">Action</span> SpO2 &lt; 90% — critical hypoxia.</div>
+    <div class="action-bn">SpO2 &lt; 90% — অক্সিজেন স্যাচুরেশন বিপজ্জনক।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Low SpO2</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-VITAL-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>respiratory_rate</code> ≥ <b>60</b></div>
+    <div class="action"><span class="lbl">Action</span> RR ≥ 60/min — severe tachypnoea.</div>
+    <div class="action-bn">শ্বাসের হার ≥ ৬০/মিনিট — গুরুতর।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Fast breathing</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-VITAL-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>temperature_c</code> ≥ <b>37.5</b></div>
+    <div class="action"><span class="lbl">Action</span> Temp ≥ 37.5°C — danger sign in newborn.</div>
+    <div class="action-bn">জ্বর ≥ ৩৭.৫°C — নবজাতকের জন্য বিপদচিহ্ন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Fever</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-VITAL-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>weight_kg</code> < <b>1.5</b></div>
+    <div class="action"><span class="lbl">Action</span> Weight &lt; 1.5 kg — VLBW. Start KMC, refer SNCU immediately.</div>
+    <div class="action-bn">ওজন &lt; ১.৫ কেজি — খুব কম ওজন (VLBW)। কাঙ্গারু মাদার কেয়ার শুরু করুন, এখনই SNCU-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Low birth weight</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-VITAL-005</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>temperature_c</code> < <b>35.5</b></div>
+    <div class="action"><span class="lbl">Action</span> Temp &lt; 35.5°C — hypothermia. Start kangaroo mother care, refer SNCU.</div>
+    <div class="action-bn">তাপমাত্রা &lt; ৩৫.৫°C — হাইপোথার্মিয়া। কাঙ্গারু মাদার কেয়ার শুরু করুন, SNCU-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Hypothermia</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-VITAL-006</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>heart_rate</code> > <b>180</b></div>
+    <div class="action"><span class="lbl">Action</span> HR &gt; 180/min — severe tachycardia. Refer SNCU.</div>
+    <div class="action-bn">হৃদস্পন্দন &gt; ১৮০/মিনিট — গুরুতর টাকিকার্ডিয়া। SNCU-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Tachycardia</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">NB-VITAL-007</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>weight_kg</code> between <b>[1.8–2.5]</b></div>
+    <div class="action"><span class="lbl">Action</span> Weight 1.8–2.5 kg — LBW. KMC, breastfeed every 2 h.</div>
+    <div class="action-bn">ওজন ১.৮–২.৫ কেজি — কম ওজন (LBW)। কাঙ্গারু কেয়ার, প্রতি ২ ঘণ্টায় বুকের দুধ।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Low birth weight</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-VITAL-008</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>weight_kg</code> < <b>1.8</b></div>
+    <div class="action"><span class="lbl">Action</span> Weight &lt; 1.8 kg — HBNC referral threshold. KMC + expressed breast milk + refer SNCU.</div>
+    <div class="action-bn">ওজন &lt; ১.৮ কেজি — HBNC থ্রেশহোল্ড: কাঙ্গারু মাদার কেয়ার + ব্যক্ত স্তন্যদুগ্ধ + SNCU-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Very low birth weight</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">NB-VITAL-009</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>temperature_c</code> between <b>[35.5–36.4]</b></div>
+    <div class="action"><span class="lbl">Action</span> Temp 35.5–36.4°C — cold stress. KMC, warm the room, recheck in 1 hour.</div>
+    <div class="action-bn">তাপমাত্রা ৩৫.৫–৩৬.৪°C — কোল্ড স্ট্রেস। কাঙ্গারু মাদার কেয়ার, ঘর গরম রাখুন, ১ ঘণ্টা পর পুনরায় মাপুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Cold stress</div>
+  </div>
+    <div class="score"><span class="lbl">Risk-score bands</span> GREEN 0–2 · YELLOW 3–5 · RED 6–100</div>
+  </section>
+  <section class="case">
+    <h2>2. 🧒 Child Health Check (2 months–5 years)</h2>
+    <div class="case-meta">
+      <span>শিশু স্বাস্থ্য যাচাই (২ মাস–৫ বছর)</span>
+      <span>Module <code>child</code></span>
+      <span>12 questions · 25 rules · <b class="draftc">13 draft</b></span>
+    </div>
+    <table class="q"><thead><tr><th>ID</th><th>প্রশ্ন (BN)</th><th>Question (EN)</th><th>Answers</th></tr></thead><tbody><tr><td><code>c1</code></td><td>পাঁচ দিনের বেশি জ্বর চলছে?</td><td>Has fever lasted more than 5 days?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c2</code></td><td>কাশি বা শ্বাসকষ্ট আছে?</td><td>Is there cough or breathing difficulty?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c3</code></td><td>ডায়রিয়া বা বারবার বমি হচ্ছে?</td><td>Is there diarrhoea or repeated vomiting?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c4</code></td><td>শিশু খেতে একদম অস্বীকার করছে?</td><td>Is the child completely refusing to eat?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c5</code></td><td>পানিশূন্যতার লক্ষণ (চোখ গর্তে, ঠোঁট শুকনো)?</td><td>Signs of dehydration — sunken eyes, dry lips?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c6</code></td><td>ওজন বয়সের তুলনায় অনেক কম?</td><td>Is weight much less than expected for age?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c7</code></td><td>শিশুর খিঁচুনি হয়েছে বা হচ্ছে?</td><td>Has the child had convulsions or fits?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c8</code></td><td>শিশু অস্বাভাবিকভাবে ঘুমন্ত, নিস্তেজ বা অজ্ঞান?</td><td>Is the child abnormally sleepy, lethargic, or unconscious?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c9</code></td><td>যা-ই খাচ্ছে সব বমি করে ফেলছে?</td><td>Does the child vomit everything?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c10</code></td><td>ঘাড় শক্ত, আলোয় কষ্ট, বা জ্বরসহ প্রচণ্ড মাথাব্যথা?</td><td>Stiff neck, light sensitivity, or severe headache with fever?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c11</code></td><td>পায়খানার সাথে রক্ত যাচ্ছে?</td><td>Is there blood in the stool (dysentery)?</td><td>হ্যাঁ · না</td></tr><tr><td><code>c12</code></td><td>হাতের তালু বা চোখের পাতা খুব ফ্যাকাশে?</td><td>Are the palms or inner eyelids very pale (anaemia)?</td><td>হ্যাঁ · না</td></tr></tbody></table>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ PHC / DH same day</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Has fever lasted more than 5 days?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Refer PHC/DH same day. Rule out malaria, typhoid, dengue.</div>
+    <div class="action-bn">একই দিনে PHC/DH-তে রেফার করুন। ম্যালেরিয়া, টাইফয়েড, ডেঙ্গু বাদ দিন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Prolonged fever — malaria / typhoid / dengue</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Fever &gt; 5 days</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-005</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Signs of dehydration — sunken eyes, dry lips?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Severe dehydration. Start ORS. Refer FRU for IV fluids.</div>
+    <div class="action-bn">গুরুতর পানিশূন্যতা = RED। এখনই ORS শুরু করুন। IV তরলের জন্য FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe dehydration</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Sunken eyes · Dry lips</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-007</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Has the child had convulsions or fits?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Convulsions = IMNCI general danger sign. Place child on side, put nothing in mouth, refer FRU immediately.</div>
+    <div class="action-bn">খিঁচুনি = IMNCI সাধারণ বিপদচিহ্ন। শিশুকে কাত করে শোয়ান, কিছু মুখে দেবেন না, এখনই FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Seizure · Meningitis / cerebral malaria</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Convulsions</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-008</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the child abnormally sleepy, lethargic, or unconscious?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Lethargy or unconsciousness = IMNCI general danger sign. Refer FRU immediately.</div>
+    <div class="action-bn">নিস্তেজতা বা অজ্ঞানতা = IMNCI সাধারণ বিপদচিহ্ন। এখনই FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe systemic illness · Shock / sepsis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Lethargy · Unconscious</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-009</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Does the child vomit everything?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Vomiting everything = IMNCI general danger sign. Cannot keep anything down — refer FRU/DH immediately.</div>
+    <div class="action-bn">সব বমি করে ফেলা = IMNCI সাধারণ বিপদচিহ্ন। মুখে কিছু রাখতে পারছে না — এখনই FRU/DH-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Unable to retain feeds · Possible serious illness</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Vomits everything</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-010</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Stiff neck, light sensitivity, or severe headache with fever?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Stiff neck/severe headache with fever = possible meningitis/encephalitis. Call 108, refer FRU/DH immediately.</div>
+    <div class="action-bn">ঘাড় শক্ত/জ্বরসহ প্রচণ্ড মাথাব্যথা = মেনিনজাইটিস/এনসেফালাইটিসের সম্ভাবনা। ১০৮ কল করুন, এখনই FRU/DH-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Meningitis · Encephalitis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Neck stiffness · Severe headache with fever</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-COMB-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there cough or breathing difficulty?” = <b>Yes</b> <span class="and">AND</span> “Signs of dehydration — sunken eyes, dry lips?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Breathing difficulty + dehydration = critical. Refer FRU immediately.</div>
+    <div class="action-bn">শ্বাসকষ্ট + পানিশূন্যতা = গুরুতর। এখনই FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe pneumonia with dehydration</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Breathing difficulty · Dehydration</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-COMB-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Has fever lasted more than 5 days?” = <b>Yes</b> <span class="and">AND</span> “Is there cough or breathing difficulty?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Fever &gt; 5 days + cough = possible pneumonia or malaria. Refer PHC today.</div>
+    <div class="action-bn">জ্বর &gt; ৫ দিন + কাশি = সম্ভাব্য নিউমোনিয়া বা ম্যালেরিয়া। আজই PHC-তে নিয়ে যান।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Pneumonia · Malaria</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Prolonged fever · Cough</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-COMB-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there diarrhoea or repeated vomiting?” = <b>Yes</b> <span class="and">AND</span> “Is the child completely refusing to eat?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Diarrhoea + refusal to eat = severe dehydration risk. Start ORS, refer FRU.</div>
+    <div class="action-bn">ডায়রিয়া + খেতে অস্বীকার = গুরুতর পানিশূন্যতার ঝুঁকি। ORS শুরু করুন, FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe dehydration with feeding refusal</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Diarrhoea · Feeding refusal</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-COMB-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there diarrhoea or repeated vomiting?” = <b>Yes</b> <span class="and">AND</span> “Signs of dehydration — sunken eyes, dry lips?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Diarrhoea + dehydration signs = IMNCI Plan C. Refer FRU immediately for IV fluids, continue ORS en route.</div>
+    <div class="action-bn">ডায়রিয়া + পানিশূন্যতার লক্ষণ = IMNCI Plan C। এখনই IV তরলের জন্য FRU-তে রেফার করুন, ORS পথে দিতে থাকুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe dehydration (IMNCI Plan C)</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Diarrhoea · Dehydration</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-VITAL-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>spo2</code> < <b>90</b></div>
+    <div class="action"><span class="lbl">Action</span> SpO2 &lt; 90% — critical hypoxia.</div>
+    <div class="action-bn">SpO2 &lt; 90% — গুরুতর হাইপক্সিয়া।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Low SpO2</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-VITAL-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>muac_cm</code> < <b>11.5</b></div>
+    <div class="action"><span class="lbl">Action</span> MUAC &lt; 11.5 cm = SAM. Refer NRC.</div>
+    <div class="action-bn">MUAC &lt; ১১.৫ সেমি = SAM। NRC-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Severe wasting</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-VITAL-003</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>muac_cm</code> between <b>[11.5–12.5]</b></div>
+    <div class="action"><span class="lbl">Action</span> MUAC 11.5–12.5 cm = MAM. Refer ICDS.</div>
+    <div class="action-bn">MUAC ১১.৫–১২.৫ সেমি = MAM। ICDS-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Moderate wasting</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-VITAL-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>respiratory_rate</code> ≥ <b>50</b></div>
+    <div class="action"><span class="lbl">Action</span> RR ≥ 50/min (2 mo–1 y) = severe pneumonia. Refer FRU.</div>
+    <div class="action-bn">শ্বাসের হার ≥ ৫০/মিনিট (২ মাস–১ বছর) = গুরুতর নিউমোনিয়া।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Tachypnoea</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-VITAL-005a</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>temperature_c</code> ≥ <b>40</b></div>
+    <div class="action"><span class="lbl">Action</span> Temp ≥ 40°C = hyperpyrexia. Refer FRU, test for malaria.</div>
+    <div class="action-bn">তাপমাত্রা ≥ ৪০°C = হাইপারপায়রেক্সিয়া। FRU-তে রেফার করুন, ম্যালেরিয়া পরীক্ষা করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Very high fever (≥40°C)</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-VITAL-005b</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>temperature_c</code> between <b>[39–40]</b></div>
+    <div class="action"><span class="lbl">Action</span> Temp 39–40°C = high fever. Refer PHC, give paracetamol.</div>
+    <div class="action-bn">তাপমাত্রা ৩৯–৪০°C = উচ্চ জ্বর। PHC-তে রেফার করুন, প্যারাসিটামল দিন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> High fever (39-40°C)</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-VITAL-006</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>weight_for_age_z</code> < <b>-3</b></div>
+    <div class="action"><span class="lbl">Action</span> WFA Z-score &lt; -3 = severe underweight. Refer NRC.</div>
+    <div class="action-bn">WFA Z-স্কোর &lt; -৩ = গুরুতর কম ওজন। NRC-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Severe underweight</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-VITAL-007</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>respiratory_rate</code> ≥ <b>40</b></div>
+    <div class="action"><span class="lbl">Action</span> RR ≥ 40/min (child 1–5 y) = possible pneumonia. Refer PHC within 24 h. Chest indrawing = RED.</div>
+    <div class="action-bn">শ্বাসের হার ≥ ৪০/মিনিট (১–৫ বছর শিশু) = সম্ভাব্য নিউমোনিয়া। ২৪ ঘণ্টার মধ্যে PHC-তে নিয়ে যান। বুকে ইনড্রয়িং থাকলে = RED।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Fast breathing (older child)</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-VITAL-008</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>spo2</code> between <b>[90–94]</b></div>
+    <div class="action"><span class="lbl">Action</span> SpO2 90–94% = moderate hypoxia. Refer PHC, prepare oxygen.</div>
+    <div class="action-bn">SpO2 ৯০–৯৪% = মাঝারি হাইপক্সিয়া। PHC-তে রেফার করুন, অক্সিজেন প্রস্তুত রাখুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Moderate hypoxia</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-002</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there cough or breathing difficulty?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Count RR. Chest indrawing = RED. Refer PHC within 24 h.</div>
+    <div class="action-bn">শ্বাসের হার গণনা করুন। বুকে ইনড্রয়িং = RED।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Pneumonia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Cough / breathing difficulty</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-003</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there diarrhoea or repeated vomiting?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Assess dehydration. Start ORS. Refer PHC within 24 h.</div>
+    <div class="action-bn">পানিশূন্যতা মূল্যায়ন করুন। ORS শুরু করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Diarrhoea / vomiting</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Diarrhoea · Vomiting</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-004</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the child completely refusing to eat?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Assess illness cause. Refer PHC within 24 h.</div>
+    <div class="action-bn">অসুস্থতার কারণ মূল্যায়ন করুন। ২৪ ঘণ্টার মধ্যে PHC।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Feeding refusal</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Not eating</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-006</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ ICDS / NRC if SAM</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is weight much less than expected for age?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Measure MUAC. &lt; 11.5 cm = SAM → RED, refer NRC.</div>
+    <div class="action-bn">MUAC পরিমাপ করুন। &lt; ১১.৫ সেমি = SAM → RED।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Malnutrition</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Low weight for age</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-011</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there blood in the stool (dysentery)?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Blood in stool = dysentery, needs antibiotics. Refer PHC within 24 h. With dehydration/lethargy = FRU.</div>
+    <div class="action-bn">পায়খানায় রক্ত = ডিসেন্ট্রি, অ্যান্টিবায়োটিক দরকার। ২৪ ঘণ্টার মধ্যে PHC। পানিশূন্যতা/নিস্তেজতা থাকলে = FRU।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Dysentery</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Blood in stool</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-012</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ PHC for Hb check</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Are the palms or inner eyelids very pale (anaemia)?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Pallor = anaemia. Refer PHC for Hb. Severe pallor = FRU (possible transfusion).</div>
+    <div class="action-bn">ফ্যাকাশে = রক্তাল্পতা। Hb পরীক্ষার জন্য PHC-তে রেফার করুন। গুরুতর ফ্যাকাশে = FRU (সম্ভাব্য রক্ত সঞ্চালন)।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Anaemia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Pallor</div>
+  </div>
+    <div class="score"><span class="lbl">Risk-score bands</span> GREEN 0–2 · YELLOW 3–5 · RED 6–100</div>
+  </section>
+  <section class="case">
+    <h2>3. 🤰 Pregnant Mother Checkup (ANC)</h2>
+    <div class="case-meta">
+      <span>গর্ভবতী মায়ের চেকআপ</span>
+      <span>Module <code>pregnancy</code></span>
+      <span>13 questions · 33 rules · <b class="draftc">20 draft</b></span>
+    </div>
+    <table class="q"><thead><tr><th>ID</th><th>প্রশ্ন (BN)</th><th>Question (EN)</th><th>Answers</th></tr></thead><tbody><tr><td><code>p1</code></td><td>রক্তচাপ বেশি?</td><td>Is blood pressure high?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p2</code></td><td>পা বা মুখ ফুলে যাচ্ছে?</td><td>Is there swelling of legs or face?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p3</code></td><td>রক্তপাত বা তীব্র পেট ব্যথা?</td><td>Is there bleeding or severe abdominal pain?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p4</code></td><td>শিশুর নড়াচড়া কমে গেছে?</td><td>Has the baby's movement reduced?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p5</code></td><td>তিন মাসের বেশি ANC চেকআপ বাদ গেছে?</td><td>Has ANC checkup been missed for 3+ months?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p6</code></td><td>চোখে ঝাপসা দেখছেন?</td><td>Is there blurred vision?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p7</code></td><td>গর্ভাবস্থায় খিঁচুনি বা ফিট হয়েছে?</td><td>Has there been a convulsion or fit during pregnancy?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p8</code></td><td>খুব ফ্যাকাশে, দুর্বল, বা সামান্য পরিশ্রমেই হাঁপিয়ে যাচ্ছেন?</td><td>Very pale, weak, or breathless on slight exertion (severe anaemia)?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p9</code></td><td>জ্বর, বিশেষ করে কাঁপুনি দিয়ে জ্বর আসছে?</td><td>Fever, especially with chills/rigors?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p10</code></td><td>যোনিপথে হঠাৎ জল ভেঙেছে বা ক্রমাগত জল ঝরছে?</td><td>Sudden gush or continuous leaking of fluid (PROM)?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p11</code></td><td>মাথা ব্যথা হচ্ছে?</td><td>Is there a headache?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p11d</code></td><td>মাথা ব্যথা কি খুব তীব্র, ২ দিনের বেশি, বা বাড়ছে?</td><td>Is the headache very severe, lasting &gt;2 days, or worsening?</td><td>হ্যাঁ · না</td></tr><tr><td><code>p12</code></td><td>মাথা ঘোরা বা দুর্বল লাগছে?</td><td>Is there dizziness or weakness?</td><td>হ্যাঁ · না</td></tr></tbody></table>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is blood pressure high?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Pre-eclampsia hard-stop. Lay on left side. Refer FRU/DH immediately.</div>
+    <div class="action-bn">প্রি-এক্লাম্পসিয়া হার্ড-স্টপ। বাম কাতে শোয়ান।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Pre-eclampsia / Eclampsia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> High BP · Headache</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there bleeding or severe abdominal pain?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> APH hard-stop. Do not do vaginal examination. Refer FRU/DH immediately.</div>
+    <div class="action-bn">APH হার্ড-স্টপ। যোনি পরীক্ষা করবেন না।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Antepartum haemorrhage</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Vaginal bleeding · Severe abdominal pain</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH same day</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Has the baby's movement reduced?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Refer FRU/DH same day for fetal monitoring.</div>
+    <div class="action-bn">ভ্রূণের নড়াচড়া পর্যবেক্ষণের জন্য একই দিনে FRU/DH-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Reduced fetal movement</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Baby not moving</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-006</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there blurred vision?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Eclampsia prodrome hard-stop. Refer FRU/DH immediately.</div>
+    <div class="action-bn">এক্লাম্পসিয়া প্রোড্রোম হার্ড-স্টপ।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Imminent eclampsia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Blurred vision · Dizziness</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-007</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Has there been a convulsion or fit during pregnancy?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Eclampsia hard-stop. Convulsion = life-threatening. Left lateral position, keep airway clear, prepare MgSO4, refer FRU immediately.</div>
+    <div class="action-bn">এক্লাম্পসিয়া হার্ড-স্টপ। খিঁচুনি = জীবনসংকটাপন্ন। বাম কাতে শোয়ান, শ্বাসনালী খোলা রাখুন, MgSO4 প্রস্তুত করুন, এখনই FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Eclampsia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Convulsion</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-008</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Very pale, weak, or breathless on slight exertion (severe anaemia)?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Severe anaemia is a leading maternal killer. Severe pallor/breathlessness = refer FRU/DH for Hb + transfusion planning.</div>
+    <div class="action-bn">গুরুতর রক্তাল্পতা মাতৃমৃত্যুর বড় কারণ। গুরুতর ফ্যাকাশে/হাঁপানি = Hb পরীক্ষা ও রক্ত সঞ্চালনের পরিকল্পনার জন্য FRU/DH-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe anaemia in pregnancy</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Severe pallor · Breathlessness on exertion</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-009</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Fever, especially with chills/rigors?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> High fever/rigors in pregnancy = sepsis/malaria/chorioamnionitis risk. Refer FRU/DH immediately.</div>
+    <div class="action-bn">গর্ভাবস্থায় উচ্চ জ্বর/কাঁপুনি = সেপসিস/ম্যালেরিয়া/ক্রিয়োঅ্যামনিওনাইটিসের ঝুঁকি। এখনই FRU/DH-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Maternal sepsis · Malaria in pregnancy · Chorioamnionitis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Fever with rigors</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-010</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Sudden gush or continuous leaking of fluid (PROM)?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Sudden gush/continuous leaking = PROM, infection/preterm-labour risk. No vaginal exam, keep a clean pad, refer FRU/DH.</div>
+    <div class="action-bn">হঠাৎ জল ভাঙা/ক্রমাগত লিকেজ = PROM, সংক্রমণ/প্রিটার্ম প্রসবের ঝুঁকি। যোনি পরীক্ষা করবেন না, পরিষ্কার প্যাড রাখুন, FRU/DH-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Premature rupture of membranes</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Leaking liquor</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-COMB-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is blood pressure high?” = <b>Yes</b> <span class="and">AND</span> “Is there swelling of legs or face?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> High BP + oedema = pre-eclampsia. Refer FRU immediately.</div>
+    <div class="action-bn">উচ্চ BP + ফোলা = প্রি-এক্লাম্পসিয়া। এখনই FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Pre-eclampsia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> High BP · Oedema</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-COMB-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there blurred vision?” = <b>Yes</b> <span class="and">AND</span> “Is there swelling of legs or face?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Blurred vision + oedema = imminent eclampsia.</div>
+    <div class="action-bn">ঝাপসা দৃষ্টি + ফোলা = আসন্ন এক্লাম্পসিয়া।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Imminent eclampsia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Blurred vision · Oedema</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-COMB-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there bleeding or severe abdominal pain?” = <b>Yes</b> <span class="and">AND</span> “Has the baby's movement reduced?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Bleeding + reduced fetal movement = placental emergency. Refer FRU immediately.</div>
+    <div class="action-bn">রক্তপাত + শিশুর নড়াচড়া কমা = প্ল্যাসেন্টা সংক্রান্ত জরুরি অবস্থা। এখনই FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Placental abruption · IUGR</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Vaginal bleeding · Reduced fetal movement</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-COMB-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is blood pressure high?” = <b>Yes</b> <span class="and">AND</span> “Is there blurred vision?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> High BP + blurred vision = severe pre-eclampsia. Prepare MgSO4, refer FRU.</div>
+    <div class="action-bn">উচ্চ BP + ঝাপসা দৃষ্টি = গুরুতর প্রি-এক্লাম্পসিয়া। MgSO4 প্রস্তুত করুন, এখনই FRU।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe pre-eclampsia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> High BP · Blurred vision</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-COMB-005</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there a headache?” = <b>Yes</b> <span class="and">AND</span> “Is the headache very severe, lasting &gt;2 days, or worsening?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Severe or persistent headache = pre-eclampsia danger sign. Refer FRU/DH immediately.</div>
+    <div class="action-bn">তীব্র বা ক্রমাগত মাথা ব্যথা = প্রি-এক্লাম্পসিয়ার বিপদচিহ্ন। এখনই FRU/DH-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Severe/persistent headache — pre-eclampsia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Severe headache</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-COMB-006</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there a headache?” = <b>Yes</b> <span class="and">AND</span> “Is there swelling of legs or face?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Headache + swelling = pre-eclampsia. Refer FRU immediately.</div>
+    <div class="action-bn">মাথা ব্যথা + ফোলা = প্রি-এক্লাম্পসিয়া। এখনই FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Pre-eclampsia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Headache · Oedema</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>systolic_bp</code> ≥ <b>140</b></div>
+    <div class="action"><span class="lbl">Action</span> Systolic BP ≥ 140 mmHg — pre-eclampsia.</div>
+    <div class="action-bn">সিস্টোলিক BP ≥ ১৪০ mmHg — প্রি-এক্লাম্পসিয়া।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> High BP</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>diastolic_bp</code> ≥ <b>90</b></div>
+    <div class="action"><span class="lbl">Action</span> Diastolic BP ≥ 90 mmHg — pre-eclampsia.</div>
+    <div class="action-bn">ডায়াস্টোলিক BP ≥ ৯০ mmHg — প্রি-এক্লাম্পসিয়া।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> High BP</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>haemoglobin</code> < <b>7</b></div>
+    <div class="action"><span class="lbl">Action</span> Hb &lt; 7 g/dL — severe anaemia.</div>
+    <div class="action-bn">Hb &lt; ৭ g/dL — গুরুতর রক্তাল্পতা।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Severe anaemia</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-004</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>haemoglobin</code> between <b>[7–10]</b></div>
+    <div class="action"><span class="lbl">Action</span> Hb 7–10 g/dL — moderate anaemia. Increase IFA.</div>
+    <div class="action-bn">Hb ৭–১০ g/dL — মাঝারি রক্তাল্পতা। IFA বাড়ান।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Moderate anaemia</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-005</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>systolic_bp</code> ≥ <b>160</b></div>
+    <div class="action"><span class="lbl">Action</span> Systolic BP ≥ 160 mmHg — severe hypertension. Prepare MgSO4, refer FRU.</div>
+    <div class="action-bn">সিস্টোলিক BP ≥ ১৬০ mmHg — গুরুতর হাইপারটেনশন। MgSO4 প্রস্তুত করুন, এখনই FRU।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Severe hypertension</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-006</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>urine_protein_plus</code> ≥ <b>2</b></div>
+    <div class="action"><span class="lbl">Action</span> Urine protein ≥ 2+ = pre-eclampsia. Refer FRU.</div>
+    <div class="action-bn">প্রস্রাবে প্রোটিন ২+ বা বেশি = প্রি-এক্লাম্পসিয়া। FRU-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Proteinuria</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-007</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>fundal_height_weeks_diff</code> > <b>4</b></div>
+    <div class="action"><span class="lbl">Action</span> Fundal height &gt;4 weeks discrepancy = IUGR or polyhydramnios suspicion.</div>
+    <div class="action-bn">ফান্ডাল উচ্চতা ৪ সপ্তাহের বেশি গ্যাপ = IUGR বা পলিহাইড্রামনিয়াসের সন্দেহ।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Abnormal fundal height</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-008</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>gestational_age_weeks</code> < <b>37</b></div>
+    <div class="action"><span class="lbl">Action</span> Labour pain or leaking before 37 weeks = preterm labour. Refer FRU without cervical examination if pains/leaking present.</div>
+    <div class="action-bn">৩৭ সপ্তাহের আগে প্রসব ব্যথা বা পানি ভাঙা = প্রিটার্ম লেবার। জরায়ুমুখ পরীক্ষা না করে এখনই FRU-তে রেফার করুন (যদি ব্যথা/লিকেজ থাকে)।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Preterm labour</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-009</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>labour_hours</code> > <b>12</b></div>
+    <div class="action"><span class="lbl">Action</span> Labour pain &gt;12 h = obstructed labour risk. Refer FRU/DH immediately.</div>
+    <div class="action-bn">প্রসব ব্যথা &gt; ১২ ঘণ্টা = অবস্ট্রাকটেড লেবার ঝুঁকি। এখনই FRU/DH-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Prolonged labour</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-010</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>leaking_hours_no_labour</code> > <b>12</b></div>
+    <div class="action"><span class="lbl">Action</span> Leaking &gt;12 h without labour = PROM with chorioamnionitis risk. Refer FRU now.</div>
+    <div class="action-bn">প্রসব ব্যথা ছাড়া ১২ ঘণ্টার বেশি লিকেজ = PROM-এ ক্রিয়োঅ্যামনিওনাইটিসের ঝুঁকি। এখনই FRU।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Prolonged PROM</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-011</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>tsh_miu</code> > <b>10</b></div>
+    <div class="action"><span class="lbl">Action</span> TSH &gt;10 mIU/L = overt hypothyroidism. Start Levothyroxine 50 μg/day now, repeat TSH after 6 weeks. Critical for fetal brain development.</div>
+    <div class="action-bn">TSH &gt; ১০ mIU/L = ওভার্ট হাইপোথাইরয়েডিজম। Levothyroxine ৫০ μg/দিন এখনই শুরু করুন, ৬ সপ্তাহ পর পুনরায় TSH। ভ্রূণ মস্তিষ্ক বিকাশে গুরুত্বপূর্ণ।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Overt hypothyroidism</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-012</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>tsh_miu</code> between <b>[2.5–10]</b></div>
+    <div class="action"><span class="lbl">Action</span> TSH 2.5–10 mIU/L = subclinical hypothyroidism. Start Levothyroxine 25 μg/day, repeat TSH in 6 weeks. Target &lt;2.5 (T1) or &lt;3 (T2/T3).</div>
+    <div class="action-bn">TSH ২.৫–১০ mIU/L = সাবক্লিনিক্যাল হাইপোথাইরয়েডিজম। Levothyroxine ২৫ μg/দিন শুরু করুন, ৬ সপ্তাহ পর TSH পুনরায়। লক্ষ্য &lt; ২.৫ (১ম ট্রাইমেস্টার) বা &lt; ৩ (২য়/৩য়)।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Subclinical hypothyroidism</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-013</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>ogtt_2hr_mg_dl</code> ≥ <b>140</b></div>
+    <div class="action"><span class="lbl">Action</span> 75g OGTT 2-h PG ≥140 mg/dL = GDM (WHO/India criteria). Start Medical Nutrition Therapy, insulin if needed. Screen at 24–28 weeks.</div>
+    <div class="action-bn">৭৫g OGTT ২-ঘণ্টা PG ≥ ১৪০ mg/dL = GDM (WHO/ভারত মাপকাঠি)। Medical Nutrition Therapy শুরু করুন, প্রয়োজনে ইনসুলিন। ২৪-২৮ সপ্তাহে স্ক্রিন করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Gestational diabetes mellitus</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-014</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>fhr_bpm</code> < <b>120</b></div>
+    <div class="action"><span class="lbl">Action</span> FHR &lt;120 bpm = fetal distress. Position mother left lateral, refer FRU/DH immediately.</div>
+    <div class="action-bn">ভ্রূণের হৃদস্পন্দন &lt; ১২০ bpm = ভ্রূণ ডিসট্রেস। মাকে বাম কাতে শোয়ান, এখনই FRU/DH-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Foetal bradycardia</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-VITAL-015</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>fhr_bpm</code> > <b>160</b></div>
+    <div class="action"><span class="lbl">Action</span> FHR &gt;160 bpm = fetal distress (maternal fever or chorioamnionitis). Refer FRU now.</div>
+    <div class="action-bn">ভ্রূণের হৃদস্পন্দন &gt; ১৬০ bpm = ভ্রূণ ডিসট্রেস (ম্যাটার্নাল জ্বর বা ক্রিয়োঅ্যামনিওনাইটিস)। এখনই FRU।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Foetal tachycardia</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">ANC-002</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there swelling of legs or face?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Isolated leg oedema. Refer PHC within 24 h for BP and urine protein.</div>
+    <div class="action-bn">বিচ্ছিন্ন পা ফোলা = YELLOW। ২৪ ঘণ্টার মধ্যে PHC।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Oedema</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Leg swelling</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">ANC-005</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC within 7 days</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Has ANC checkup been missed for 3+ months?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Schedule ANC visit at PHC within 7 days. Check MCP card.</div>
+    <div class="action-bn">৭ দিনের মধ্যে PHC-তে ANC ভিজিট নির্ধারণ করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Missed ANC</div>
+    <div class="sub"><span class="lbl">Danger signs</span> No ANC visit in 3+ months</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">ANC-011</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there a headache?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Headache — refer PHC within 24 h to check BP. If severe/persistent, or with swelling/blurred vision = FRU now.</div>
+    <div class="action-bn">মাথা ব্যথা — রক্তচাপ মাপতে ২৪ ঘণ্টার মধ্যে PHC-তে যান। তীব্র/ক্রমাগত হলে, বা ফোলা/ঝাপসা দৃষ্টির সাথে = এখনই FRU।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Headache (assess for pre-eclampsia)</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Headache</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">ANC-012</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there dizziness or weakness?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Dizziness/weakness — refer PHC for Hb + BP check (anaemia or low BP).</div>
+    <div class="action-bn">মাথা ঘোরা/দুর্বলতা — রক্তাল্পতা বা নিম্ন রক্তচাপের জন্য PHC-তে Hb ও BP পরীক্ষা করান।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Dizziness (anaemia / hypotension)</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Dizziness</div>
+  </div>
+    <div class="score"><span class="lbl">Risk-score bands</span> GREEN 0–2 · YELLOW 3–5 · RED 6–100</div>
+  </section>
+  <section class="case">
+    <h2>4. 🤱 Postpartum Checkup (0–42 days)</h2>
+    <div class="case-meta">
+      <span>প্রসব-পরবর্তী চেকআপ (০-৪২ দিন)</span>
+      <span>Module <code>delivery_pnc</code></span>
+      <span>9 questions · 21 rules · <b class="draftc">9 draft</b></span>
+    </div>
+    <table class="q"><thead><tr><th>ID</th><th>প্রশ্ন (BN)</th><th>Question (EN)</th><th>Answers</th></tr></thead><tbody><tr><td><code>pp1</code></td><td>অতিরিক্ত রক্তপাত বা দুর্গন্ধযুক্ত স্রাব?</td><td>Is there excessive bleeding or foul-smelling discharge?</td><td>হ্যাঁ · না</td></tr><tr><td><code>pp2</code></td><td>জ্বর বা ঠান্ডা লাগছে?</td><td>Is there fever or chills?</td><td>হ্যাঁ · না</td></tr><tr><td><code>pp3</code></td><td>স্তনে ব্যথা, ফোলা বা লাল দাগ?</td><td>Is there breast pain, swelling, or red marks?</td><td>হ্যাঁ · না</td></tr><tr><td><code>pp4</code></td><td>পেটে তীব্র ব্যথা বা সেলাইয়ে সমস্যা?</td><td>Is there severe abdominal pain or suture problem?</td><td>হ্যাঁ · না</td></tr><tr><td><code>pp5</code></td><td>প্রস্রাবে জ্বালা বা কষ্ট হচ্ছে?</td><td>Is there burning or difficulty urinating?</td><td>হ্যাঁ · না</td></tr><tr><td><code>pp6</code></td><td>খুব দুর্বল বা মাথা ঘোরা হচ্ছে?</td><td>Is there extreme weakness or dizziness?</td><td>হ্যাঁ · না</td></tr><tr><td><code>pp7</code></td><td>প্রসবের পর খিঁচুনি বা ফিট হয়েছে?</td><td>Has there been a convulsion or fit after delivery?</td><td>হ্যাঁ · না</td></tr><tr><td><code>pp8</code></td><td>শ্বাস নিতে কষ্ট হচ্ছে?</td><td>Is there difficulty breathing?</td><td>হ্যাঁ · না</td></tr><tr><td><code>pp9</code></td><td>মন খুব খারাপ, কান্না, ঘুম/খাওয়া কমে যাওয়া, বা বাচ্চার প্রতি আগ্রহ নেই?</td><td>Persistent low mood, crying, sleep/appetite loss, or no interest in the baby?</td><td>হ্যাঁ · না</td></tr></tbody></table>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there excessive bleeding or foul-smelling discharge?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> PPH hard-stop. Refer FRU/DH immediately. Bimanual uterine compression if trained.</div>
+    <div class="action-bn">PPH হার্ড-স্টপ। এখনই FRU/DH-তে রেফার করুন। বাইম্যানুয়াল জরায়ু সংকোচন প্রয়োগ করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Postpartum haemorrhage · Puerperal sepsis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Excessive bleeding · Foul discharge</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-007</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Has there been a convulsion or fit after delivery?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Postpartum eclampsia hard-stop. Convulsion = life-threatening. Left lateral, keep airway clear, prepare MgSO4, refer FRU immediately.</div>
+    <div class="action-bn">প্রসব-পরবর্তী এক্লাম্পসিয়া হার্ড-স্টপ। খিঁচুনি = জীবনসংকটাপন্ন। বাম কাতে শোয়ান, শ্বাসনালী খোলা রাখুন, MgSO4 প্রস্তুত করুন, এখনই FRU।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Postpartum eclampsia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Convulsion</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-008</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there difficulty breathing?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Difficulty breathing = danger sign (pulmonary embolism, severe anaemia, cardiac, or sepsis). Refer FRU immediately.</div>
+    <div class="action-bn">শ্বাসকষ্ট = বিপদচিহ্ন (পালমোনারি এম্বলিজম, গুরুতর রক্তাল্পতা, হৃদযন্ত্র বা সেপসিস)। এখনই FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Pulmonary embolism · Cardiac failure · Severe anaemia / sepsis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Difficulty breathing</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-COMB-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there excessive bleeding or foul-smelling discharge?” = <b>Yes</b> <span class="and">AND</span> “Is there fever or chills?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Bleeding + fever = puerperal sepsis. Refer FRU immediately.</div>
+    <div class="action-bn">রক্তপাত + জ্বর = পিউরপেরাল সেপসিস। এখনই FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Puerperal sepsis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Bleeding · Fever</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-COMB-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there severe abdominal pain or suture problem?” = <b>Yes</b> <span class="and">AND</span> “Is there fever or chills?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Abdominal pain + fever = peritonitis. Refer FRU immediately.</div>
+    <div class="action-bn">পেট ব্যথা + জ্বর = পেরিটোনাইটিস। এখনই FRU-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Peritonitis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Abdominal pain · Fever</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-COMB-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there excessive bleeding or foul-smelling discharge?” = <b>Yes</b> <span class="and">AND</span> “Is there extreme weakness or dizziness?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Bleeding + weakness = hypovolaemic shock. Lay head down, refer FRU immediately.</div>
+    <div class="action-bn">রক্তপাত + দুর্বলতা = হাইপোভোলেমিক শক। মাথা নিচু করে শোয়ান, এখনই FRU।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Hypovolaemic shock</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Bleeding · Weakness</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-COMB-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">COMBINATION</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there breast pain, swelling, or red marks?” = <b>Yes</b> <span class="and">AND</span> “Is there fever or chills?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Breast pain + fever = breast abscess or mastitis. Refer PHC for antibiotics.</div>
+    <div class="action-bn">স্তনে ব্যথা + জ্বর = ব্রেস্ট অ্যাবসেস বা ম্যাস্টাইটিস সংক্রমণ। PHC-তে অ্যান্টিবায়োটিক।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Breast abscess</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Breast pain · Fever</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-VITAL-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>temperature_c</code> ≥ <b>38</b></div>
+    <div class="action"><span class="lbl">Action</span> Temp ≥ 38°C postpartum = puerperal sepsis. Refer FRU.</div>
+    <div class="action-bn">জ্বর ≥ ৩৮°C প্রসবের পর = পিউরপেরাল সেপসিস।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> High fever postpartum</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-VITAL-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>haemoglobin</code> < <b>7</b></div>
+    <div class="action"><span class="lbl">Action</span> Hb &lt; 7 g/dL — refer FRU for transfusion.</div>
+    <div class="action-bn">Hb &lt; ৭ g/dL — রক্ত সঞ্চালনের জন্য FRU-তে রেফার করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Severe anaemia postpartum</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-VITAL-003</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>haemoglobin</code> between <b>[7–10]</b></div>
+    <div class="action"><span class="lbl">Action</span> Hb 7–10 g/dL — moderate anaemia. Increase IFA.</div>
+    <div class="action-bn">Hb ৭–১০ g/dL — মাঝারি রক্তাল্পতা। IFA বাড়ান।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Moderate anaemia postpartum</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-VITAL-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>systolic_bp</code> ≥ <b>140</b></div>
+    <div class="action"><span class="lbl">Action</span> Postpartum systolic BP ≥ 140 = postpartum pre-eclampsia. Prepare MgSO4.</div>
+    <div class="action-bn">প্রসবের পর সিস্টোলিক BP ≥ ১৪০ = পোস্টপার্টাম প্রি-এক্লাম্পসিয়া। MgSO4 প্রস্তুত করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Postpartum hypertension</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-VITAL-005</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>heart_rate</code> > <b>110</b></div>
+    <div class="action"><span class="lbl">Action</span> HR &gt; 110/min = sepsis or anaemia risk. Refer PHC for evaluation.</div>
+    <div class="action-bn">হৃদস্পন্দন &gt; ১১০/মিনিট = সেপসিস বা রক্তাল্পতার ঝুঁকি। PHC-তে মূল্যায়ন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Tachycardia</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-VITAL-006</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>pads_soaked_per_30min</code> ≥ <b>2</b></div>
+    <div class="action"><span class="lbl">Action</span> ≥2 pads soaked in 30 min = PPH. Uterine massage, call 108.</div>
+    <div class="action-bn">৩০ মিনিটে ২+ প্যাড ভিজে যাওয়া = PPH। জরায়ু মালিশ করুন, ১০৮ কল করুন।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Postpartum haemorrhage</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-VITAL-007</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>pads_per_day</code> > <b>5</b></div>
+    <div class="action"><span class="lbl">Action</span> More than 5 pads per day (HBNC threshold) = excessive bleeding. PPH/sepsis risk — refer FRU now.</div>
+    <div class="action-bn">দিনে ৫ এর বেশি প্যাড (HBNC থ্রেশহোল্ড) = অতিরিক্ত রক্তপাত। PPH/সেপসিসের ঝুঁকি — এখনই FRU।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Excessive postpartum bleeding</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-VITAL-008</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">MEASUREMENT</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      
+    </div>
+    <div class="cond"><span class="lbl">If</span> <code>temperature_c</code> ≥ <b>38.9</b></div>
+    <div class="action"><span class="lbl">Action</span> Temp ≥ 38.9°C / 102°F postpartum = severe puerperal sepsis. First dose antibiotic, refer FRU now.</div>
+    <div class="action-bn">তাপমাত্রা ≥ ৩৮.৯°C / ১০২°F প্রসবের পর = গুরুতর পিউরপেরাল সেপসিস। প্রথম ডোজ অ্যান্টিবায়োটিক, এখনই FRU।</div>
+    
+    <div class="sub"><span class="lbl">Danger signs</span> Severe postpartum sepsis</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-002</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there fever or chills?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Puerperal sepsis risk. Isolated fever day 1–2 = YELLOW. Refer PHC within 24 h.</div>
+    <div class="action-bn">পিউরপেরাল সেপসিস ঝুঁকি। বিচ্ছিন্ন জ্বর দিন ১-২ = YELLOW।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Puerperal fever</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Fever · Chills</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-003</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there breast pain, swelling, or red marks?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Mastitis: continue breastfeeding, warm compress, refer PHC within 24 h for antibiotics.</div>
+    <div class="action-bn">ম্যাস্টাইটিস: বুকের দুধ চালিয়ে যান, গরম সেঁক দিন, অ্যান্টিবায়োটিকের জন্য PHC।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Mastitis</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Breast pain · Swelling</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-004</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there severe abdominal pain or suture problem?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Wound infection = YELLOW. Refer PHC within 24 h.</div>
+    <div class="action-bn">ক্ষত সংক্রমণ = YELLOW। ২৪ ঘণ্টার মধ্যে PHC।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Wound infection</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Abdominal pain · Suture problem</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-005</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there burning or difficulty urinating?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> UTI: refer PHC within 24 h for urine culture and antibiotics.</div>
+    <div class="action-bn">UTI: প্রস্রাব কালচার ও অ্যান্টিবায়োটিকের জন্য ২৪ ঘণ্টার মধ্যে PHC।</div>
+    <div class="sub"><span class="lbl">Suspected</span> UTI</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Burning urination</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-006</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC for Hb check</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there extreme weakness or dizziness?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Assess pallor. Severe pallor = anaemia. Refer PHC for Hb check.</div>
+    <div class="action-bn">ফ্যাকাশে ভাব মূল্যায়ন করুন। গুরুতর ফ্যাকাশে = রক্তাল্পতা → PHC-তে Hb পরীক্ষা।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Anaemia</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Weakness · Dizziness</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-009</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ PHC / MO counselling</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Persistent low mood, crying, sleep/appetite loss, or no interest in the baby?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Postpartum depression screen. Counsel, involve family, refer PHC/MO. Any thought of self-harm or harming the baby = urgent referral.</div>
+    <div class="action-bn">প্রসব-পরবর্তী বিষণ্নতার স্ক্রিন। পরামর্শ দিন, পরিবারকে যুক্ত করুন, PHC/MO-তে রেফার করুন। নিজের বা বাচ্চার ক্ষতির চিন্তা থাকলে = জরুরি রেফারেল।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Postpartum depression</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Low mood · Anhedonia</div>
+  </div>
+    <div class="score"><span class="lbl">Risk-score bands</span> GREEN 0–2 · YELLOW 3–5 · RED 6–100</div>
+  </section>
+  <section class="case">
+    <h2>5. 💉 Immunization — UIP National Schedule</h2>
+    <div class="case-meta">
+      <span>টিকা মিস / ইমিউনাইজেশন</span>
+      <span>Module <code>immunisation</code></span>
+      <span>6 questions · 6 rules · <b class="draftc">1 draft</b></span>
+    </div>
+    <table class="q"><thead><tr><th>ID</th><th>প্রশ্ন (BN)</th><th>Question (EN)</th><th>Answers</th></tr></thead><tbody><tr><td><code>im1</code></td><td>শিশুর বয়স কত মাস?</td><td>What is the child's age in months?</td><td>০-৬ মাস · ৬-১২ মাস · ১-৫ বছর</td></tr><tr><td><code>im2</code></td><td>কোন টিকা মিস হয়েছে?</td><td>Which vaccine was missed?</td><td>BCG/OPV · DPT/Pentavalent · Measles/MR</td></tr><tr><td><code>im3</code></td><td>কতদিন আগে টিকা দেওয়ার কথা ছিল?</td><td>How many days ago was the vaccine due?</td><td>১ সপ্তাহ · ১ মাস · ৩ মাসের বেশি</td></tr><tr><td><code>im4</code></td><td>শিশুর কি কোনো অসুস্থতা আছে এখন?</td><td>Does the child have any illness now?</td><td>হ্যাঁ · না</td></tr><tr><td><code>im5</code></td><td>১-৫ বছর বয়সী শিশুর বুস্টার ডোজ মিস হয়েছে?</td><td>Has the booster dose been missed for child aged 1–5 years?</td><td>হ্যাঁ · না</td></tr><tr><td><code>im6</code></td><td>আগের টিকার পর কি গুরুতর প্রতিক্রিয়া হয়েছিল?</td><td>Was there a severe reaction after a previous vaccine dose (AEFI)?</td><td>হ্যাঁ · না</td></tr></tbody></table>
+    
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-001</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ Nearest immunisation session within 7 days</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “What is the child's age in months?” in <b>০-৬ মাস / ৬-১২ মাস</b></div>
+    <div class="action"><span class="lbl">Action</span> Schedule catch-up within 7 days. Do not restart series. Includes PCV, Rotavirus (RVV) and fIPV per current UIP.</div>
+    <div class="action-bn">৭ দিনের মধ্যে নিকটতম সেশন সাইটে ক্যাচ-আপ নির্ধারণ করুন। সিরিজ পুনরায় শুরু করবেন না। বর্তমান UIP অনুযায়ী PCV, রোটাভাইরাস (RVV) ও fIPV অন্তর্ভুক্ত।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Missed primary vaccines</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Unimmunised infant</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-002</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ Nearest immunisation session within 7 days</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Which vaccine was missed?” in <b>BCG/OPV / DPT/Pentavalent / Measles/MR</b></div>
+    <div class="action"><span class="lbl">Action</span> Schedule catch-up within 7 days.</div>
+    <div class="action-bn">৭ দিনের মধ্যে ক্যাচ-আপ নির্ধারণ করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Missed vaccine</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Vaccine gap</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-003</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ Next immunisation session</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Has the booster dose been missed for child aged 1–5 years?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> DPT booster 16–24 m. OPV booster 16–24 m. MR-2 16–24 m. Schedule catch-up.</div>
+    <div class="action-bn">DPT বুস্টার ১৬-২৪ মাসে। OPV বুস্টার ১৬-২৪ মাসে। MR-2 ১৬-২৪ মাসে।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Missed booster</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Booster overdue</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-004</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ Reschedule within 7 days of recovery</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Does the child have any illness now?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Mild illness = vaccinate. Moderate/severe = defer until recovered.</div>
+    <div class="action-bn">হালকা অসুস্থতা = নির্ধারিত সময়ে টিকা দিন। মাঝারি/গুরুতর = সুস্থ হওয়া পর্যন্ত স্থগিত করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Illness at vaccination</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Current illness</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-005</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      
+      <span class="refer">→ PHC catch-up session</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “How many days ago was the vaccine due?” = <b>৩ মাসের বেশি</b></div>
+    <div class="action"><span class="lbl">Action</span> Catch-up immunisation. Do not restart series. Flag on ANMOL.</div>
+    <div class="action-bn">ক্যাচ-আপ ইমিউনাইজেশন। সিরিজ পুনরায় শুরু করবেন না। ANMOL-এ ফ্ল্যাগ করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Long vaccine gap</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Vaccine overdue &gt; 3 months</div>
+  </div>
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-006</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">SCORED</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ Refer MO before next dose</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Was there a severe reaction after a previous vaccine dose (AEFI)?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Severe reaction after a previous dose (AEFI). Refer to MO before the next dose — do not auto-schedule.</div>
+    <div class="action-bn">আগের ডোজে গুরুতর প্রতিক্রিয়া (AEFI)। পরের ডোজের আগে MO-কে দেখান — স্বয়ংক্রিয়ভাবে নির্ধারণ করবেন না।</div>
+    <div class="sub"><span class="lbl">Suspected</span> AEFI history</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Prior severe vaccine reaction</div>
+  </div>
+    <div class="score"><span class="lbl">Risk-score bands</span> GREEN 0–0 · YELLOW 1–100 · RED —</div>
+  </section>
+  <section class="case">
+    <h2>6. 🚨 Emergency — Global Hard-Stop Engine</h2>
+    <div class="case-meta">
+      <span>জরুরি অবস্থা যাচাই</span>
+      <span>Module <code>emergency</code></span>
+      <span>8 questions · 8 rules · <b class="draftc">4 draft</b></span>
+    </div>
+    <table class="q"><thead><tr><th>ID</th><th>প্রশ্ন (BN)</th><th>Question (EN)</th><th>Answers</th></tr></thead><tbody><tr><td><code>e1</code></td><td>অতিরিক্ত রক্তপাত হচ্ছে?</td><td>Is there excessive bleeding?</td><td>হ্যাঁ · না</td></tr><tr><td><code>e2</code></td><td>খিঁচুনি বা অজ্ঞান হয়েছে?</td><td>Has there been convulsion or loss of consciousness?</td><td>হ্যাঁ · না</td></tr><tr><td><code>e3</code></td><td>শ্বাস নিতে খুব কষ্ট হচ্ছে?</td><td>Is there severe difficulty breathing?</td><td>হ্যাঁ · না</td></tr><tr><td><code>e4</code></td><td>রোগী সাড়া দিচ্ছে না বা জ্ঞান নেই?</td><td>Is the patient unresponsive or unconscious?</td><td>হ্যাঁ · না</td></tr><tr><td><code>e5</code></td><td>সাপে কামড়েছে, বিষাক্ত পোকা বা পশুর কামড়?</td><td>Snakebite, venomous sting, or animal bite?</td><td>হ্যাঁ · না</td></tr><tr><td><code>e6</code></td><td>বিষ/কীটনাশক/অতিরিক্ত ওষুধ খেয়েছে বা খাওয়ানো হয়েছে?</td><td>Poison, pesticide, or overdose ingested?</td><td>হ্যাঁ · না</td></tr><tr><td><code>e7</code></td><td>ঠান্ডা-ঘামে ভেজা, খুব দুর্বল নাড়ি, অত্যন্ত নিস্তেজ (শকের লক্ষণ)?</td><td>Cold clammy skin, very weak pulse, extreme listlessness (shock)?</td><td>হ্যাঁ · না</td></tr><tr><td><code>e8</code></td><td>গুরুতর আঘাত, বড় ক্ষত থেকে রক্তপাত, বা মারাত্মক পোড়া?</td><td>Major injury, bleeding from a large wound, or severe burn?</td><td>হ্যাঁ · না</td></tr></tbody></table>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH ≤ 30 min</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there excessive bleeding?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Call 108. Refer FRU/DH ≤ 30 min. Uterine compression if postpartum.</div>
+    <div class="action-bn">হার্ড-স্টপ। এখনই ১০৮ কল করুন। FRU/DH-তে ≤ ৩০ মিনিটে রেফার করুন। প্রসব-পরবর্তী হলে জরায়ু সংকোচন প্রয়োগ করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Haemorrhage</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Excessive bleeding</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Has there been convulsion or loss of consciousness?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Lay on left side, protect airway. Call 108. Refer FRU/DH immediately.</div>
+    <div class="action-bn">হার্ড-স্টপ। বাম কাতে শোয়ান, শ্বাসনালী রক্ষা করুন। ১০৮ কল করুন। এখনই FRU/DH-তে রেফার করুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Eclampsia / Seizure</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Convulsion · Unconscious</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH ≤ 30 min</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is there severe difficulty breathing?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Call 108. Keep airway clear. If newborn: stimulate, clear airway.</div>
+    <div class="action-bn">হার্ড-স্টপ। ১০৮ কল করুন। শ্বাসনালী পরিষ্কার রাখুন। নবজাতক হলে: উদ্দীপনা দিন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Respiratory failure</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Severe breathing difficulty</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      
+      <span class="refer">→ FRU / DH ≤ 30 min</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Is the patient unresponsive or unconscious?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Call 108. Check airway, breathing, circulation. Recovery position.</div>
+    <div class="action-bn">হার্ড-স্টপ। এখনই ১০৮ কল করুন। শ্বাসনালী, শ্বাস, সঞ্চালন পরীক্ষা করুন। রিকভারি পজিশনে রাখুন।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Unconsciousness</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Unresponsive</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-006</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH ≤ 30 min</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Snakebite, venomous sting, or animal bite?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Immobilise the limb (splint), keep below heart level, remove tight items. Do NOT cut/suck/tourniquet. Call 108, FRU/DH ≤30 min (anti-snake-venom). Animal bite: wound wash 15 min + ARV/RIG.</div>
+    <div class="action-bn">হার্ড-স্টপ। অঙ্গ স্থির রাখুন (স্প্লিন্ট), হৃদয়ের নিচে রাখুন, টাইট জিনিস খুলুন। কাটবেন/চুষবেন/বাঁধবেন না। ১০৮ কল করুন, FRU/DH ≤ ৩০ মিনিট (অ্যান্টি-স্নেক-ভেনম)। পশুর কামড় হলে ১৫ মিনিট ক্ষত ধুয়ে ARV/RIG।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Envenomation · Rabies risk</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Snakebite · Animal bite</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-007</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH ≤ 30 min</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Poison, pesticide, or overdose ingested?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Do NOT induce vomiting. Bring the container/label. Protect airway, left-lateral if drowsy. Call 108, FRU/DH ≤30 min.</div>
+    <div class="action-bn">হার্ড-স্টপ। বমি করাবেন না। কৌটা/লেবেল সঙ্গে নিন। শ্বাসনালী রক্ষা করুন, অজ্ঞান হলে বাম কাতে শোয়ান। ১০৮ কল করুন, FRU/DH ≤ ৩০ মিনিট।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Poisoning / pesticide ingestion</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Ingested poison/overdose</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-008</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH ≤ 30 min</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Cold clammy skin, very weak pulse, extreme listlessness (shock)?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Lay flat, keep warm, raise legs, nothing by mouth. Call 108, FRU/DH ≤30 min.</div>
+    <div class="action-bn">হার্ড-স্টপ। সমতল শোয়ান, গরম রাখুন, পা উঁচু করুন, মুখে কিছু দেবেন না। ১০৮ কল করুন, FRU/DH ≤ ৩০ মিনিট।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Shock / circulatory collapse</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Cold clammy skin · Weak pulse</div>
+  </div>
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-009</span>
+      <span class="badge red">RED</span>
+      <span class="chip hard">HARD-STOP</span>
+      <span class="tag draft">DRAFT · SIGN-OFF</span>
+      <span class="refer">→ FRU / DH ≤ 30 min</span>
+    </div>
+    <div class="cond"><span class="lbl">If</span> “Major injury, bleeding from a large wound, or severe burn?” = <b>Yes</b></div>
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Direct pressure on bleeding; for burns cool with clean water, cover, apply nothing. Immobilise fractures. Call 108, FRU/DH ≤30 min.</div>
+    <div class="action-bn">হার্ড-স্টপ। রক্তপাতে সরাসরি চাপ দিন; পোড়ায় পরিষ্কার জল দিয়ে ঠান্ডা করুন, ঢেকে দিন, কিছু লাগাবেন না। ভাঙা হাড় স্থির রাখুন। ১০৮ কল করুন, FRU/DH ≤ ৩০ মিনিট।</div>
+    <div class="sub"><span class="lbl">Suspected</span> Major trauma · Severe burn</div>
+    <div class="sub"><span class="lbl">Danger signs</span> Major injury · Severe bleeding · Burn</div>
+  </div>
+    <div class="score"><span class="lbl">Risk-score bands</span> GREEN 0–0 · YELLOW — · RED 1–100</div>
+  </section>
+
+  <div class="foot">Generated from asha_engine.json (engine 2.3.0-draft). Bands: 🟢 home care · 🟡 PHC within 24 h · 🔴 FRU/SNCU/DH immediately, call 108.
+  A fired RED can never be downgraded. DRAFT rules await AIIH&amp;PH / Secretariat clinical sign-off.</div>
+</body></html>
