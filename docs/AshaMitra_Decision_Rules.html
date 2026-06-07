@@ -1,0 +1,1348 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<title>AshaMitra — Clinical Decision Rules</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm 18mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Segoe UI','Nirmala UI','Noto Sans Bengali',sans-serif;
+         color:#1c2333; font-size:10.3pt; line-height:1.45; margin:0; }
+  code { font-family:'Cascadia Code','Consolas',monospace; font-size:9pt;
+         background:#eef0fb; padding:1px 5px; border-radius:4px; color:#2c2f6b; }
+  h1 { font-size:23pt; margin:0 0 4px; color:#312e81; letter-spacing:-.5px; }
+  h2 { font-size:15pt; color:#fff; background:#4f46e5; padding:7px 12px;
+       border-radius:7px; margin:0 0 10px; }
+  h3 { font-size:12pt; color:#312e81; margin:16px 0 7px; }
+  .lead { color:#374151; }
+  .lbl { display:inline-block; font-size:7.6pt; font-weight:700; text-transform:uppercase;
+         letter-spacing:.5px; color:#6366f1; margin-right:4px; }
+
+  /* cover */
+  .cover { padding:14px 0 6px; border-bottom:3px solid #4f46e5; margin-bottom:20px; }
+  .cover .sub { font-size:12pt; color:#4b5563; margin:2px 0 10px; }
+  .cover .pills span { display:inline-block; background:#eef0fb; color:#312e81;
+        border:1px solid #d6d8f5; border-radius:20px; padding:3px 11px; font-size:8.6pt; margin:2px 4px 2px 0; }
+  .meta-grid { margin-top:12px; font-size:9pt; color:#4b5563; }
+  .meta-grid div { margin:2px 0; }
+
+  /* badges + chips */
+  .badge { display:inline-block; color:#fff; font-weight:700; font-size:8pt;
+           padding:1px 8px; border-radius:20px; letter-spacing:.3px; }
+  .badge.red{background:#dc2626;} .badge.yellow{background:#d97706;} .badge.green{background:#16a34a;}
+  .chip { display:inline-block; font-size:7.4pt; font-weight:700; padding:1px 7px;
+          border-radius:20px; text-transform:uppercase; letter-spacing:.4px; }
+  .chip.hardstop{ background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; }
+  .chip.soft{ background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; }
+
+  /* engine + tables */
+  table { border-collapse:collapse; width:100%; margin:6px 0 14px; font-size:9pt; }
+  th,td { border:1px solid #dadcef; padding:5px 8px; text-align:left; vertical-align:top; }
+  thead th, table.eng th { background:#eef0fb; color:#312e81; }
+  table.eng th { width:30%; }
+
+  /* case */
+  section.case { page-break-before: always; }
+  .case-meta { display:flex; flex-wrap:wrap; gap:14px; font-size:9pt; color:#475569; margin-bottom:6px; }
+  .case-counts { margin:4px 0 8px; }
+  .kw { font-size:8.3pt; color:#64748b; margin-bottom:12px; }
+
+  /* rule card */
+  .rule { border:1px solid #e5e7f2; border-left-width:5px; border-radius:7px;
+          padding:9px 12px; margin:0 0 10px; page-break-inside:avoid; background:#fcfcff; }
+  .rule.red{ border-left-color:#dc2626; } .rule.yellow{ border-left-color:#d97706; }
+  .rule.green{ border-left-color:#16a34a; }
+  .rule-head { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-bottom:5px; }
+  .rid { font-weight:800; font-size:10.5pt; color:#1e1b4b; font-family:'Cascadia Code','Consolas',monospace; }
+  .qid { font-size:8pt; color:#94a3b8; }
+  .prio { font-size:8pt; color:#64748b; }
+  .refer { margin-left:auto; font-size:8.6pt; font-weight:700; color:#b91c1c; }
+  .rule.yellow .refer{ color:#b45309; } .rule.green .refer{ color:#15803d; }
+  .q-bn { font-size:11pt; font-weight:600; color:#111827; }
+  .q-en { font-size:9.4pt; color:#4b5563; font-style:italic; margin-bottom:4px; }
+  .opts,.logic,.note,.action,.action-bn,.sym,.escalation { font-size:9pt; margin:3px 0; }
+  .action { background:#f8fafc; border-radius:5px; padding:4px 7px; }
+  .action-bn { color:#334155; }
+  .note { color:#9a3412; }
+  .escalation { color:#b91c1c; }
+  .sym { color:#64748b; font-size:8.4pt; }
+  .signoff { margin-top:5px; font-size:8.5pt; background:#fef3c7; border:1px solid #fde68a;
+             color:#92400e; padding:4px 8px; border-radius:5px; }
+  .invariant { margin-top:5px; font-size:8.5pt; background:#ede9fe; border:1px solid #ddd6fe;
+               color:#5b21b6; padding:4px 8px; border-radius:5px; }
+  .foot { margin-top:24px; padding-top:8px; border-top:1px solid #e5e7eb;
+          font-size:8pt; color:#94a3b8; }
+</style></head>
+<body>
+
+  <div class="cover">
+    <h1>AshaMitra — Clinical Decision Rules</h1>
+    <div class="sub">Complete rulebook for all 7 triage cases — the exact logic the app uses to decide 🟢 Green / 🟡 Yellow / 🔴 Red</div>
+    <div class="pills">
+      <span>Engine: asha_cdss_engine</span>
+      <span>Engine v1.0.0</span>
+      <span>Cases dataset v2.0.0</span>
+      <span>Deterministic</span>
+      <span>Offline-capable</span>
+      <span>No LLM in diagnosis</span>
+      <span>Re-sweep invariant</span>
+    </div>
+    <div class="meta-grid">
+      <div><b>Protocol basis:</b> HBNC, IMNCI, HBYC, MCP, PMSMA, SBA, PPH, PNC, UIP</div>
+      <div><b>Cases:</b> Newborn Checkup (0-28 days) · Child Health Check (1-5 years) · Infant Checkup (1-12 months) · Pregnant Mother Checkup · Postpartum Checkup · Immunization Missed · Emergency Case</div>
+      <div><b>Source of truth:</b> assets/data/clinical_decision_engine.json + assets/data/triage_cases.json</div>
+    </div>
+  </div>
+
+  
+  <section class="engine">
+    <h2>How the engine decides</h2>
+    <p class="lead">The clinical engine is <b>deterministic</b> — the same answers always
+    produce the same triage band, byte-for-byte. <b>No LLM sits in the diagnostic path.</b>
+    Rules are evaluated top-to-bottom; the first hard-stop match exits immediately as RED.</p>
+    <table class="eng">
+      <tr><th>Hard-stop answer triggers</th><td>হ্যাঁ · একবার · একটু · অনেক</td></tr>
+      <tr><th>Yellow answer triggers</th><td>হ্যাঁ · মাঝে মাঝে · কিছুটা</td></tr>
+      <tr><th>Evaluation order</th><td>Rules are evaluated top-to-bottom. First hard_stop match exits immediately with RED.</td></tr>
+      <tr><th>Multi-condition logic</th><td>AND — all conditions in a rule's condition_set must be true for the rule to fire.</td></tr>
+      <tr><th>Band-lock rule</th><td>Once RED is fired by any hard_stop rule, band is locked RED. No subsequent answer can downgrade it.</td></tr>
+      <tr><th>Fallback band</th><td><span class="badge green">GREEN</span> (when no rule fires)</td></tr>
+    </table>
+
+    <h3>Band resolution &amp; referral</h3>
+    <table class="bands">
+      <thead><tr><th>Rule</th><th>Band</th><th>Condition</th><th>Referral</th><th>Action</th></tr></thead>
+      <tbody>
+      <tr>
+        <td><code>BAND-001</code></td>
+        <td><span class="badge green">GREEN</span></td>
+        <td>No hard_stop fired AND no YELLOW rule fired</td>
+        <td>Home care</td>
+        <td>Home care. Routine follow-up per module schedule. Counsel on warning signs. Record visit on ANMOL.</td></tr><tr>
+        <td><code>BAND-002</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>No hard_stop fired AND at least one YELLOW rule fired</td>
+        <td>PHC within 24 h</td>
+        <td>Refer to PHC within 24 h. Follow up in 2 days. Counsel on escalation signs. Record on ANMOL.</td></tr><tr>
+        <td><code>BAND-003</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Any hard_stop rule fired</td>
+        <td>FRU / SNCU / DH immediately</td>
+        <td>Refer FRU/SNCU/DH immediately (≤ 30–60 min). Call 108. Decision trace locked. MDSR hook triggered if applicable.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <h3 style="page-break-before:auto;">Reading a rule card</h3>
+  <p style="font-size:9pt;color:#475569;margin-top:0;">Each rule below shows: its <b>ID</b>, the triage
+  <b>band</b> it fires, whether it is a <b>HARD-STOP</b> (irreversible RED) or a <b>scored</b> sign, the
+  <b>question</b> (Bengali + English) and answer options, the deterministic <b>logic</b>, any
+  <b>escalation</b> to a higher band, the <b>action</b> the ASHA must take, and the <b>referral</b> target.</p>
+
+  
+  <section class="case">
+    <h2>1. 👶 নবজাতক চেকআপ (০-২৮ দিন)</h2>
+    <div class="case-meta">
+      <span><b>Newborn Checkup (0-28 days)</b></span>
+      <span>Module: <code>newborn</code></span>
+      <span>Protocol basis: <b>HBNC + IMNCI</b></span>
+      <span>Rules: 7</span>
+    </div>
+    <div class="case-counts">
+      <span class="badge red">RED</span> 6 &nbsp; <span class="badge yellow">YELLOW</span> 0 &nbsp; <span class="badge green">GREEN</span> 1
+    </div>
+    <div class="kw"><span class="lbl">Detection keywords</span> নবজাতক · নতুন বাচ্চা · newborn · জন্মের পর · ০ দিন · ১ সপ্তাহ · ২ সপ্তাহ · নতুন শিশু · সদ্যজাত</div>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">n1</span>
+      <span class="prio">priority 1</span>
+      <span class="refer">→ SNCU / FRU</span>
+    </div>
+    <div class="q-bn">শিশু বুকের দুধ খেতে পারছে না?</div>
+    <div class="q-en">Is the baby unable to breastfeed?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; খুব কম</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF n1 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> PSBI hard-stop. Refer to SNCU/FRU immediately (≤ 30 min). Do not delay for any reason.</div>
+    <div class="action-bn">PSBI হার্ড-স্টপ। এখনই SNCU/FRU-তে রেফার করুন (≤ ৩০ মিনিট)।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> cannot feed at breast · not sucking · very poor feeding</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">n2</span>
+      <span class="prio">priority 2</span>
+      <span class="refer">→ SNCU / FRU</span>
+    </div>
+    <div class="q-bn">শিশুর শরীরে জ্বর আছে?</div>
+    <div class="q-en">Does the baby have fever?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF n2 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> PSBI hard-stop. Refer to SNCU/FRU immediately. Any fever in a newborn is a danger sign.</div>
+    <div class="action-bn">PSBI হার্ড-স্টপ। যেকোনো জ্বর নবজাতকের জন্য বিপদচিহ্ন। এখনই SNCU/FRU-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> body temperature elevated · hot to touch · fever</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">n3</span>
+      <span class="prio">priority 3</span>
+      <span class="refer">→ SNCU / FRU</span>
+    </div>
+    <div class="q-bn">শ্বাস-প্রশ্বাস দ্রুত বা কষ্টকর?</div>
+    <div class="q-en">Is breathing fast or difficult?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; কিছুটা</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF n3 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> PSBI hard-stop. Refer to SNCU/FRU immediately. Count RR — if ≥ 60/min = severe.</div>
+    <div class="action-bn">PSBI হার্ড-স্টপ। শ্বাসের হার গণনা করুন — ≥ ৬০/মিনিট = গুরুতর। এখনই SNCU/FRU-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> rapid breathing · laboured breathing · chest indrawing · grunting</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">n4</span>
+      <span class="prio">priority 4</span>
+      <span class="refer">→ FRU / DH</span>
+    </div>
+    <div class="q-bn">নাভি লাল, ফোলা বা পুঁজ আছে?</div>
+    <div class="q-en">Is the navel red, swollen, or has pus?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF n4 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Refer to FRU/DH immediately. Omphalitis can progress to sepsis within hours.</div>
+    <div class="action-bn">এখনই FRU/DH-তে রেফার করুন। ওম্ফালাইটিস কয়েক ঘণ্টায় সেপসিসে পরিণত হতে পারে।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> umbilicus red · umbilicus swollen · pus at umbilicus · foul smell from cord</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-005</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">n5</span>
+      <span class="prio">priority 5</span>
+      <span class="refer">→ SNCU / FRU</span>
+    </div>
+    <div class="q-bn">শিশু অনেক কম নড়ছে বা নিস্তেজ?</div>
+    <div class="q-en">Is the baby moving very little or lethargic?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; কিছুটা</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF n5 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> PSBI hard-stop. Refer to SNCU/FRU immediately. Lethargy = severe systemic illness.</div>
+    <div class="action-bn">PSBI হার্ড-স্টপ। নিস্তেজতা = গুরুতর সিস্টেমিক অসুস্থতা। এখনই SNCU/FRU-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> not moving · very lethargic · limp · unresponsive · not crying</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">NB-006</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">n6</span>
+      <span class="prio">priority 6</span>
+      <span class="refer">→ SNCU / FRU</span>
+    </div>
+    <div class="q-bn">ত্বক হলুদ বা নীলাভ দেখাচ্ছে?</div>
+    <div class="q-en">Does the skin look yellow or bluish?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF n6 == হ্যাঁ THEN RED</code></div>
+    
+    <div class="note"><span class="lbl">Risk note</span> Cyanosis = RED always. Jaundice within 24 h of birth or palms/soles yellow = RED. Jaundice day 2–14 without palm/sole = YELLOW.</div>
+    <div class="action"><span class="lbl">Action</span> Cyanosis or jaundice within 24 h = refer SNCU immediately. Jaundice day 2–14 without palm/sole involvement = refer PHC within 24 h for bilirubin check.</div>
+    <div class="action-bn">সায়ানোসিস বা ২৪ ঘণ্টার মধ্যে জন্ডিস = এখনই SNCU-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> skin yellow · eyes yellow · skin bluish · central cyanosis</div>
+    
+  </div>
+
+  <div class="rule green">
+    <div class="rule-head">
+      <span class="rid">NB-007</span>
+      <span class="badge green">GREEN</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">n7</span>
+      <span class="prio">priority 7</span>
+      <span class="refer">→ None</span>
+    </div>
+    <div class="q-bn">সব প্রশ্নের উত্তর না — কোনো বিপদচিহ্ন নেই?</div>
+    <div class="q-en">All questions answered NO — no danger signs?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF n1==না AND n2==না AND n3==না AND n4==না AND n5==না AND n6==না THEN GREEN</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> HBNC home visit schedule: day 1, 3, 7, 14, 28. Counsel on exclusive breastfeeding, warmth, cord care, danger sign recognition.</div>
+    <div class="action-bn">HBNC হোম ভিজিট: ১, ৩, ৭, ১৪, ২৮ দিন। বুকের দুধ, উষ্ণতা, নাভির যত্ন পরামর্শ দিন।</div>
+    
+    
+  </div>
+  </section>
+
+  <section class="case">
+    <h2>2. 🧒 শিশু স্বাস্থ্য যাচাই (১-৫ বছর)</h2>
+    <div class="case-meta">
+      <span><b>Child Health Check (1-5 years)</b></span>
+      <span>Module: <code>child</code></span>
+      <span>Protocol basis: <b>IMNCI + HBYC</b></span>
+      <span>Rules: 6</span>
+    </div>
+    <div class="case-counts">
+      <span class="badge red">RED</span> 2 &nbsp; <span class="badge yellow">YELLOW</span> 4 &nbsp; <span class="badge green">GREEN</span> 0
+    </div>
+    <div class="kw"><span class="lbl">Detection keywords</span> বাচ্চা · শিশু · child · ছেলে · মেয়ে · ১ বছর · ২ বছর · ৩ বছর · ৪ বছর · ৫ বছর</div>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">c1</span>
+      <span class="prio">priority 1</span>
+      <span class="refer">→ PHC / DH same day</span>
+    </div>
+    <div class="q-bn">পাঁচ দিনের বেশি জ্বর চলছে?</div>
+    <div class="q-en">Has fever lasted more than 5 days?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF c1 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Refer to PHC/DH same day. Rule out malaria, typhoid, dengue. Do not give antipyretics and send home.</div>
+    <div class="action-bn">একই দিনে PHC/DH-তে রেফার করুন। ম্যালেরিয়া, টাইফয়েড, ডেঙ্গু বাদ দিন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> fever lasting more than 5 days · prolonged fever</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-002</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">c2</span>
+      <span class="prio">priority 2</span>
+      <span class="refer">→ PHC within 24 h / FRU if severe</span>
+    </div>
+    <div class="q-bn">কাশি বা শ্বাসকষ্ট আছে?</div>
+    <div class="q-en">Is there cough or breathing difficulty?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; হালকা</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF c2 == হ্যাঁ THEN YELLOW (escalates to RED if chest indrawing or stridor present)</code></div>
+    
+    <div class="note"><span class="lbl">Risk note</span> Chest indrawing or stridor = RED. RR ≥ 50/min (2–12 m) or ≥ 40/min (1–5 y) = YELLOW.</div>
+    <div class="action"><span class="lbl">Action</span> Count respiratory rate. RR ≥ 50 (2–12 m) or ≥ 40 (1–5 y) = pneumonia → PHC within 24 h. Chest indrawing or stridor = severe pneumonia → RED, refer FRU immediately.</div>
+    <div class="action-bn">শ্বাসের হার গণনা করুন। বুকে ইনড্রয়িং বা স্ট্রিডর = RED, FRU-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> cough · fast breathing · chest indrawing · stridor · wheeze</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-003</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">c3</span>
+      <span class="prio">priority 3</span>
+      <span class="refer">→ PHC within 24 h / FRU if severe dehydration</span>
+    </div>
+    <div class="q-bn">ডায়রিয়া বা বারবার বমি হচ্ছে?</div>
+    <div class="q-en">Is there diarrhoea or repeated vomiting?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; মাঝে মাঝে</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF c3 == হ্যাঁ THEN YELLOW (escalates to RED if severe dehydration)</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Assess dehydration. No dehydration = GREEN (ORS at home). Some dehydration = YELLOW (ORS at PHC). Severe dehydration (sunken eyes, skin pinch slow, unable to drink) = RED, IV fluids at FRU.</div>
+    <div class="action-bn">পানিশূন্যতা মূল্যায়ন করুন। কোনো পানিশূন্যতা নেই = GREEN (ORS বাড়িতে)। কিছু পানিশূন্যতা = YELLOW (PHC)। গুরুতর = RED (FRU)।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> diarrhoea · loose stools · repeated vomiting · watery stools</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-004</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">c4</span>
+      <span class="prio">priority 4</span>
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="q-bn">শিশু খেতে একদম অস্বীকার করছে?</div>
+    <div class="q-en">Is the child completely refusing to eat?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; কিছুটা</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF c4 == হ্যাঁ THEN YELLOW</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Assess for illness cause. If associated with fever/diarrhoea = escalate to relevant rule. Isolated feeding refusal &gt; 2 days = PHC referral within 24 h.</div>
+    <div class="action-bn">অসুস্থতার কারণ মূল্যায়ন করুন। বিচ্ছিন্ন খাওয়া প্রত্যাখ্যান &gt; ২ দিন = ২৪ ঘণ্টার মধ্যে PHC।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> not eating at all · refusing food · complete feeding refusal</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-005</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">c5</span>
+      <span class="prio">priority 5</span>
+      <span class="refer">→ FRU immediately</span>
+    </div>
+    <div class="q-bn">পানিশূন্যতার লক্ষণ (চোখ গর্তে, ঠোঁট শুকনো)?</div>
+    <div class="q-en">Signs of dehydration — sunken eyes, dry lips?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF c5 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Severe dehydration = RED. Start ORS immediately. Refer to FRU for IV fluids. Do not delay referral.</div>
+    <div class="action-bn">গুরুতর পানিশূন্যতা = RED। এখনই ORS শুরু করুন। IV তরলের জন্য FRU-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> sunken eyes · dry lips · dry mouth · skin pinch returns slowly · no tears · decreased urine</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-006</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">c6</span>
+      <span class="prio">priority 6</span>
+      <span class="refer">→ NRC if SAM / ICDS if MAM</span>
+    </div>
+    <div class="q-bn">ওজন বয়সের তুলনায় অনেক কম?</div>
+    <div class="q-en">Is weight much less than expected for age?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF c6 == হ্যাঁ THEN YELLOW (escalates to RED if MUAC &lt; 11.5 cm or oedema)</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Measure MUAC. MUAC &lt; 11.5 cm or oedema = SAM → RED, refer NRC. MUAC 11.5–12.5 cm = MAM → YELLOW, refer ICDS/NRC for RUTF. MUAC &gt; 12.5 cm = GREEN, counsel on feeding.</div>
+    <div class="action-bn">MUAC পরিমাপ করুন। &lt; ১১.৫ সেমি বা ইডিমা = SAM → RED, NRC-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> weight very low for age · visible severe wasting · oedema of both feet · MUAC &lt; 11.5 cm</div>
+    
+  </div>
+  </section>
+
+  <section class="case">
+    <h2>3. 👶 শিশু চেকআপ (১-১২ মাস)</h2>
+    <div class="case-meta">
+      <span><b>Infant Checkup (1-12 months)</b></span>
+      <span>Module: <code>child</code></span>
+      <span>Protocol basis: <b>IMNCI + HBYC</b></span>
+      <span>Rules: 6</span>
+    </div>
+    <div class="case-counts">
+      <span class="badge red">RED</span> 4 &nbsp; <span class="badge yellow">YELLOW</span> 2 &nbsp; <span class="badge green">GREEN</span> 0
+    </div>
+    <div class="kw"><span class="lbl">Detection keywords</span> শিশু · বাচ্চা · infant · ১ মাস · ৬ মাস · ১ বছর · ছোট বাচ্চা · দুধের বাচ্চা</div>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-007-i</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">i1</span>
+      <span class="prio">priority 7</span>
+      <span class="refer">→ FRU immediately</span>
+    </div>
+    <div class="q-bn">শিশু খাওয়া-দাওয়া একদম বন্ধ করে দিয়েছে?</div>
+    <div class="q-en">Has the infant completely stopped feeding?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; কিছুটা কম</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF i1 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Any feeding refusal in infant &lt; 2 months = RED hard-stop. Refer FRU immediately.</div>
+    <div class="action-bn">&lt; ২ মাস বয়সী শিশুর খাওয়া বন্ধ = RED হার্ড-স্টপ। এখনই FRU-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> complete feeding refusal in infant · not breastfeeding · not taking bottle</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-007</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">i2</span>
+      <span class="prio">priority 8</span>
+      <span class="refer">→ PHC / FRU same day</span>
+    </div>
+    <div class="q-bn">তিন দিনের বেশি জ্বর চলছে?</div>
+    <div class="q-en">Has fever lasted more than 3 days?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF i2 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Refer to PHC/FRU same day. Infants &lt; 3 months with any fever = RED hard-stop.</div>
+    <div class="action-bn">একই দিনে PHC/FRU-তে রেফার করুন। &lt; ৩ মাস বয়সী শিশুর যেকোনো জ্বর = RED।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> fever lasting more than 3 days in infant</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-003-i</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">i3</span>
+      
+      <span class="refer">→ PHC within 24 h</span>
+    </div>
+    <div class="q-bn">ডায়রিয়া বা বারবার বমি হচ্ছে?</div>
+    <div class="q-en">Is there diarrhoea or repeated vomiting?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; মাঝে মাঝে</div>
+    
+    
+    
+    <div class="action"><span class="lbl">Action</span> Assess dehydration. Some dehydration = YELLOW, PHC within 24 h. Severe dehydration = RED, FRU for IV fluids.</div>
+    
+    <div class="sym"><span class="lbl">Maps to symptoms</span> diarrhoea in infant · repeated vomiting in infant · watery stools</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-008</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">i4</span>
+      <span class="prio">priority 9</span>
+      <span class="refer">→ FRU immediately</span>
+    </div>
+    <div class="q-bn">শ্বাসকষ্ট বা বুকে শব্দ হচ্ছে?</div>
+    <div class="q-en">Is there breathing difficulty or chest sounds?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; হালকা</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF i4 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Chest indrawing or stridor in infant = RED, refer FRU immediately. Fast breathing alone (RR ≥ 50) = YELLOW, refer PHC within 24 h.</div>
+    <div class="action-bn">বুকে ইনড্রয়িং বা স্ট্রিডর = RED। এখনই FRU-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> breathing difficulty · chest sounds · wheeze · stridor · fast breathing in infant</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">CH-005-i</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">i5</span>
+      <span class="prio">priority 10</span>
+      <span class="refer">→ FRU immediately</span>
+    </div>
+    <div class="q-bn">পানিশূন্যতার লক্ষণ (চোখ গর্তে, ঠোঁট শুকনো)?</div>
+    <div class="q-en">Signs of dehydration — sunken eyes, dry lips?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF i5 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Severe dehydration in infant = RED. Start ORS immediately. Refer FRU for IV fluids.</div>
+    <div class="action-bn">শিশুর গুরুতর পানিশূন্যতা = RED। ORS শুরু করুন। IV তরলের জন্য FRU-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> sunken eyes · dry lips · skin pinch slow · no tears · decreased urine output</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">CH-009</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">i6</span>
+      <span class="prio">priority 11</span>
+      <span class="refer">→ ICDS / AWC</span>
+    </div>
+    <div class="q-bn">ওজন বাড়ছে না বা কমে যাচ্ছে?</div>
+    <div class="q-en">Is weight not increasing or decreasing?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF i6 == হ্যাঁ THEN YELLOW</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Refer to ICDS/AWC for growth monitoring. If MUAC &lt; 11.5 cm = RED, refer NRC. Counsel on complementary feeding after 6 months.</div>
+    <div class="action-bn">ICDS/AWC-তে রেফার করুন। MUAC &lt; ১১.৫ সেমি = RED, NRC-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> weight not gaining · weight loss in infant · faltering growth</div>
+    
+  </div>
+  </section>
+
+  <section class="case">
+    <h2>4. 🤰 গর্ভবতী মায়ের চেকআপ</h2>
+    <div class="case-meta">
+      <span><b>Pregnant Mother Checkup</b></span>
+      <span>Module: <code>pregnancy</code></span>
+      <span>Protocol basis: <b>MCP + PMSMA</b></span>
+      <span>Rules: 7</span>
+    </div>
+    <div class="case-counts">
+      <span class="badge red">RED</span> 4 &nbsp; <span class="badge yellow">YELLOW</span> 2 &nbsp; <span class="badge green">GREEN</span> 1
+    </div>
+    <div class="kw"><span class="lbl">Detection keywords</span> গর্ভবতী · গর্ভাবস্থা · মা · প্রেগনেন্ট · pregnant · pregnancy · anc · মাতৃত্ব · গর্ভ · পেটে বাচ্চা</div>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">p1</span>
+      <span class="prio">priority 1</span>
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="q-bn">রক্তচাপ বেশি বা মাথা ব্যথা হচ্ছে?</div>
+    <div class="q-en">Is blood pressure high or is there headache?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; মাঝে মাঝে</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF p1 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Pre-eclampsia/eclampsia hard-stop. Refer to FRU/DH immediately. Do not give food/water. Lay on left side during transport.</div>
+    <div class="action-bn">প্রি-এক্লাম্পসিয়া/এক্লাম্পসিয়া হার্ড-স্টপ। এখনই FRU/DH-তে রেফার করুন। বাম কাতে শোয়ান।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> high blood pressure · severe headache · BP ≥ 140/90 mmHg</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">ANC-002</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">p2</span>
+      <span class="prio">priority 2</span>
+      <span class="refer">→ PHC within 24 h / FRU if combined with p1</span>
+    </div>
+    <div class="q-bn">পা বা মুখ ফুলে যাচ্ছে?</div>
+    <div class="q-en">Is there swelling of legs or face?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; কিছুটা</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF p2 == হ্যাঁ THEN YELLOW (escalates to RED if p1 also == হ্যাঁ)</code></div>
+    <div class="escalation"><span class="lbl">Escalation</span>
+      <code>IF p2 == হ্যাঁ AND p1 == হ্যাঁ THEN RED (pre-eclampsia)</code> → <span class="badge red">RED</span></div>
+    <div class="note"><span class="lbl">Risk note</span> Oedema + headache + high BP = RED. Isolated leg oedema = YELLOW.</div>
+    <div class="action"><span class="lbl">Action</span> If oedema + headache + BP high = RED (pre-eclampsia). Isolated leg oedema = YELLOW, refer PHC within 24 h for BP check and urine protein.</div>
+    <div class="action-bn">বিচ্ছিন্ন পা ফোলা = YELLOW, ২৪ ঘণ্টার মধ্যে PHC। ফোলা + মাথাব্যথা + উচ্চ BP = RED।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> swelling of face · swelling of legs · pitting oedema · puffy face</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">p3</span>
+      <span class="prio">priority 3</span>
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="q-bn">রক্তপাত বা তীব্র পেট ব্যথা?</div>
+    <div class="q-en">Is there bleeding or severe abdominal pain?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF p3 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> APH hard-stop. Refer to FRU/DH immediately. Any bleeding after 20 weeks = emergency. Do not do vaginal examination.</div>
+    <div class="action-bn">APH হার্ড-স্টপ। এখনই FRU/DH-তে রেফার করুন। যোনি পরীক্ষা করবেন না।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> vaginal bleeding · antepartum haemorrhage · severe abdominal pain · APH</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">p4</span>
+      <span class="prio">priority 4</span>
+      <span class="refer">→ FRU / DH same day</span>
+    </div>
+    <div class="q-bn">শিশুর নড়াচড়া কমে গেছে?</div>
+    <div class="q-en">Has the baby's movement reduced?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF p4 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Refer to FRU/DH same day for fetal monitoring (CTG/Doppler). Absent fetal movement = emergency.</div>
+    <div class="action-bn">ভ্রূণের নড়াচড়া পর্যবেক্ষণের জন্য একই দিনে FRU/DH-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> baby not moving · reduced fetal kicks · no fetal movement felt</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">ANC-005</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">p5</span>
+      <span class="prio">priority 5</span>
+      <span class="refer">→ PHC within 7 days</span>
+    </div>
+    <div class="q-bn">তিন মাসের বেশি ANC চেকআপ বাদ গেছে?</div>
+    <div class="q-en">Has ANC checkup been missed for more than 3 months?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF p5 == হ্যাঁ THEN YELLOW</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Schedule ANC visit at PHC within 7 days. Check MCP card. Ensure TT, IFA, calcium supplementation are up to date. Flag for PMSMA if HRP.</div>
+    <div class="action-bn">৭ দিনের মধ্যে PHC-তে ANC ভিজিট নির্ধারণ করুন। MCP কার্ড চেক করুন। TT, IFA, ক্যালসিয়াম আপডেট করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> missed ANC checkup · no ANC visit in 3+ months</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">ANC-006</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">p6</span>
+      <span class="prio">priority 6</span>
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="q-bn">চোখে ঝাপসা বা মাথা ঘোরা হচ্ছে?</div>
+    <div class="q-en">Is there blurred vision or dizziness?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; মাঝে মাঝে</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF p6 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Eclampsia prodrome hard-stop. Refer to FRU/DH immediately. Blurred vision + headache + oedema = imminent eclampsia.</div>
+    <div class="action-bn">এক্লাম্পসিয়া প্রোড্রোম হার্ড-স্টপ। এখনই FRU/DH-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> blurred vision · seeing spots · dizziness · visual disturbance</div>
+    
+  </div>
+
+  <div class="rule green">
+    <div class="rule-head">
+      <span class="rid">ANC-007</span>
+      <span class="badge green">GREEN</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">p7</span>
+      <span class="prio">priority 7</span>
+      <span class="refer">→ None</span>
+    </div>
+    <div class="q-bn">সব প্রশ্নের উত্তর না — কোনো বিপদচিহ্ন নেই?</div>
+    <div class="q-en">All questions answered NO — no danger signs?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF p1==না AND p2==না AND p3==না AND p4==না AND p5==না AND p6==না THEN GREEN</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Routine ANC follow-up. Ensure 4 ANC visits (8, 14, 28, 36 weeks). Counsel on IFA (180 tabs), calcium (360 tabs), TT2, diet, birth preparedness. Register on ANMOL.</div>
+    <div class="action-bn">রুটিন ANC ফলো-আপ। ৪টি ANC ভিজিট নিশ্চিত করুন (৮, ১৪, ২৮, ৩৬ সপ্তাহ)।</div>
+    
+    
+  </div>
+  </section>
+
+  <section class="case">
+    <h2>5. 🤱 প্রসব-পরবর্তী চেকআপ</h2>
+    <div class="case-meta">
+      <span><b>Postpartum Checkup</b></span>
+      <span>Module: <code>delivery_pnc</code></span>
+      <span>Protocol basis: <b>SBA + PPH + PNC</b></span>
+      <span>Rules: 6</span>
+    </div>
+    <div class="case-counts">
+      <span class="badge red">RED</span> 1 &nbsp; <span class="badge yellow">YELLOW</span> 5 &nbsp; <span class="badge green">GREEN</span> 0
+    </div>
+    <div class="kw"><span class="lbl">Detection keywords</span> প্রসব · ডেলিভারি · জন্মের পর · delivery · postpartum · postnatal · প্রসবের পর · বাচ্চা হওয়ার পর · জন্ম দিয়েছে</div>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">PNC-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">pp1</span>
+      <span class="prio">priority 1</span>
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="q-bn">অতিরিক্ত রক্তপাত বা দুর্গন্ধযুক্ত স্রাব?</div>
+    <div class="q-en">Is there excessive bleeding or foul-smelling discharge?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; কিছুটা</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF pp1 == হ্যাঁ THEN RED</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> PPH hard-stop. Refer to FRU/DH immediately. If trained: bimanual uterine compression. Misoprostol 600 mcg sublingual if within ASHA scope (confirm at sign-off). Do not delay transport.</div>
+    <div class="action-bn">PPH হার্ড-স্টপ। এখনই FRU/DH-তে রেফার করুন। বাইম্যানুয়াল জরায়ু সংকোচন প্রয়োগ করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> heavy vaginal bleeding after delivery · soaking ≥ 2 pads in 30 min · foul-smelling lochia · PPH</div>
+    <div class="signoff">⚠ Clinical sign-off pending — PPH proxy '≥ 2 pads soaked in 30 min' pending clinical sign-off (README open item #3).</div>
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-002</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">pp2</span>
+      <span class="prio">priority 2</span>
+      <span class="refer">→ PHC within 24 h / FRU if sepsis</span>
+    </div>
+    <div class="q-bn">জ্বর বা ঠান্ডা লাগছে?</div>
+    <div class="q-en">Is there fever or chills?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; মাঝে মাঝে</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF pp2 == হ্যাঁ THEN YELLOW (escalates to RED if pp1 also == হ্যাঁ OR fever &gt; 38C after day 2)</code></div>
+    <div class="escalation"><span class="lbl">Escalation</span>
+      <code>IF pp2 == হ্যাঁ AND pp1 == হ্যাঁ THEN RED (puerperal sepsis)</code> → <span class="badge red">RED</span></div>
+    <div class="note"><span class="lbl">Risk note</span> Fever + foul discharge = RED (sepsis). Fever &gt; 38°C after day 2 = RED. Isolated fever day 1–2 = YELLOW.</div>
+    <div class="action"><span class="lbl">Action</span> Puerperal sepsis risk. Fever + foul discharge = RED. Isolated fever day 1–2 = YELLOW, refer PHC within 24 h. Fever &gt; 38°C after day 2 = RED.</div>
+    <div class="action-bn">পিউরপেরাল সেপসিস ঝুঁকি। জ্বর + দুর্গন্ধ স্রাব = RED। বিচ্ছিন্ন জ্বর দিন ১-২ = YELLOW।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> fever · chills · rigors · temperature &gt; 38°C postpartum</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-003</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">pp3</span>
+      <span class="prio">priority 3</span>
+      <span class="refer">→ PHC within 24 h / FRU if abscess</span>
+    </div>
+    <div class="q-bn">স্তনে ব্যথা, ফোলা বা লাল দাগ?</div>
+    <div class="q-en">Is there breast pain, swelling, or red marks?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; কিছুটা</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF pp3 == হ্যাঁ THEN YELLOW (escalates to RED if fluctuant abscess)</code></div>
+    
+    <div class="note"><span class="lbl">Risk note</span> Fluctuant abscess = RED. Mastitis without abscess = YELLOW.</div>
+    <div class="action"><span class="lbl">Action</span> Mastitis: continue breastfeeding, warm compress, refer PHC within 24 h for antibiotics. If abscess (fluctuant swelling) = RED, refer FRU for I&amp;D.</div>
+    <div class="action-bn">ম্যাস্টাইটিস: বুকের দুধ চালিয়ে যান, গরম সেঁক দিন, অ্যান্টিবায়োটিকের জন্য PHC-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> breast pain · breast swelling · red streak on breast · mastitis · engorgement</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-004</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">pp4</span>
+      <span class="prio">priority 4</span>
+      <span class="refer">→ PHC within 24 h / FRU if dehiscence or peritonitis</span>
+    </div>
+    <div class="q-bn">পেটে তীব্র ব্যথা বা সেলাইয়ে সমস্যা?</div>
+    <div class="q-en">Is there severe abdominal pain or suture problem?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF pp4 == হ্যাঁ THEN YELLOW (escalates to RED if wound dehiscence or peritonitis)</code></div>
+    
+    <div class="note"><span class="lbl">Risk note</span> Wound dehiscence or peritonitis signs = RED. Wound infection alone = YELLOW.</div>
+    <div class="action"><span class="lbl">Action</span> Wound infection = YELLOW, refer PHC within 24 h. Wound dehiscence or severe pain = RED, refer FRU. Peritonitis signs (rigid abdomen, rebound tenderness) = RED hard-stop.</div>
+    <div class="action-bn">ক্ষত সংক্রমণ = YELLOW, ২৪ ঘণ্টার মধ্যে PHC। ক্ষত বিচ্ছিন্নতা বা পেরিটোনাইটিস = RED।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> severe abdominal pain postpartum · wound dehiscence · suture opening · wound infection</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-005</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">pp5</span>
+      <span class="prio">priority 5</span>
+      <span class="refer">→ PHC within 24 h / FRU if pyelonephritis</span>
+    </div>
+    <div class="q-bn">প্রস্রাবে জ্বালা বা কষ্ট হচ্ছে?</div>
+    <div class="q-en">Is there burning or difficulty urinating?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; মাঝে মাঝে</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF pp5 == হ্যাঁ THEN YELLOW (escalates to RED if fever + flank pain)</code></div>
+    
+    <div class="note"><span class="lbl">Risk note</span> Fever + flank pain = pyelonephritis → RED.</div>
+    <div class="action"><span class="lbl">Action</span> UTI: refer PHC within 24 h for urine culture and antibiotics. If fever + flank pain = pyelonephritis → RED, refer FRU.</div>
+    <div class="action-bn">UTI: প্রস্রাব কালচার ও অ্যান্টিবায়োটিকের জন্য ২৪ ঘণ্টার মধ্যে PHC-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> dysuria · burning urination · urinary tract infection · UTI postpartum</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">PNC-006</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">pp6</span>
+      <span class="prio">priority 6</span>
+      <span class="refer">→ PHC for Hb check / FRU if Hb &lt; 7 or fainting</span>
+    </div>
+    <div class="q-bn">খুব দুর্বল বা মাথা ঘোরা হচ্ছে?</div>
+    <div class="q-en">Is there extreme weakness or dizziness?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; কিছুটা</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF pp6 == হ্যাঁ THEN YELLOW (escalates to RED if Hb &lt; 7 g/dL or fainting)</code></div>
+    
+    <div class="note"><span class="lbl">Risk note</span> Hb &lt; 7 g/dL or fainting = RED.</div>
+    <div class="action"><span class="lbl">Action</span> Assess pallor (conjunctiva, palms). Severe pallor = anaemia → YELLOW, refer PHC for Hb check. Hb &lt; 7 g/dL or fainting = RED, refer FRU for transfusion.</div>
+    <div class="action-bn">ফ্যাকাশে ভাব মূল্যায়ন করুন। গুরুতর ফ্যাকাশে = রক্তাল্পতা → YELLOW, PHC-তে Hb পরীক্ষা।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> extreme weakness · dizziness · pallor · fainting · severe anaemia postpartum</div>
+    
+  </div>
+  </section>
+
+  <section class="case">
+    <h2>6. 💉 টিকা মিস / ইমিউনাইজেশন</h2>
+    <div class="case-meta">
+      <span><b>Immunization Missed</b></span>
+      <span>Module: <code>immunisation</code></span>
+      <span>Protocol basis: <b>UIP National Schedule</b></span>
+      <span>Rules: 5</span>
+    </div>
+    <div class="case-counts">
+      <span class="badge red">RED</span> 0 &nbsp; <span class="badge yellow">YELLOW</span> 5 &nbsp; <span class="badge green">GREEN</span> 0
+    </div>
+    <div class="kw"><span class="lbl">Detection keywords</span> টিকা · ভ্যাকসিন · immunization · vaccination · টিকা মিস · টিকা বাদ · টিকা দেওয়া হয়নি · ইমিউনাইজেশন</div>
+    
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-001</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">im1</span>
+      <span class="prio">priority 1</span>
+      <span class="refer">→ Nearest immunisation session within 7 days</span>
+    </div>
+    <div class="q-bn">শিশুর বয়স কত মাস?</div>
+    <div class="q-en">What is the child's age in months?</div>
+    <div class="opts"><span class="lbl">Answers</span> ০-৬ মাস &nbsp;·&nbsp; ৬-১২ মাস &nbsp;·&nbsp; ১-৫ বছর</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF im1 IN [০-৬ মাস, ৬-১২ মাস] THEN YELLOW</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Schedule catch-up at nearest session site within 7 days. BCG can be given up to 1 year. OPV/IPV/Pentavalent: give missed dose, continue schedule. Do not restart series.</div>
+    <div class="action-bn">৭ দিনের মধ্যে নিকটতম সেশন সাইটে ক্যাচ-আপ নির্ধারণ করুন। সিরিজ পুনরায় শুরু করবেন না।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> BCG not given · OPV0 not given · Hepatitis B birth dose missed · Pentavalent missed · IPV missed</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-002</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">im2</span>
+      <span class="prio">priority 2</span>
+      <span class="refer">→ Nearest immunisation session within 7 days</span>
+    </div>
+    <div class="q-bn">কোন টিকা মিস হয়েছে?</div>
+    <div class="q-en">Which vaccine was missed?</div>
+    <div class="opts"><span class="lbl">Answers</span> BCG/OPV &nbsp;·&nbsp; DPT/Pentavalent &nbsp;·&nbsp; Measles/MMR</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF im2 IN [BCG/OPV, DPT/Pentavalent, Measles/MMR] THEN YELLOW</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Schedule catch-up within 7 days. Measles-1 at 9 months, Vitamin A 1 lakh IU at 9 months. If &gt; 12 months, give MMR instead of measles.</div>
+    <div class="action-bn">৭ দিনের মধ্যে ক্যাচ-আপ নির্ধারণ করুন। ৯ মাসে Measles-1, ৯ মাসে Vitamin A ১ লক্ষ IU।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> Measles dose 1 missed · Vitamin A dose 1 missed · JE dose 1 missed in endemic districts</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-005</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">im3</span>
+      <span class="prio">priority 5</span>
+      <span class="refer">→ PHC catch-up session</span>
+    </div>
+    <div class="q-bn">কতদিন আগে টিকা দেওয়ার কথা ছিল?</div>
+    <div class="q-en">How many days ago was the vaccine due?</div>
+    <div class="opts"><span class="lbl">Answers</span> ১ সপ্তাহ &nbsp;·&nbsp; ১ মাস &nbsp;·&nbsp; ৩ মাসের বেশি</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF im3 == ৩ মাসের বেশি THEN YELLOW</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Catch-up immunisation. Do not restart series. Give missed dose and continue from where left off. Refer to PHC for catch-up session. Flag on ANMOL for tracking.</div>
+    <div class="action-bn">ক্যাচ-আপ ইমিউনাইজেশন। সিরিজ পুনরায় শুরু করবেন না। ANMOL-এ ট্র্যাকিংয়ের জন্য ফ্ল্যাগ করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> vaccine overdue by more than 3 months</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-004</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">im4</span>
+      <span class="prio">priority 4</span>
+      <span class="refer">→ Reschedule within 7 days of recovery</span>
+    </div>
+    <div class="q-bn">শিশুর কি কোনো অসুস্থতা আছে এখন?</div>
+    <div class="q-en">Does the child have any illness now?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; হালকা জ্বর</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF im4 == হ্যাঁ THEN YELLOW (defer if moderate/severe illness)</code></div>
+    
+    <div class="note"><span class="lbl">Risk note</span> Mild illness = vaccinate as scheduled. Moderate/severe illness = defer until recovered.</div>
+    <div class="action"><span class="lbl">Action</span> Mild illness (mild fever, cold) = vaccinate as scheduled. Moderate/severe illness = defer vaccination until recovered. Reschedule within 7 days of recovery. Do not miss opportunity for mild illness.</div>
+    <div class="action-bn">হালকা অসুস্থতা = নির্ধারিত সময়ে টিকা দিন। মাঝারি/গুরুতর = সুস্থ হওয়া পর্যন্ত স্থগিত করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> fever at time of vaccination · moderate to severe illness</div>
+    
+  </div>
+
+  <div class="rule yellow">
+    <div class="rule-head">
+      <span class="rid">IMM-003</span>
+      <span class="badge yellow">YELLOW</span>
+      <span class="chip soft">scored</span>
+      <span class="qid">im5</span>
+      <span class="prio">priority 3</span>
+      <span class="refer">→ Next immunisation session</span>
+    </div>
+    <div class="q-bn">১-৫ বছর বয়সী শিশুর বুস্টার ডোজ মিস হয়েছে?</div>
+    <div class="q-en">Has the booster dose been missed for child aged 1–5 years?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF im5 == হ্যাঁ THEN YELLOW</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> DPT booster at 16–24 months. OPV booster at 16–24 months. MMR at 15–18 months. Vitamin A 6-monthly up to 5 years. Schedule catch-up at next session.</div>
+    <div class="action-bn">DPT বুস্টার ১৬-২৪ মাসে। OPV বুস্টার ১৬-২৪ মাসে। MMR ১৫-১৮ মাসে। পরবর্তী সেশনে ক্যাচ-আপ নির্ধারণ করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> DPT booster missed · OPV booster missed · MMR missed · Measles-2 missed · Vitamin A doses missed</div>
+    
+  </div>
+  </section>
+
+  <section class="case">
+    <h2>7. 🚨 জরুরি অবস্থা যাচাই</h2>
+    <div class="case-meta">
+      <span><b>Emergency Case</b></span>
+      <span>Module: <code>emergency</code></span>
+      <span>Protocol basis: <b>Global Emergency Rule Engine</b></span>
+      <span>Rules: 5</span>
+    </div>
+    <div class="case-counts">
+      <span class="badge red">RED</span> 5 &nbsp; <span class="badge yellow">YELLOW</span> 0 &nbsp; <span class="badge green">GREEN</span> 0
+    </div>
+    <div class="kw"><span class="lbl">Detection keywords</span> জরুরি · emergency · খুব খারাপ · মারাত্মক · বিপদ · অ্যাম্বুলেন্স · হাসপাতাল · গুরুতর · জ্ঞান নেই</div>
+    
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-001</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">e1</span>
+      <span class="prio">priority 1</span>
+      <span class="refer">→ FRU / DH ≤ 30 min</span>
+    </div>
+    <div class="q-bn">অতিরিক্ত রক্তপাত হচ্ছে?</div>
+    <div class="q-en">Is there excessive bleeding?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; একটু</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF e1 == হ্যাঁ THEN RED — band locked, no downgrade possible</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Call 108 immediately. Refer FRU/DH ≤ 30 min. Apply uterine compression if postpartum. Do not leave patient alone.</div>
+    <div class="action-bn">হার্ড-স্টপ। এখনই ১০৮ কল করুন। FRU/DH-তে ≤ ৩০ মিনিটে রেফার করুন। প্রসব-পরবর্তী হলে জরায়ু সংকোচন প্রয়োগ করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> heavy bleeding · haemorrhage · soaking pads rapidly · blood pooling</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-002</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">e2</span>
+      <span class="prio">priority 2</span>
+      <span class="refer">→ FRU / DH immediately</span>
+    </div>
+    <div class="q-bn">খিঁচুনি বা অজ্ঞান হয়েছে?</div>
+    <div class="q-en">Has there been convulsion or loss of consciousness?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; একবার</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF e2 == হ্যাঁ THEN RED — band locked, no downgrade possible</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Lay on left side, protect airway. Call 108. Refer FRU/DH immediately. If eclampsia: MgSO4 loading dose if within ANM/MO scope. ASHA: do not delay transport.</div>
+    <div class="action-bn">হার্ড-স্টপ। বাম কাতে শোয়ান, শ্বাসনালী রক্ষা করুন। ১০৮ কল করুন। এখনই FRU/DH-তে রেফার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> seizure · convulsion · fits · unconscious · unresponsive · eclampsia</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-003</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">e3</span>
+      <span class="prio">priority 3</span>
+      <span class="refer">→ FRU / DH ≤ 30 min</span>
+    </div>
+    <div class="q-bn">শ্বাস নিতে খুব কষ্ট হচ্ছে?</div>
+    <div class="q-en">Is there severe difficulty breathing?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; অনেক</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF e3 == হ্যাঁ THEN RED — band locked, no downgrade possible</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Call 108. Refer FRU/DH ≤ 30 min. Keep airway clear. If newborn: stimulate, clear airway, bag-mask if available.</div>
+    <div class="action-bn">হার্ড-স্টপ। ১০৮ কল করুন। শ্বাসনালী পরিষ্কার রাখুন। নবজাতক হলে: উদ্দীপনা দিন, শ্বাসনালী পরিষ্কার করুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> unable to breathe · severe respiratory distress · cyanosis · gasping · apnoea</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-004</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">e4</span>
+      <span class="prio">priority 4</span>
+      <span class="refer">→ FRU / DH ≤ 30 min</span>
+    </div>
+    <div class="q-bn">রোগী সাড়া দিচ্ছে না বা জ্ঞান নেই?</div>
+    <div class="q-en">Is the patient unresponsive or unconscious?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না &nbsp;·&nbsp; নিশ্চিত না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF e4 == হ্যাঁ THEN RED — band locked, no downgrade possible</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> Hard-stop. Call 108 immediately. Check airway, breathing, circulation. Recovery position. Refer FRU/DH ≤ 30 min. MDSR audit trigger if death occurs.</div>
+    <div class="action-bn">হার্ড-স্টপ। এখনই ১০৮ কল করুন। শ্বাসনালী, শ্বাস, সঞ্চালন পরীক্ষা করুন। রিকভারি পজিশনে রাখুন।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> not responding · unconscious · no response to voice · no response to pain</div>
+    
+  </div>
+
+  <div class="rule red">
+    <div class="rule-head">
+      <span class="rid">EM-005</span>
+      <span class="badge red">RED</span>
+      <span class="chip hardstop">HARD-STOP</span>
+      <span class="qid">e5</span>
+      <span class="prio">priority 5</span>
+      <span class="refer">→ FRU / SNCU / DH immediately</span>
+    </div>
+    <div class="q-bn">উপরের যেকোনো একটি বিপদচিহ্ন আছে?</div>
+    <div class="q-en">Is any single hard-stop danger sign present?</div>
+    <div class="opts"><span class="lbl">Answers</span> হ্যাঁ &nbsp;·&nbsp; না</div>
+    <div class="logic"><span class="lbl">Logic</span> <code>IF e5 == হ্যাঁ THEN RED — re-sweep invariant: band permanently locked RED across all modules</code></div>
+    
+    
+    <div class="action"><span class="lbl">Action</span> System invariant: RED band locked. No GREEN or YELLOW answer can downgrade a fired RED. Re-sweep confirms RED on every state update.</div>
+    <div class="action-bn">সিস্টেম ইনভেরিয়েন্ট: RED ব্যান্ড লক। কোনো GREEN বা YELLOW উত্তর RED কমাতে পারবে না।</div>
+    <div class="sym"><span class="lbl">Maps to symptoms</span> any single hard-stop sign present</div>
+    <div class="invariant">🔒 Re-sweep invariant — Re-sweep invariant (EM-005): once any hard_stop fires across ANY module, band is locked RED. No subsequent GREEN or YELLOW answer can downgrade it. Engine must enforce this structurally on every state update, not just at final evaluation.</div>
+  </div>
+  </section>
+
+  <section class="case">
+    <h2>Master rule index</h2>
+    <table class="bands">
+      <thead><tr><th>Case</th><th>Rule ID</th><th>Band</th><th>Hard-stop</th><th>Referral target</th></tr></thead>
+      <tbody><tr>
+        <td>Newborn Checkup (0-28 days)</td>
+        <td><code>NB-001</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>SNCU / FRU</td></tr><tr>
+        <td>Newborn Checkup (0-28 days)</td>
+        <td><code>NB-002</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>SNCU / FRU</td></tr><tr>
+        <td>Newborn Checkup (0-28 days)</td>
+        <td><code>NB-003</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>SNCU / FRU</td></tr><tr>
+        <td>Newborn Checkup (0-28 days)</td>
+        <td><code>NB-004</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / DH</td></tr><tr>
+        <td>Newborn Checkup (0-28 days)</td>
+        <td><code>NB-005</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>SNCU / FRU</td></tr><tr>
+        <td>Newborn Checkup (0-28 days)</td>
+        <td><code>NB-006</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>SNCU / FRU</td></tr><tr>
+        <td>Newborn Checkup (0-28 days)</td>
+        <td><code>NB-007</code></td>
+        <td><span class="badge green">GREEN</span></td>
+        <td>—</td>
+        <td>None</td></tr><tr>
+        <td>Child Health Check (1-5 years)</td>
+        <td><code>CH-001</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>PHC / DH same day</td></tr><tr>
+        <td>Child Health Check (1-5 years)</td>
+        <td><code>CH-002</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC within 24 h / FRU if severe</td></tr><tr>
+        <td>Child Health Check (1-5 years)</td>
+        <td><code>CH-003</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC within 24 h / FRU if severe dehydration</td></tr><tr>
+        <td>Child Health Check (1-5 years)</td>
+        <td><code>CH-004</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC within 24 h</td></tr><tr>
+        <td>Child Health Check (1-5 years)</td>
+        <td><code>CH-005</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU immediately</td></tr><tr>
+        <td>Child Health Check (1-5 years)</td>
+        <td><code>CH-006</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>NRC if SAM / ICDS if MAM</td></tr><tr>
+        <td>Infant Checkup (1-12 months)</td>
+        <td><code>CH-007-i</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU immediately</td></tr><tr>
+        <td>Infant Checkup (1-12 months)</td>
+        <td><code>CH-007</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>PHC / FRU same day</td></tr><tr>
+        <td>Infant Checkup (1-12 months)</td>
+        <td><code>CH-003-i</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td></td></tr><tr>
+        <td>Infant Checkup (1-12 months)</td>
+        <td><code>CH-008</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU immediately</td></tr><tr>
+        <td>Infant Checkup (1-12 months)</td>
+        <td><code>CH-005-i</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU immediately</td></tr><tr>
+        <td>Infant Checkup (1-12 months)</td>
+        <td><code>CH-009</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>ICDS / AWC</td></tr><tr>
+        <td>Pregnant Mother Checkup</td>
+        <td><code>ANC-001</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / DH immediately</td></tr><tr>
+        <td>Pregnant Mother Checkup</td>
+        <td><code>ANC-002</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC within 24 h / FRU if combined with p1</td></tr><tr>
+        <td>Pregnant Mother Checkup</td>
+        <td><code>ANC-003</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / DH immediately</td></tr><tr>
+        <td>Pregnant Mother Checkup</td>
+        <td><code>ANC-004</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / DH same day</td></tr><tr>
+        <td>Pregnant Mother Checkup</td>
+        <td><code>ANC-005</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC within 7 days</td></tr><tr>
+        <td>Pregnant Mother Checkup</td>
+        <td><code>ANC-006</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / DH immediately</td></tr><tr>
+        <td>Pregnant Mother Checkup</td>
+        <td><code>ANC-007</code></td>
+        <td><span class="badge green">GREEN</span></td>
+        <td>—</td>
+        <td>None</td></tr><tr>
+        <td>Postpartum Checkup</td>
+        <td><code>PNC-001</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / DH immediately</td></tr><tr>
+        <td>Postpartum Checkup</td>
+        <td><code>PNC-002</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC within 24 h / FRU if sepsis</td></tr><tr>
+        <td>Postpartum Checkup</td>
+        <td><code>PNC-003</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC within 24 h / FRU if abscess</td></tr><tr>
+        <td>Postpartum Checkup</td>
+        <td><code>PNC-004</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC within 24 h / FRU if dehiscence or peritonitis</td></tr><tr>
+        <td>Postpartum Checkup</td>
+        <td><code>PNC-005</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC within 24 h / FRU if pyelonephritis</td></tr><tr>
+        <td>Postpartum Checkup</td>
+        <td><code>PNC-006</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC for Hb check / FRU if Hb &lt; 7 or fainting</td></tr><tr>
+        <td>Immunization Missed</td>
+        <td><code>IMM-001</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>Nearest immunisation session within 7 days</td></tr><tr>
+        <td>Immunization Missed</td>
+        <td><code>IMM-002</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>Nearest immunisation session within 7 days</td></tr><tr>
+        <td>Immunization Missed</td>
+        <td><code>IMM-005</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>PHC catch-up session</td></tr><tr>
+        <td>Immunization Missed</td>
+        <td><code>IMM-004</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>Reschedule within 7 days of recovery</td></tr><tr>
+        <td>Immunization Missed</td>
+        <td><code>IMM-003</code></td>
+        <td><span class="badge yellow">YELLOW</span></td>
+        <td>—</td>
+        <td>Next immunisation session</td></tr><tr>
+        <td>Emergency Case</td>
+        <td><code>EM-001</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / DH ≤ 30 min</td></tr><tr>
+        <td>Emergency Case</td>
+        <td><code>EM-002</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / DH immediately</td></tr><tr>
+        <td>Emergency Case</td>
+        <td><code>EM-003</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / DH ≤ 30 min</td></tr><tr>
+        <td>Emergency Case</td>
+        <td><code>EM-004</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / DH ≤ 30 min</td></tr><tr>
+        <td>Emergency Case</td>
+        <td><code>EM-005</code></td>
+        <td><span class="badge red">RED</span></td>
+        <td>Yes</td>
+        <td>FRU / SNCU / DH immediately</td></tr></tbody>
+    </table>
+  </section>
+
+  <div class="foot">
+    Generated from the tracked rule files of the AshaMitra repository
+    (clinical_decision_engine.json v1.0.0 + triage_cases.json v2.0.0).
+    Bands: 🟢 Green = home care · 🟡 Yellow = PHC within 24 h · 🔴 Red = FRU/SNCU/DH immediately (≤ 30–60 min), call 108.
+    A fired RED can never be downgraded. Items flagged "clinical sign-off pending" await AIIH&PH / Secretariat confirmation.
+  </div>
+
+</body></html>

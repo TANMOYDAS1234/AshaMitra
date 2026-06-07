@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../../app/routes.dart';
 import '../../../../shared/widgets/referral_map/referral_map_widget.dart';
 import '../../../../core/services/rule_executor.dart';
+import '../../../../core/services/patient_triage_context.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -69,10 +70,13 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
         ? Map<String, dynamic>.from(rawVitals)
         : <String, dynamic>{};
 
+    final patientId = _answers['_patientId'];
     _engineResult = Get.find<RuleExecutor>().execute(
       moduleId: _moduleId,
       answers: rawAnswers,
       vitals: vitalsMap,
+      demographics: PatientTriageContext.demographicsFor(patientId),
+      history: PatientTriageContext.historyFor(patientId),
     );
 
     // If pipeline blocked (validation failed), use conversational risk level as fallback

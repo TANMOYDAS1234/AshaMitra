@@ -273,33 +273,34 @@ class SituationExtractor {
       ], questionId: 'c6', answer: true, label: 'ওজন কম'),
     ],
     'pregnancy': [
+      // BP only (headache split out to p11 so an ISOLATED headache is not RED).
+      // Palpitations / tinnitus kept here as severe pre-eclampsia markers (RED).
       _SymptomRule(triggers: [
-        // Standard Bengali
-        'মাথা ব্যথা', 'মাথা ধরেছে', 'রক্তচাপ', 'বিপি', 'মাথা ব্যাথা',
-        'মাথা ভারী', 'মাথা ভার লাগছে', 'বুক ধড়ফড়', 'বুক ধড়ফড় করছে',
-        'ঘাড় ব্যথা', 'ঘাড়ে ব্যথা', 'চোখে ব্যথা', 'কানে শোঁ শোঁ',
-        'bp বেশি', 'প্রেশার বেশি', 'প্রেশার হাই',
-        // Rarhi dialects
-        'মাথা ব্যথা করছে', 'মাথা ধরছে', 'মাথায় ব্যথা', 'মাথা ব্যথা হইছে',
-        'মাথা ব্যথা করতেছে', 'মাথা ধরছে গো',
-        // Medinipur
-        'মাথা ব্যথা হচ্ছে গো', 'মাথা ধরেছে গো', 'বিপি বেশি গো',
-        // Murshidabad / Malda
-        'মাথা ব্যথা আছে', 'মাথা ধরছে', 'রক্তচাপ বেশি',
-        // Cooch Behar
-        'মাথা ব্যথা করছে', 'বিপি বেশি হইছে',
-        // Sundarbans
-        'মাথা ব্যথা রে', 'মাথা ধরছে রে',
-        // Hindi / Bhojpuri
-        'sir dard', 'sar dard', 'bp high', 'blood pressure badha hua',
-        'sir mein dard', 'sar mein dard hai', 'bp badhgel',
-        // Odia
-        'matha byatha', 'bp besi',
-        // Chhattisgarhi
-        'matha dukhath', 'bp jyada',
-        // English
-        'headache', 'head pain', 'high bp', 'blood pressure high',
-      ], questionId: 'p1', answer: true, label: 'মাথা ব্যথা/উচ্চ রক্তচাপ'),
+        'রক্তচাপ', 'রক্তচাপ বেশি', 'বিপি', 'bp বেশি', 'বিপি বেশি গো',
+        'বিপি বেশি হইছে', 'প্রেশার বেশি', 'প্রেশার হাই',
+        'বুক ধড়ফড়', 'বুক ধড়ফড় করছে', 'কানে শোঁ শোঁ',
+        'bp high', 'blood pressure badha hua', 'bp badhgel', 'bp besi',
+        'bp jyada', 'high bp', 'blood pressure high',
+      ], questionId: 'p1', answer: true, label: 'উচ্চ রক্তচাপ'),
+      // Headache — isolated → YELLOW (p11). Severity/duration goes to p11d,
+      // and p11+p11d (or p11+swelling) escalates to RED in the engine.
+      _SymptomRule(triggers: [
+        'মাথা ব্যথা', 'মাথা ব্যাথা', 'মাথা ধরেছে', 'মাথা ধরছে', 'মাথায় ব্যথা',
+        'মাথা ভারী', 'মাথা ভার লাগছে', 'ঘাড় ব্যথা', 'ঘাড়ে ব্যথা', 'চোখে ব্যথা',
+        'মাথা ব্যথা করছে', 'মাথা ব্যথা হইছে', 'মাথা ব্যথা করতেছে', 'মাথা ধরছে গো',
+        'মাথা ব্যথা হচ্ছে গো', 'মাথা ধরেছে গো', 'মাথা ব্যথা আছে', 'মাথা ব্যথা রে',
+        'মাথা ধরছে রে',
+        'sir dard', 'sar dard', 'sir mein dard', 'sar mein dard hai',
+        'matha byatha', 'matha dukhath', 'headache', 'head pain',
+      ], questionId: 'p11', answer: true, label: 'মাথা ব্যথা'),
+      // Severe / persistent / worsening headache → RED via the p11+p11d combo.
+      _SymptomRule(triggers: [
+        'তীব্র মাথা ব্যথা', 'প্রচণ্ড মাথা ব্যথা', 'খুব মাথা ব্যথা', 'অনেক মাথা ব্যথা',
+        'মাথা ব্যথা কমছে না', 'মাথা ব্যথা সারছে না', 'মাথা ব্যথা বাড়ছে',
+        'অনেকদিন মাথা ব্যথা', 'দুই দিন মাথা ব্যথা', 'কয়েকদিন মাথা ব্যথা',
+        'severe headache', 'bad headache', 'persistent headache',
+        'worsening headache', 'headache not going',
+      ], questionId: 'p11d', answer: true, label: 'তীব্র/ক্রমাগত মাথা ব্যথা'),
       _SymptomRule(triggers: [
         // Standard Bengali
         'পা ফুলেছে', 'মুখ ফুলেছে', 'ফোলা', 'পা ফুলে', 'হাত ফুলেছে',
@@ -378,32 +379,22 @@ class SituationExtractor {
         // English
         'missed anc', 'no checkup', 'not seen doctor', 'anc missed',
       ], questionId: 'p5', answer: true, label: 'ANC মিস'),
+      // Blurred vision / photophobia / collapse — eclampsia prodrome → RED.
       _SymptomRule(triggers: [
-        // Standard Bengali
-        'চোখে ঝাপসা', 'ঝাপসা দেখছে', 'মাথা ঘুরছে', 'চোখ ঝাপসা',
-        'মাথা ঘোরা', 'চোখে অন্ধকার',
-        'মাথা ঘুরে পড়ে গেছে', 'চোখে আলো সহ্য হচ্ছে না', 'চোখে ঝিলিক',
-        'দেখতে পাচ্ছে না', 'চোখে সমস্যা', 'মাথা ঘুরে যাচ্ছে',
-        // Rarhi
-        'মাথা ঘুরাইতেছে', 'চোখে ঝাপসা লাগছে', 'মাথা ঘুরছে গো',
-        'চোখে কম দেখছে', 'মাথা ঘুরতেছে',
-        // Medinipur
-        'মাথা ঘুরছে গো', 'চোখে ঝাপসা গো',
-        // Murshidabad
-        'মাথা ঘুরাইতেছে', 'চোখে ঝাপসা লাগছে',
-        // Cooch Behar
-        'মাথা ঘুরছে', 'চোখে ঝাপসা',
-        // Hindi / Bhojpuri
-        'aankhon mein dhundla', 'chakkar aa raha', 'sir ghoom raha',
-        'aankhein dhundhli', 'chakkar aagel',
-        // Odia
-        'matha ghuruchi', 'chokha andhara',
-        // Chhattisgarhi
-        'matha ghoomth', 'aankhon mein andhera',
-        // English
-        'blurred vision', 'dizziness', 'dizzy', 'vision blurred',
-        'head spinning',
-      ], questionId: 'p6', answer: true, label: 'ঝাপসা দৃষ্টি/মাথা ঘোরা'),
+        'চোখে ঝাপসা', 'ঝাপসা দেখছে', 'চোখ ঝাপসা', 'চোখে অন্ধকার',
+        'চোখে আলো সহ্য হচ্ছে না', 'চোখে ঝিলিক', 'দেখতে পাচ্ছে না', 'চোখে সমস্যা',
+        'চোখে ঝাপসা লাগছে', 'চোখে ঝাপসা গো', 'চোখে কম দেখছে',
+        'মাথা ঘুরে পড়ে গেছে',
+        'aankhon mein dhundla', 'aankhein dhundhli', 'chokha andhara',
+        'aankhon mein andhera', 'blurred vision', 'vision blurred',
+      ], questionId: 'p6', answer: true, label: 'ঝাপসা দৃষ্টি'),
+      // Dizziness / weakness — anaemia or low BP → YELLOW (not auto-RED).
+      _SymptomRule(triggers: [
+        'মাথা ঘুরছে', 'মাথা ঘোরা', 'মাথা ঘুরে যাচ্ছে', 'মাথা ঘুরাইতেছে',
+        'মাথা ঘুরতেছে', 'মাথা ঘুরছে গো', 'দুর্বল লাগছে', 'মাথা হালকা',
+        'chakkar aa raha', 'sir ghoom raha', 'chakkar aagel',
+        'matha ghuruchi', 'matha ghoomth', 'dizziness', 'dizzy', 'head spinning',
+      ], questionId: 'p12', answer: true, label: 'মাথা ঘোরা/দুর্বলতা'),
     ],
     'delivery_pnc': [
       _SymptomRule(triggers: [

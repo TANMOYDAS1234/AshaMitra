@@ -15,6 +15,8 @@ import '../../../../shared/widgets/user_avatar.dart';
 import '../../../../core/services/gemini_conversation_service.dart';
 import '../../../../core/services/rule_executor.dart';
 import '../../../../core/services/offline_brain.dart';
+import '../../../../core/services/answer_codes.dart';
+import '../../../../core/services/patient_triage_context.dart';
 import '../../../../core/services/immediate_action_engine.dart';
 import '../../../../core/services/clup/clup_pipeline.dart';
 import '../../../../core/services/clup/situation_extractor.dart';
@@ -52,7 +54,9 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
 
   // ── Conversation state ────────────────────────────────────────
   final List<ConversationTurn> _history = [];
-  final Map<String, bool> _extractedAnswers = {};
+  // questionId → answer. Values are graded codes (yes/no/severe/mild/unsure,
+  // see AnswerCodes) or legacy bool. Use AnswerCodes.isAffirmative(...) to read.
+  final Map<String, dynamic> _extractedAnswers = {};
   final Map<String, double> _extractedVitals = {};
   String _streamingPartial = ''; // live text from SSE stream
   String _riskLevel = 'low';
@@ -483,8 +487,6 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   // ── Core: process any input through conversational AI ─────────
   Future<void> _processInput(String input) async {
     if (input.trim().isEmpty || _isProcessing) return;
-    // Gap 5: detect uncertainty before processing
-    final uncertain = _isUncertain(input);
     setState(() {
       _isProcessing = true;
       _transcript = input;
@@ -505,14 +507,14 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     final online = await _hasInternet();
     _isOffline = !online;
     if (_isOffline) {
-      await _processOffline(input, uncertain: uncertain);
+      await _processOffline(input);
     } else {
-      await _processOnline(input, uncertain: uncertain);
+      await _processOnline(input);
     }
   }
 
   // ── Online: true Gemini conversation ──────────────────────────
-  Future<void> _processOnline(String input, {bool uncertain = false}) async {
+  Future<void> _processOnline(String input) async {
     // Ensure offline question list is populated for yes/no capture
     if (_offlineQuestions.isEmpty) {
       _offlineQuestions = Get.find<RuleExecutor>()
@@ -525,18 +527,13 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     // BEFORE sending to Gemini, so currentAnswers is already up to date.
     final localExtraction = _situationExtractor.extract(
         situation: input, moduleId: _moduleId);
-    if (uncertain) {
-      _extractedAnswers.addAll(Map.fromEntries(
-          localExtraction.preAnswers.entries.where((e) => e.value == false)));
-    } else {
-      _extractedAnswers.addAll(localExtraction.preAnswers);
-    }
-    if (localExtraction.preAnswers.isEmpty && _lastOnlineQuestionId != null) {
-      final qid = _lastOnlineQuestionId!;
-      if (!_extractedAnswers.containsKey(qid)) {
-        final yn = _detectYesNo(input);
-        if (yn != null) _extractedAnswers[qid] = yn;
-      }
+    _extractedAnswers.addAll(localExtraction.preAnswers);
+    // Terse graded reply against the question Gemini asked last turn — records
+    // yes / no / severe / mild / unsure (unsure blocks GREEN downstream). A
+    // long multi-symptom reply returns null here and is left to the extractor.
+    if (_lastOnlineQuestionId != null) {
+      final code = AnswerCodes.fromSpeech(input);
+      if (code != null) _extractedAnswers[_lastOnlineQuestionId!] = code;
     }
     _lastOnlineQuestionId = null; // consume
 
@@ -575,7 +572,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
         _orbState = OrbState.idle;
         _streamingPartial = '';
       });
-      await _processOffline(input, uncertain: uncertain);
+      await _processOffline(input);
       return;
     }
 
@@ -590,16 +587,12 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     });
 
     // Merge Gemini extractions (Gemini handles complex multi-symptom replies)
-    final toMerge = uncertain
-        ? Map.fromEntries(
-            response.extractedAnswers.entries.where((e) => e.value == false))
-        : response.extractedAnswers;
-    _extractedAnswers.addAll(toMerge);
+    _extractedAnswers.addAll(response.extractedAnswers);
 
     // Track which question ID the prompt is about to tell Gemini to ask
     // so next turn's bare yes/no can be recorded against it.
     const priorityOrder = {
-      'pregnancy':    ['p1','p3','p6','p4','p2','p5'],
+      'pregnancy':    ['p1','p3','p7','p6','p9','p10','p8','p4','p11','p11d','p2','p12','p5'],
       'delivery_pnc': ['pp1','pp2','pp4','pp6','pp3','pp5'],
       'newborn':      ['n1','n2','n3','n5','n4','n6'],
       'child':        ['c1','c5','c2','c3','c4','c6'],
@@ -678,7 +671,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   }
 
   // ── Offline: CLUP + OfflineBrain dialogue ─────────────────────
-  Future<void> _processOffline(String input, {bool uncertain = false}) async {
+  Future<void> _processOffline(String input) async {
     if (!mounted) return;
 
     // ── 1. Extract answers from free text ──────────────────────
@@ -686,29 +679,24 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       situation: input,
       moduleId: _moduleId,
     );
-    if (uncertain) {
-      _extractedAnswers.addAll(Map.fromEntries(
-          extraction.preAnswers.entries.where((e) => e.value == false)));
-    } else {
-      _extractedAnswers.addAll(extraction.preAnswers);
-    }
+    _extractedAnswers.addAll(extraction.preAnswers);
 
-    // ── 2. Capture terse yes/no against last asked question ────
-    // Clear _lastAskedQuestion only after we've tried to use it so a
-    // second bare reply on the same turn cannot double-record.
+    // ── 2. Capture terse graded reply against last asked question ────
+    // Records a graded code (yes / no / severe / mild / unsure). `unsure`
+    // never silently clears GREEN; `mild` is at least YELLOW (handled in the
+    // engine). Clear _lastAskedQuestion only after use so a second bare reply
+    // cannot double-record.
     String? lastTurnId = extraction.preAnswers.keys.firstOrNull;
-    bool lastTurnYes = extraction.preAnswers.values.firstOrNull ?? false;
+    dynamic lastTurnVal = extraction.preAnswers.values.firstOrNull ?? false;
     final lastQ = _lastAskedQuestion;
-    if (!uncertain &&
-        lastQ != null &&
-        extraction.preAnswers.isEmpty &&
+    if (lastQ != null &&
         _isYesNoQuestion(lastQ) &&
-        !_extractedAnswers.containsKey(lastQ.id)) {
-      final yn = _detectYesNo(input);
-      if (yn != null) {
-        _extractedAnswers[lastQ.id] = yn;
+        !extraction.preAnswers.containsKey(lastQ.id)) {
+      final code = AnswerCodes.fromSpeech(input);
+      if (code != null) {
+        _extractedAnswers[lastQ.id] = code;
         lastTurnId = lastQ.id;
-        lastTurnYes = yn;
+        lastTurnVal = code;
       }
     }
     // Consume the last question so a follow-up turn cannot re-record it.
@@ -730,7 +718,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     // Catches combos pre-filled by situation extraction (not just
     // turn-by-turn answers), which the OfflineBrain combo check misses.
     final confirmedYes = _extractedAnswers.entries
-        .where((e) => e.value == true)
+        .where((e) => AnswerCodes.isAffirmative(e.value))
         .map((e) => e.key)
         .toSet();
     final earlyCombo = _offlineBrain.checkCombinations(confirmedYes);
@@ -835,7 +823,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       remaining: remaining,
       confirmedYes: confirmedYes,
       lastAnsweredId: lastTurnId,
-      lastAnswerWasYes: lastTurnYes,
+      lastAnswerWasYes: AnswerCodes.isAffirmative(lastTurnVal),
     );
 
     // Combination alert fired during question selection → emergency finish
@@ -914,6 +902,8 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       moduleId: _moduleId,
       answers: Map<String, dynamic>.from(_extractedAnswers),
       vitals: Map<String, dynamic>.from(_extractedVitals),
+      demographics: PatientTriageContext.demographicsFor(_patientId),
+      history: PatientTriageContext.historyFor(_patientId),
     );
     final band = result.pipelineBlocked ? 'GREEN' : result.band;
     return switch (band) {
@@ -926,7 +916,8 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   // ── Spoken closing summary before navigating to result ────────
   Future<void> _speakClosingSummary() async {
     if (!mounted) return;
-    final confirmedCount = _extractedAnswers.values.where((v) => v).length;
+    final confirmedCount =
+        _extractedAnswers.values.where(AnswerCodes.isAffirmative).length;
     final String text;
     if (_riskLevel == 'emergency') {
       text = 'সতর্কতা! গুরুত্বর বিপদচিহ্ন পাওয়া গেছে। এখনই রেফার করুন।';
@@ -963,47 +954,8 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     Get.toNamed(AppRoutes.triageResult, arguments: args);
   }
 
-  // ── Gap 5: uncertainty detection ─────────────────────────────
-  static const _uncertaintyWords = [
-    'মনে হয়', 'মনে হচ্ছে', 'হয়তো', 'নিশ্চিত না', 'জানি না',
-    'মনে হইতেছে', 'মনে হয় গো', 'হয়তো গো', 'নিশ্চিত না গো',
-    'একটু', 'হালকা', 'কিছুটা', 'মাঝে মাঝে',
-    'maybe', 'not sure', 'shayad', 'pata nahi', 'lagta hai',
-    'thoda', 'halka', 'kabhi kabhi',
-  ];
-
-  bool _isUncertain(String text) {
-    final lower = text.toLowerCase();
-    return _uncertaintyWords.any((w) => lower.contains(w));
-  }
-
-  // ── Terse yes/no detection for offline answers ───────────────────────────
-  // Returns true (yes), false (no), or null when the reply is not a clear
-  // yes/no. Whole-word matching avoids false hits (e.g. "নাভি" contains "না").
-  static const _ynYes = {
-    'হ্যাঁ', 'হ্যা', 'হাঁ', 'হা', 'yes', 'haan', 'han', 'ji',
-  };
-  static const _ynNo = {
-    'না', 'নেই', 'নাই', 'হয়নি', 'নো', 'no', 'nahi', 'nahin', 'nai', 'nei',
-  };
-  static bool? _detectYesNo(String input) {
-    final words = input
-        .toLowerCase()
-        .trim()
-        .split(RegExp(r'[\s।,!?.]+'))
-        .where((w) => w.isNotEmpty)
-        .toList();
-    if (words.isEmpty || words.length > 5) return null;
-    final yes = words.any(_ynYes.contains);
-    final no = words.any(_ynNo.contains);
-    if (yes != no) return yes;
-    // A bare one-word verb reply ("আছে" / "হয়েছে") is also a clear yes.
-    if (words.length == 1 &&
-        const {'আছে', 'হয়েছে', 'হইছে', 'achhe', 'ache'}.contains(words.first)) {
-      return true;
-    }
-    return null;
-  }
+  // Graded answer detection (yes / no / severe / mild / unsure) now lives in
+  // AnswerCodes.fromSpeech — a single source of truth shared with the engine.
 
   static bool _isYesNoQuestion(EngineQuestion q) =>
       q.options.length == 2 &&
@@ -1156,7 +1108,10 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
                       onPointerCancel: (_) => _onHoldEnd(),
                       child: VoiceOrb(size: orbSize, state: _orbState),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
+                    // Graded answer chips for the worker's reply (tap fallback
+                    // for speaking into the orb above).
+                    _buildAnswerChips(),
                     if (_transcript.isNotEmpty)
                       Container(
                         width: double.infinity,
@@ -1215,6 +1170,55 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Graded answer chips — tap fallback for the orb's spoken reply ─────────
+  // The orb (hold-to-talk) is the primary reply; these chips let the worker
+  // tap a graded answer when speaking is hard. Each feeds the canonical phrase
+  // through _processInput, so AnswerCodes.fromSpeech maps it identically to
+  // speech: হ্যাঁ→yes (RED), মাঝে মাঝে→mild (≥YELLOW), না→no, নিশ্চিত নই→unsure
+  // (blocks GREEN). Shown only while an assistant question awaits an answer.
+  Widget _buildAnswerChips() {
+    final show = !_isProcessing &&
+        !_isListening &&
+        _history.isNotEmpty &&
+        _history.last.role == 'assistant';
+    if (!show) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        alignment: WrapAlignment.center,
+        children: [
+          _answerChip('হ্যাঁ', 'হ্যাঁ', AppColors.emergencyRed),
+          _answerChip('মাঝে মাঝে', 'মাঝে মাঝে', AppColors.warningYellow),
+          _answerChip('না', 'না', AppColors.safeGreen),
+          _answerChip('নিশ্চিত নই', 'নিশ্চিত না', AppColors.textSecondary),
+        ],
+      ),
+    );
+  }
+
+  Widget _answerChip(String label, String phrase, Color color) {
+    return Material(
+      color: color.withValues(alpha: 0.10),
+      shape: StadiumBorder(side: BorderSide(color: color.withValues(alpha: 0.45))),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: _isProcessing ? null : () => _processInput(phrase),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+          child: Text(
+            label,
+            style: AppTextStyles.label.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ),

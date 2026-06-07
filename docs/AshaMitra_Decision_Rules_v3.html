@@ -1,0 +1,312 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>AshaMitra — Clinical Decision Rules v3.0 (DRAFT)</title>
+<style>
+  @page { size: A4; margin: 15mm 13mm 16mm 13mm; }
+  * { box-sizing: border-box; }
+  body { font-family:'Segoe UI','Nirmala UI','Noto Sans Bengali',sans-serif;
+         color:#1c2333; font-size:10.2pt; line-height:1.5; margin:0; }
+  code { font-family:'Cascadia Code','Consolas',monospace; font-size:8.8pt;
+         background:#eef0fb; padding:1px 5px; border-radius:4px; color:#2c2f6b; }
+  strong { color:#111827; }
+
+  h1 { font-size:21pt; color:#312e81; letter-spacing:-.5px; margin:4px 0 6px; }
+  h2 { font-size:14.5pt; color:#fff; background:#4f46e5; padding:7px 12px;
+       border-radius:7px; margin:22px 0 10px; page-break-before:always; }
+  h2:first-of-type { page-break-before:avoid; }
+  h3 { font-size:12.5pt; color:#312e81; margin:18px 0 6px;
+       border-bottom:2px solid #e0e2f5; padding-bottom:3px; }
+  h4 { font-size:10.8pt; color:#3730a3; margin:12px 0 4px; }
+  p { margin:6px 0; }
+
+  .draft-banner { background:#fef2f2; border:1.5px solid #fca5a5; border-left:6px solid #dc2626;
+       border-radius:8px; padding:10px 14px; margin:6px 0 16px; }
+  .draft-banner b { color:#b91c1c; font-size:11pt; }
+  .draft-banner span { color:#7f1d1d; font-size:9pt; }
+
+  table { border-collapse:collapse; width:100%; margin:8px 0 14px; font-size:8.9pt;
+          page-break-inside:avoid; }
+  th,td { border:1px solid #d6d8ef; padding:5px 8px; text-align:left; vertical-align:top; }
+  thead th { background:#eef0fb; color:#312e81; font-weight:700; }
+  tbody tr:nth-child(even) { background:#fafbff; }
+
+  pre.card { font-family:'Cascadia Code','Consolas',monospace; font-size:8.4pt; line-height:1.5;
+        white-space:pre-wrap; word-wrap:break-word; background:#fbfbfe; border:1px solid #e5e7f2;
+        border-left:5px solid #94a3b8; border-radius:7px; padding:9px 12px; margin:8px 0;
+        page-break-inside:avoid; color:#1f2937; }
+  pre.card.red{ border-left-color:#dc2626; } pre.card.yellow{ border-left-color:#d97706; }
+  pre.card.green{ border-left-color:#16a34a; }
+  pre.card .cardhead { color:#1e1b4b; font-size:9pt; }
+  pre.card .lab { display:inline-block; min-width:62px; color:#6366f1; font-weight:700; }
+
+  blockquote { background:#f7f8ff; border-left:4px solid #a5b4fc; border-radius:0 7px 7px 0;
+        padding:8px 14px; margin:10px 0; color:#3f3f6b; font-size:9.5pt; page-break-inside:avoid; }
+
+  ul { margin:6px 0 10px; padding-left:22px; }
+  li { margin:3px 0; }
+  li.sub { margin-left:20px; list-style:circle; color:#374151; }
+  li.check { list-style:none; margin-left:-6px; }
+
+  hr { border:none; border-top:1px solid #e5e7eb; margin:14px 0; }
+
+  .tag { display:inline-block; font-size:7.2pt; font-weight:700; padding:1px 7px; border-radius:20px;
+         text-transform:uppercase; letter-spacing:.4px; vertical-align:middle; }
+  .tag.new   { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
+  .tag.draft { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+  .tag.pend  { background:#ffedd5; color:#9a3412; border:1px solid #fdba74; }
+  .warn { color:#b91c1c; font-weight:700; }
+
+  .foot { margin-top:22px; padding-top:8px; border-top:1px solid #e5e7eb; font-size:8pt; color:#94a3b8; }
+</style></head><body>
+<div class="draft-banner">
+  <b>⚠ DRAFT v3.0 — proposed upgrade, NOT clinically validated.</b><br>
+  <span>Every new or changed threshold below is tagged <b>DRAFT · SIGN-OFF</b> and must be approved by the
+  AIIH&amp;PH / WB Health Secretariat clinical committee before it touches
+  <code>clinical_decision_engine.json</code> or <code>triage_cases.json</code>.</span>
+</div>
+<h1>AshaMitra — Clinical Decision Rules <strong>v3.0 (DRAFT for clinical sign-off)</strong></h1>
+<p><strong>Status:</strong> Proposed upgrade to engine <code>asha_cdss_engine v1.0.0</code> / cases <code>v2.0.0</code>. <strong>Author of this draft:</strong> Tooling/design proposal — <strong>NOT a clinical authority.</strong> <strong>Nothing in this document is validated.</strong> Every new or changed clinical threshold below is tagged <code>[DRAFT — SIGN-OFF]</code> and must be reviewed and approved by <strong>AIIH&amp;PH / WB Health Secretariat clinical committee</strong> before it touches <code>clinical_decision_engine.json</code> or <code>triage_cases.json</code>.</p>
+<blockquote><strong>Design intent.</strong> This upgrade does <strong>not</strong> try to make the app "diagnose like a doctor." The ASHA's role is *recognise danger signs → refer correctly*. The clinical expertise lives in the <strong>rules</strong> (committee-validated); the engine stays deterministic, offline, no-LLM, and biased toward over-referral. The goal of v3.0 is <strong>completeness, correct thresholds, and safe handling of uncertainty</strong> — so the tool remains defensible under review.</blockquote>
+<p>Protocol basis (unchanged): HBNC, IMNCI (incl. Young Infant 0–2 m), HBYC, MCP, PMSMA, SBA, PPH, PNC, UIP.</p>
+<hr>
+<h2>PART A — Design-layer upgrades (apply across all modules)</h2>
+<p>These are higher-impact than any single rule, because they fix gaps that affect *every* case.</p>
+<h3>A1. Universal danger-sign pre-sweep <code>[DRAFT — SIGN-OFF]</code></h3>
+<p><strong>Problem:</strong> IMNCI opens every child assessment with four general danger signs. The current cases jump straight into module-specific questions, so a generic danger sign can be missed if it doesn't match a module question.</p>
+<p><strong>Fix:</strong> Add a mandatory <strong>pre-sweep</strong> that runs *before* the module questions for any paediatric case (Newborn / Infant / Child). Any <code>হ্যাঁ</code> → immediate RED, band-locked, skip to referral.</p>
+<table><thead><tr><th>Pre-sweep ID</th><th>Question (BN / EN)</th><th>Answers</th><th>Logic</th></tr></thead><tbody><tr><td>GDS-01</td><td>শিশু কি কিছু খেতে বা বুকের দুধ খেতে পারছে না? / Unable to drink or breastfeed at all?</td><td>হ্যাঁ · না · নিশ্চিত না</td><td><code>হ্যাঁ</code> → RED</td></tr><tr><td>GDS-02</td><td>যা-ই খাচ্ছে সব বমি করে ফেলছে? / Vomits everything?</td><td>হ্যাঁ · না · নিশ্চিত না</td><td><code>হ্যাঁ</code> → RED</td></tr><tr><td>GDS-03</td><td>খিঁচুনি হচ্ছে বা হয়েছে? / Convulsions now or recently?</td><td>হ্যাঁ · না · নিশ্চিত না</td><td><code>হ্যাঁ</code> → RED</td></tr><tr><td>GDS-04</td><td>নিস্তেজ, অজ্ঞান, বা ডাকে সাড়া দিচ্ছে না? / Lethargic, unconscious, or not responding?</td><td>হ্যাঁ · না · নিশ্চিত না</td><td><code>হ্যাঁ</code> → RED</td></tr></tbody></table>
+<p>Referral: FRU / SNCU / DH immediately, call 108. (For a young infant 0–2 m, "unable to feed" includes "feeding very little / stopped sucking.")</p>
+<h3>A2. Uncertainty policy — stop "নিশ্চিত না → GREEN" <code>[DRAFT — SIGN-OFF]</code></h3>
+<p><strong>Problem:</strong> Every rule's logic tests only <code>= হ্যাঁ</code>. A <code>নিশ্চিত না</code> (unsure) on a hard-stop danger-sign question fires nothing and can land the patient in GREEN. A clinician resolves uncertainty by referring, not by clearing.</p>
+<p><strong>Proposed rule (committee to pick the exact policy):</strong></p>
+<ul><li class="top">On any <strong>hard-stop</strong> question, <code>নিশ্চিত না</code> → re-prompt once with a plain re-check instruction ("look again / ask the family"). If still <code>নিশ্চিত না</code>:</li><li class="sub"><strong>Option 1 (recommended, safer):</strong> force minimum <strong>YELLOW</strong> (PHC within 24 h) and <strong>block GREEN</strong> for the whole case.</li><li class="sub"><strong>Option 2 (less referral load):</strong> treat as <code>না</code> but <strong>block GREEN</strong> — case can be at most "watch + follow-up in 2 days," never "all clear."</li><li class="top"><strong>Trade-off:</strong> Option 1 raises YELLOW referral volume at PHC but closes the silent-miss path; Option 2 keeps volume lower but relies on follow-up. Pick per PHC capacity. Either way, <strong>GREEN must require all danger-sign answers to be a clear <code>না</code>.</strong></li></ul>
+<h3>A3. Score every answer option, not just <code>হ্যাঁ</code> <code>[DRAFT — SIGN-OFF]</code></h3>
+<p><strong>Problem:</strong> Answer sets offer intermediate options (<code>খুব কম</code>, <code>কিছুটা</code>, <code>একটু</code>, <code>অনেক</code>, <code>মাঝে মাঝে</code>, <code>একবার</code>) but per-rule logic ignores them. e.g. NB-001 offers "খুব কম" (feeding very little) — clinically PSBI — yet logic only fires on <code>হ্যাঁ</code>.</p>
+<p><strong>Fix:</strong> Each rule must declare an explicit <strong>answer→band map</strong>. Defaults to standardise:</p>
+<table><thead><tr><th>Option</th><th>Meaning</th><th>Default band on a danger-sign question</th></tr></thead><tbody><tr><td>হ্যাঁ</td><td>Yes</td><td>as the rule specifies (usually RED)</td></tr><tr><td>খুব কম / অনেক / একটু</td><td>severe-degree variants</td><td><strong>same band as হ্যাঁ</strong> (a degree of the danger sign)</td></tr><tr><td>একবার</td><td>once (e.g. one convulsion/faint)</td><td><strong>RED</strong> for convulsion/LOC/bleeding questions</td></tr><tr><td>মাঝে মাঝে / কিছুটা</td><td>intermittent / partial</td><td><strong>YELLOW</strong> (not GREEN)</td></tr><tr><td>না</td><td>No</td><td>no fire</td></tr><tr><td>নিশ্চিত না</td><td>Unsure</td><td>per A2</td></tr></tbody></table>
+<p>Per-rule overrides are listed in the rule cards where they differ.</p>
+<h3>A4. Structured measurement capture <code>[DRAFT — SIGN-OFF, hardware-dependent]</code></h3>
+<p><strong>Problem:</strong> RR count, MUAC, temperature, BP, Hb, pad-soak, fetal kick-count are referenced in *actions* but never captured as numeric inputs that drive the band — so a yes/no proxy stands in for a measurable fact. Numbers + thresholds are what make triage precise.</p>
+<p><strong>Fix:</strong> Where the ASHA has the device, add a numeric input that the engine thresholds deterministically. <strong>Confirm device availability for your WB ASHA cohort before enabling</strong> — if a device isn't in the kit, keep the yes/no proxy and don't ask for the number.</p>
+<table><thead><tr><th>Input</th><th>Device</th><th>Deterministic thresholds (to confirm at sign-off)</th></tr></thead><tbody><tr><td>Respiratory rate /min</td><td>timer/phone</td><td>newborn/young-infant ≥60 RED; 2–12 m ≥50; 12 m–5 y ≥40 → pneumonia</td></tr><tr><td>Temperature °C</td><td>digital thermometer</td><td>newborn/young-infant: ≥37.5 <strong>or</strong> &lt;35.5 → RED</td></tr><tr><td>MUAC cm</td><td>MUAC tape</td><td>&lt;11.5 → SAM/RED; 11.5–12.5 → MAM/YELLOW</td></tr><tr><td>BP mmHg</td><td>BP machine (if in kit)</td><td>≥140/90 → RED (pre-eclampsia)</td></tr><tr><td>Hb g/dL</td><td>Hb meter (if available)</td><td>&lt;7 → RED; 7–10.9 → YELLOW (anaemia)</td></tr><tr><td>Pad soak</td><td>count + time</td><td>≥2 pads soaked in 30 min → RED *(proxy still pending per README item #3)*</td></tr></tbody></table>
+<h3>A5. Per-case age / gestational-age intake <code>[DRAFT — SIGN-OFF]</code></h3>
+<p><strong>Problem:</strong> Several rules reference age-dependent thresholds ("infant &lt;2 m", "fever &lt;3 m", jaundice timing) but no question captures exact age, and bleeding in pregnancy is interpreted without trimester.</p>
+<p><strong>Fix:</strong></p>
+<ul><li class="top"><strong>Newborn/Infant:</strong> capture <strong>age in days/weeks</strong> at intake. Drive young-infant (0–2 m) vs older-infant (2–12 m) logic from it (feeding refusal, any fever, and any low temp are RED in 0–2 m).</li><li class="top"><strong>Pregnancy:</strong> capture <strong>gestational age / trimester</strong>. Bleeding 1st trimester → miscarriage/ectopic pathway; bleeding ≥20 weeks → placenta praevia/abruption — both RED, but the referral note and "no vaginal exam" warning differ.</li></ul>
+<hr>
+<h2>PART B — Per-module rule changes &amp; additions</h2>
+<p>Existing rules not listed here are <strong>retained unchanged</strong>. Only corrections and <code>[NEW]</code> rules are shown.</p>
+<h3>1. 👶 Newborn Checkup (0–28 days) — <code>newborn</code> (HBNC + IMNCI Young Infant)</h3>
+<p><strong>Corrections to existing rules:</strong></p>
+<ul><li class="top"><strong>NB-001</strong> — add answer-map: <code>খুব কম</code> (feeding very little) → <strong>RED</strong> (PSBI "very poor feeding"), not silent.</li><li class="top"><strong>NB-006 (jaundice/cyanosis) — split the conflated logic</strong> <code>[DRAFT — SIGN-OFF]</code>. Current logic fires RED on any <code>হ্যাঁ</code> but the note describes a YELLOW day-2–14 path. Replace with a follow-up:</li><li class="sub">n6a: ত্বক/ঠোঁট/জিভ নীলাভ? / bluish skin, lips, or tongue (cyanosis)? → <strong>RED always</strong>.</li><li class="sub">n6b: জন্মের ২৪ ঘণ্টার মধ্যে হলুদ হয়েছে, বা হাতের তালু/পায়ের তলা হলুদ? / jaundice within 24 h of birth <strong>or</strong> palms/soles yellow? → <strong>RED</strong>.</li><li class="sub">n6c: হলুদভাব ২–১৪ দিনে, হাতের তালু/পায়ের তলা স্বাভাবিক? / jaundice day 2–14, palms/soles spared? → <strong>YELLOW</strong> (PHC within 24 h for bilirubin).</li></ul>
+<p><strong>New rules:</strong></p>
+<pre class="card red"><b class="cardhead">NB-008  RED  HARD-STOP  n8  → SNCU / FRU immediately            [NEW] [DRAFT — SIGN-OFF]</b>
+শিশুর শরীর কি ঠান্ডা লাগছে বা স্বাভাবিকের চেয়ে অনেক কম গরম?
+Is the baby cold to touch / colder than normal (hypothermia)?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF n8 = হ্যাঁ THEN RED. If thermometer present and temp &lt; 35.5°C THEN RED.
+<span class="lab">ACTION</span>   PSBI hard-stop. Skin-to-skin/kangaroo warmth + cover head, keep warm during transport.
+         Refer SNCU/FRU immediately (≤30 min). Hypothermia is a major neonatal killer.
+<span class="lab">MAPS TO</span>  cold to touch · low body temperature · temp &lt; 35.5°C · hypothermia</pre>
+<pre class="card red"><b class="cardhead">NB-009  RED  HARD-STOP  n9  → SNCU / FRU immediately            [NEW] [DRAFT — SIGN-OFF]</b>
+শিশুর খিঁচুনি হচ্ছে, হাত-পা শক্ত হয়ে যাচ্ছে বা পিছনে বেঁকে যাচ্ছে?
+Convulsions, stiffening, or back-arching (opisthotonus)?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · একবার · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF n9 IN [হ্যাঁ, একবার] THEN RED.
+<span class="lab">ACTION</span>   PSBI hard-stop. Protect airway, left-lateral, do not restrain limbs. Call 108. SNCU/FRU now.
+<span class="lab">MAPS TO</span>  neonatal seizure · convulsion · stiffening · arching · twitching</pre>
+<pre class="card red"><b class="cardhead">NB-010  RED  HARD-STOP  n10  → FRU / DH                         [NEW] [DRAFT — SIGN-OFF]</b>
+ত্বকে অনেক ফুসকুড়ি/পুঁজভরা ফোস্কা, অথবা কান থেকে পুঁজ পড়ছে?
+Many skin pustules / pus-filled blisters, or pus draining from ear?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · অল্প কয়েকটা · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF n10 = হ্যাঁ THEN RED. IF n10 = অল্প কয়েকটা (few localised pustules) THEN YELLOW.
+<span class="lab">ACTION</span>   Many/severe pustules or ear pus = PSBI local infection → FRU/DH. Few localised = PHC within 24 h.
+<span class="lab">MAPS TO</span>  skin pustules · pus-filled blisters · ear discharge · local bacterial infection</pre>
+<pre class="card red"><b class="cardhead">NB-011  RED  HARD-STOP  n11  → SNCU / FRU immediately           [NEW] [DRAFT — SIGN-OFF]</b>
+মাথার নরম অংশ (তালু) ফুলে উঁচু হয়ে আছে?
+Is the soft spot on the head (fontanelle) bulging?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF n11 = হ্যাঁ THEN RED.
+<span class="lab">ACTION</span>   Possible meningitis. Refer SNCU/FRU immediately.
+<span class="lab">MAPS TO</span>  bulging fontanelle · raised intracranial pressure · meningitis sign</pre>
+<blockquote>Optional intake flags for HBNC counselling (not RED by themselves): <strong>LBW / preterm</strong> (birth weight &lt;2.5 kg or born early) and <strong>did-not-cry-at-birth</strong> history → mark for closer follow-up + extra warmth/ feeding counselling. Confirm whether these should escalate band at sign-off.</blockquote>
+<p><strong>Newborn band tally after upgrade:</strong> RED 9–10, YELLOW (jaundice split / few pustules) 1–2, GREEN 1.</p>
+<hr>
+<h3>2. 🧒 Child Health Check (1–5 years) — <code>child</code> (IMNCI + HBYC)</h3>
+<p><strong>Corrections:</strong></p>
+<ul><li class="top"><strong>CH-002 (cough/breathing)</strong> — make the escalation deterministic <code>[DRAFT — SIGN-OFF]</code>: add explicit follow-ups instead of prose. c2a: বুক ভিতরের দিকে টেনে বসছে (chest indrawing)? → <strong>RED</strong>. c2b: শ্বাসে শোঁ-শোঁ আওয়াজ/স্ট্রিডর? → <strong>RED</strong>. RR input (A4): ≥40/min (1–5 y) → YELLOW pneumonia.</li><li class="top"><strong>CH-003 (diarrhoea) → add dehydration sub-assessment</strong> <code>[DRAFT — SIGN-OFF]</code>, so the GREEN/YELLOW/RED paths described in the action actually exist as logic:</li><li class="sub">c3a: চোখ গর্তে বসে গেছে? / sunken eyes? · c3b: চামড়া টেনে ছাড়লে ধীরে ফিরছে? / skin pinch slow? · c3c: পান করতে পারছে না বা নিস্তেজ? / unable to drink or lethargic?</li><li class="sub">Any of c3a–c3c <code>হ্যাঁ</code> → <strong>RED (severe dehydration)</strong>. Restless/irritable + drinks eagerly + some signs → <strong>YELLOW (some dehydration)</strong>. None → <strong>GREEN (ORS at home)</strong>.</li><li class="sub">c3d: পায়খানা ১৪ দিনের বেশি? / diarrhoea ≥14 days (persistent)? → <strong>YELLOW</strong>, PHC.</li></ul>
+<p><strong>New rules:</strong></p>
+<pre class="card red"><b class="cardhead">CH-010  RED  HARD-STOP  c7  → FRU / DH immediately              [NEW] [DRAFT — SIGN-OFF]</b>
+ঘাড় শক্ত, আলোয় কষ্ট, বা প্রচণ্ড মাথাব্যথা (জ্বরসহ)?
+Stiff neck, light sensitivity, or severe headache (with fever)?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF c7 = হ্যাঁ THEN RED.
+<span class="lab">ACTION</span>   Possible meningitis/encephalitis. Refer FRU/DH immediately, call 108.
+<span class="lab">MAPS TO</span>  neck stiffness · photophobia · meningitis · encephalitis · severe headache with fever</pre>
+<pre class="card red"><b class="cardhead">CH-011  YELLOW  SCORED  c8  → PHC within 24 h (RED if signs of shock)   [NEW] [DRAFT — SIGN-OFF]</b>
+পায়খানার সাথে রক্ত যাচ্ছে?
+Is there blood in the stool (dysentery)?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF c8 = হ্যাঁ THEN YELLOW (dysentery → antibiotic at PHC). Escalate RED if severe dehydration
+         (link to c3a–c3c) or lethargy.
+<span class="lab">ACTION</span>   Dysentery needs antibiotics — refer PHC within 24 h. With dehydration/lethargy → FRU.
+<span class="lab">MAPS TO</span>  blood in stool · dysentery · mucoid bloody diarrhoea</pre>
+<pre class="card red"><b class="cardhead">CH-012  YELLOW  SCORED  c9  → PHC within 24 h (RED if severe pallor)    [NEW] [DRAFT — SIGN-OFF]</b>
+হাতের তালু/চোখের পাতা খুব ফ্যাকাশে?
+Are palms / inner eyelids very pale (anaemia)?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF c9 = হ্যাঁ THEN YELLOW. Severe palmar pallor → RED.
+<span class="lab">ACTION</span>   Some pallor → PHC for Hb. Severe pallor → FRU (possible transfusion / severe anaemia).
+<span class="lab">MAPS TO</span>  pallor · palmar pallor · conjunctival pallor · anaemia</pre>
+<blockquote><strong>Measles cross-check (optional YELLOW):</strong> generalised rash + fever + cough/red eyes → flag for measles, check Vit-A and immunisation status; corneal clouding or mouth ulcers → RED. Confirm at sign-off.</blockquote>
+<hr>
+<h3>3. 👶 Infant Checkup (1–12 months) — <code>child</code> (IMNCI + HBYC)</h3>
+<p><strong>This module has the most dangerous structural gaps.</strong> Two fixes are mandatory.</p>
+<p><strong>Corrections:</strong></p>
+<ul><li class="top"><strong>Add age-in-weeks intake (A5)</strong> and split <strong>young infant (0–2 m)</strong> vs <strong>older infant (2–12 m)</strong>:</li><li class="sub">0–2 m: <strong>any</strong> fever, <strong>any</strong> low temp, <strong>any</strong> feeding refusal → <strong>RED</strong> (PSBI). This makes CH-007-i and CH-007 age-correct instead of conflating duration with age.</li><li class="top"><strong>CH-008 (breathing)</strong> — same deterministic split as CH-002: chest indrawing/stridor → RED; RR ≥50/min (2–12 m) alone → YELLOW.</li></ul>
+<p><strong>New rules (close the silent-miss holes):</strong></p>
+<pre class="card red"><b class="cardhead">CH-013-i  RED  HARD-STOP  i7  → SNCU / FRU immediately          [NEW] [DRAFT — SIGN-OFF]</b>
+শিশু অনেক কম নড়ছে, নিস্তেজ, বা ডাকে/স্পর্শে সাড়া দিচ্ছে না?
+Is the infant very lethargic, limp, or not responding to voice/touch?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · কিছুটা · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF i7 = হ্যাঁ THEN RED. IF i7 = কিছুটা (moves only when stimulated) THEN RED in 0–2 m, else YELLOW.
+<span class="lab">ACTION</span>   Lethargy = severe systemic illness. Refer SNCU/FRU immediately.
+<span class="lab">MAPS TO</span>  lethargic infant · limp · unresponsive · moves only when stimulated   ⚠ THIS RULE DID NOT EXIST</pre>
+<pre class="card red"><b class="cardhead">CH-014-i  RED  HARD-STOP  i8  → SNCU / FRU immediately          [NEW] [DRAFT — SIGN-OFF]</b>
+শিশুর খিঁচুনি হচ্ছে বা হয়েছে?
+Convulsions now or recently?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · একবার · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF i8 IN [হ্যাঁ, একবার] THEN RED.
+<span class="lab">ACTION</span>   Protect airway, left-lateral, call 108, SNCU/FRU now.
+<span class="lab">MAPS TO</span>  infant seizure · convulsion · fits</pre>
+<pre class="card red"><b class="cardhead">CH-015-i  RED  HARD-STOP  i9  → SNCU / FRU immediately          [NEW] [DRAFT — SIGN-OFF]</b>
+শরীর ঠান্ডা (০–২ মাসে) বা মাথার তালু ফুলে উঁচু?
+Cold body (in 0–2 m) or bulging fontanelle?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF i9 = হ্যাঁ THEN RED. (Hypothermia in young infant; bulging fontanelle = meningitis.)
+<span class="lab">ACTION</span>   Warmth + refer SNCU/FRU immediately.
+<span class="lab">MAPS TO</span>  hypothermia young infant · bulging fontanelle · meningitis sign</pre>
+<p><strong>Infant band tally after upgrade:</strong> RED 7–8, YELLOW 2–3, plus pre-sweep (A1) in front.</p>
+<hr>
+<h3>4. 🤰 Pregnant Mother Checkup — <code>pregnancy</code> (MCP + PMSMA)</h3>
+<p><strong>Corrections:</strong></p>
+<ul><li class="top"><strong>ANC-001</strong> — separate the two collapsed concepts so the engine reflects them <code>[DRAFT — SIGN-OFF]</code>: p1a BP input (A4) ≥140/90 → RED; p1b severe headache → RED; p1c <strong>epigastric / right-upper-abdomen pain</strong> (severe pre-eclampsia / HELLP) → <strong>RED</strong> (currently not captured at all).</li><li class="top"><strong>ANC-002 / ANC-006</strong> escalations retained; ensure they are expressed as condition_sets, not prose.</li></ul>
+<p><strong>New rules:</strong></p>
+<pre class="card red"><b class="cardhead">ANC-008  RED  HARD-STOP  p8  → FRU / DH same day (immediately if fainting)  [NEW] [DRAFT — SIGN-OFF]</b>
+খুব ফ্যাকাশে, দুর্বল, বা সামান্য পরিশ্রমেই হাঁপিয়ে যাচ্ছেন?
+Very pale, weak, or breathless on slight exertion (severe anaemia)?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · কিছুটা · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF p8 = হ্যাঁ THEN RED. IF Hb available and &lt;7 THEN RED; 7–10.9 THEN YELLOW.
+         IF p8 = কিছুটা (mild pallor, no breathlessness) THEN YELLOW.
+<span class="lab">ACTION</span>   Severe anaemia is a leading maternal killer. Severe pallor/breathlessness → FRU/DH for Hb +
+         transfusion planning. Mild → PHC for Hb + IFA.
+<span class="lab">MAPS TO</span>  severe pallor · breathlessness on exertion · palpitations · severe anaemia in pregnancy</pre>
+<pre class="card red"><b class="cardhead">ANC-009  RED  HARD-STOP  p9  → FRU / DH immediately             [NEW] [DRAFT — SIGN-OFF]</b>
+জ্বর, বিশেষ করে কাঁপুনি দিয়ে জ্বর আসছে?
+Fever, especially with chills/rigors?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · মাঝে মাঝে · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF p9 = হ্যাঁ THEN RED (sepsis/malaria/chorioamnionitis risk in pregnancy).
+         IF p9 = মাঝে মাঝে (low-grade, no other sign) THEN YELLOW, PHC within 24 h.
+<span class="lab">ACTION</span>   High/rigor fever in pregnancy → FRU/DH (rule out malaria, UTI, chorioamnionitis, sepsis).
+<span class="lab">MAPS TO</span>  fever in pregnancy · rigors · chills · maternal sepsis · malaria</pre>
+<pre class="card red"><b class="cardhead">ANC-010  RED  HARD-STOP  p10  → FRU / DH immediately            [NEW] [DRAFT — SIGN-OFF]</b>
+যোনিপথে হঠাৎ জল ভেঙেছে বা ক্রমাগত জল ঝরছে?
+Sudden gush or continuous leaking of fluid (PROM)?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF p10 = হ্যাঁ THEN RED. (Preterm: even more urgent.)
+<span class="lab">ACTION</span>   PROM → infection/preterm-labour risk. No vaginal exam, keep clean pad, refer FRU/DH.
+<span class="lab">MAPS TO</span>  leaking liquor · rupture of membranes · PROM · watery vaginal discharge</pre>
+<blockquote><strong>Optional intake — High-Risk Pregnancy (HRP) flags</strong> (for PMSMA tagging, not necessarily RED alone): age &lt;18 or &gt;35, height &lt;145 cm, previous C-section/stillbirth, multiple pregnancy, malpresentation, known diabetes/hypertension. Decide band at sign-off; minimum is <strong>YELLOW + PMSMA flag</strong>. Note: convulsions/fits in pregnancy are caught by Emergency EM-002 and ANC-006 prodrome.</blockquote>
+<p><strong>Pregnancy band tally after upgrade:</strong> RED 7, YELLOW 2–3, GREEN 1.</p>
+<hr>
+<h3>5. 🤱 Postpartum Checkup — <code>delivery_pnc</code> (SBA + PPH + PNC)</h3>
+<p><strong>Biggest single gap: no eclampsia rule. Postpartum (pre-)eclampsia occurs up to ~6 weeks after delivery.</strong></p>
+<p><strong>New rules:</strong></p>
+<pre class="card red"><b class="cardhead">PNC-007  RED  HARD-STOP  pp7  → FRU / DH immediately            [NEW] [DRAFT — SIGN-OFF]</b>
+প্রসবের পর মাথাব্যথা, চোখে ঝাপসা দেখা, খিঁচুনি, বা রক্তচাপ বেশি?
+After delivery: severe headache, blurred vision, convulsions, or high BP?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · একবার · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF pp7 IN [হ্যাঁ, একবার] THEN RED. IF BP available ≥140/90 THEN RED.
+<span class="lab">ACTION</span>   Postpartum (pre-)eclampsia hard-stop — can occur up to 6 weeks postpartum. Left-lateral,
+         protect airway, call 108, FRU/DH immediately. If convulsing &amp; within ANM/MO scope: MgSO4.
+<span class="lab">MAPS TO</span>  postpartum headache · blurred vision · postpartum convulsion · high BP postpartum · eclampsia
+         ⚠ THIS RULE DID NOT EXIST — critical addition</pre>
+<pre class="card red"><b class="cardhead">PNC-008  RED  HARD-STOP  pp8  → FRU / DH immediately            [NEW] [DRAFT — SIGN-OFF]</b>
+হঠাৎ শ্বাসকষ্ট, বুকে ব্যথা, বা এক পায়ে ব্যথা/ফোলা?
+Sudden breathlessness, chest pain, or pain/swelling in one calf?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF pp8 = হ্যাঁ THEN RED. (Pulmonary embolism / DVT / peripartum cardiomyopathy.)
+<span class="lab">ACTION</span>   Refer FRU/DH immediately, call 108. Do not let her walk.
+<span class="lab">MAPS TO</span>  postpartum breathlessness · chest pain · calf swelling · DVT · pulmonary embolism · PPCM</pre>
+<pre class="card red"><b class="cardhead">PNC-009  YELLOW  SCORED  pp9  → PHC / counselling (RED if self-harm thoughts)  [NEW] [DRAFT — SIGN-OFF]</b>
+মন খুব খারাপ, কান্না, ঘুম/খাওয়া কমে যাওয়া, বা বাচ্চার প্রতি আগ্রহ নেই?
+Persistent low mood, crying, sleep/appetite loss, or no interest in the baby?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · মাঝে মাঝে · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF pp9 = হ্যাঁ THEN YELLOW (postpartum depression screen). Any thought of self-harm or harming
+         baby → RED, urgent referral.
+<span class="lab">ACTION</span>   Counsel, involve family, refer PHC/MO. Self-harm risk → escalate immediately.
+<span class="lab">MAPS TO</span>  postpartum depression · low mood · anhedonia · self-harm ideation</pre>
+<blockquote><strong>Correction — PNC-001 / PNC-002 retained.</strong> Keep the <code>[SIGN-OFF PENDING]</code> flag on the "≥2 pads in 30 min" proxy (README item #3). Also add a retained-products/urinary-retention check: না-passing urine or palpable bladder → YELLOW (FRU if anuria).</blockquote>
+<p><strong>Postpartum band tally after upgrade:</strong> RED 3, YELLOW 6–7.</p>
+<hr>
+<h3>6. 💉 Immunization Missed — <code>immunisation</code> (UIP National Schedule)</h3>
+<p><strong>The schedule content is out of date.</strong> Corrections (verified against current UIP):</p>
+<ul><li class="top"><strong>"MMR" → "MR"</strong> everywhere. India's UIP uses <strong>Measles–Rubella (MR)</strong>, not MMR (no mumps). MR-1 at <strong>9–12 months</strong>, MR-2 at <strong>16–24 months</strong>.</li><li class="top"><strong>Add PCV</strong> (Pneumococcal Conjugate): 2 primary doses at <strong>6 &amp; 14 weeks</strong> + <strong>booster at 9–12 months</strong>.</li><li class="top"><strong>Add Rotavirus (RVV):</strong> 3 doses at <strong>6, 10, 14 weeks</strong> (oral).</li><li class="top"><strong>Correct IPV → fIPV:</strong> <strong>two fractional doses at 6 &amp; 14 weeks</strong> (not a single IPV).</li><li class="top"><strong>Vitamin A:</strong> 1st dose at <strong>9 months</strong>; doses 2–9 <strong>six-monthly up to 5 years</strong>.</li><li class="top"><strong>PCV/RVV rollout:</strong> now part of national UIP; <strong>confirm current West Bengal rollout/stock status</strong> with the State Immunization Officer before wording catch-up advice (district variation possible).</li></ul>
+<p><strong>Corrected reference schedule (for IMM-002 / catch-up logic):</strong></p>
+<table><thead><tr><th>Age</th><th>Vaccines (current UIP)</th></tr></thead><tbody><tr><td>Birth</td><td>BCG, OPV-0, Hep-B birth dose</td></tr><tr><td>6 weeks</td><td>OPV-1, Pentavalent-1, RVV-1, fIPV-1, PCV-1</td></tr><tr><td>10 weeks</td><td>OPV-2, Pentavalent-2, RVV-2</td></tr><tr><td>14 weeks</td><td>OPV-3, Pentavalent-3, RVV-3, fIPV-2, PCV-2</td></tr><tr><td>9–12 months</td><td>MR-1, JE-1 (endemic), PCV-booster, Vitamin A-1</td></tr><tr><td>16–24 months</td><td>MR-2, JE-2 (endemic), DPT-booster-1, OPV-booster, Vitamin A 2-9 (6-monthly)</td></tr><tr><td>5–6 years</td><td>DPT-booster-2</td></tr><tr><td>10 &amp; 16 years</td><td>TT/Td</td></tr><tr><td>Pregnant woman</td><td>TT/Td (1 dose if vaccinated within 3 years)</td></tr></tbody></table>
+<p><strong>Rule logic retained</strong>, with one fix and one addition:</p>
+<ul><li class="top"><strong>IMM-001 logic gap:</strong> currently <code>IF im1 IN [0–6 m, 6–12 m] THEN YELLOW</code> — make the 1–5 y branch explicitly route to IMM-003 (booster catch-up) so older children aren't dropped.</li><li class="top"><strong>New IMM-006 <code>[NEW]</code>:</strong> AEFI history — "আগের টিকার পর কি গুরুতর প্রতিক্রিয়া হয়েছিল?" / severe reaction after a previous dose? <code>হ্যাঁ</code> → <strong>YELLOW + refer MO before next dose</strong> (do not auto-schedule).</li><li class="top">Keep the core counselling: <strong>do not restart the series</strong>; give the missed dose and continue. BCG up to 1 y.</li></ul>
+<p><strong>Immunization band tally:</strong> YELLOW 5–6 (no RED needed — sick-child danger signs route through Child/Infant + pre-sweep). IMM-004 correctly defers vaccination for moderate/severe illness.</p>
+<hr>
+<h3>7. 🚨 Emergency Case — <code>emergency</code> (Global Emergency Rule Engine)</h3>
+<p><strong>Module is thin and missing common rural killers in WB.</strong> Retain EM-001..005; add:</p>
+<pre class="card red"><b class="cardhead">EM-006  RED  HARD-STOP  e6  → FRU / DH ≤ 30 min, call 108       [NEW] [DRAFT — SIGN-OFF]</b>
+সাপে কামড়েছে, বিষাক্ত পোকা বা পশুর কামড়?
+Snakebite, venomous sting, or animal bite?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF e6 = হ্যাঁ THEN RED — band locked.
+<span class="lab">ACTION</span>   Immobilise the limb (splint), keep it below heart level, remove tight items, DO NOT cut/suck/
+         tourniquet. Call 108, FRU/DH ≤30 min (anti-snake-venom). Note bite time. Dog/animal bite → also
+         wound wash 15 min + ARV/RIG at facility.
+<span class="lab">MAPS TO</span>  snakebite · scorpion sting · dog bite · rabies risk · envenomation</pre>
+<pre class="card red"><b class="cardhead">EM-007  RED  HARD-STOP  e7  → FRU / DH ≤ 30 min, call 108       [NEW] [DRAFT — SIGN-OFF]</b>
+বিষ/কীটনাশক/অতিরিক্ত ওষুধ খেয়েছে বা খাওয়ানো হয়েছে?
+Poison, pesticide, or overdose ingested?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF e7 = হ্যাঁ THEN RED — band locked.
+<span class="lab">ACTION</span>   Do NOT induce vomiting. Bring the container/label. Protect airway, left-lateral if drowsy.
+         Call 108, FRU/DH ≤30 min.
+<span class="lab">MAPS TO</span>  poisoning · pesticide ingestion · OP poisoning · drug overdose</pre>
+<pre class="card red"><b class="cardhead">EM-008  RED  HARD-STOP  e8  → FRU / DH ≤ 30 min, call 108       [NEW] [DRAFT — SIGN-OFF]</b>
+ঠান্ডা-ঘামে ভেজা, খুব দুর্বল নাড়ি, অত্যন্ত নিস্তেজ (শকের লক্ষণ)?
+Cold clammy skin, very weak pulse, extreme listlessness (shock)?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF e8 = হ্যাঁ THEN RED — band locked.
+<span class="lab">ACTION</span>   Lay flat, keep warm, raise legs, nothing by mouth. Call 108, FRU/DH ≤30 min.
+<span class="lab">MAPS TO</span>  shock · cold extremities · thready pulse · circulatory collapse</pre>
+<pre class="card red"><b class="cardhead">EM-009  RED  HARD-STOP  e9  → FRU / DH ≤ 30 min, call 108       [NEW] [DRAFT — SIGN-OFF]</b>
+গুরুতর আঘাত, বড় ক্ষত থেকে রক্তপাত, বা মারাত্মক পোড়া?
+Major injury, bleeding from a large wound, or severe burn?
+<span class="lab">ANSWERS</span>  হ্যাঁ · না · নিশ্চিত না
+<span class="lab">LOGIC</span>    IF e9 = হ্যাঁ THEN RED — band locked.
+<span class="lab">ACTION</span>   Direct pressure on bleeding; for burns cool with clean water, cover, do not apply substances.
+         Immobilise suspected fractures. Call 108, FRU/DH ≤30 min.
+<span class="lab">MAPS TO</span>  trauma · road accident · major laceration · severe burn · fracture with bleeding</pre>
+<blockquote><strong>Obstetric-emergency add (confirm placement — Emergency vs ANC) <code>[DRAFT — SIGN-OFF]</code>:</strong> in labour with cord visible at the vagina (<strong>cord prolapse</strong>) or labour &gt;12–18 h with no progress (<strong>obstructed labour</strong>) → RED, FRU immediately, knee-chest position for cord prolapse. <strong>Newborn not breathing at birth</strong> → RED + stimulate/clear airway/bag-mask if trained while transport is arranged.</blockquote>
+<p>EM-005 re-sweep invariant <strong>retained as-is</strong> — it is the correct global safety lock.</p>
+<hr>
+<h2>PART C — Master index of additions (for the committee)</h2>
+<table><thead><tr><th>Module</th><th>New / changed</th><th>ID</th><th>Band</th><th>Why</th></tr></thead><tbody><tr><td>All paeds</td><td>NEW</td><td>GDS-01..04</td><td>RED</td><td>IMNCI general danger-sign pre-sweep</td></tr><tr><td>Newborn</td><td>NEW</td><td>NB-008</td><td>RED</td><td>Hypothermia (PSBI) — was missing</td></tr><tr><td>Newborn</td><td>NEW</td><td>NB-009</td><td>RED</td><td>Convulsions — was missing</td></tr><tr><td>Newborn</td><td>NEW</td><td>NB-010</td><td>RED/Y</td><td>Skin pustules / ear pus</td></tr><tr><td>Newborn</td><td>NEW</td><td>NB-011</td><td>RED</td><td>Bulging fontanelle</td></tr><tr><td>Newborn</td><td>FIX</td><td>NB-006</td><td>RED/Y</td><td>Split cyanosis vs day-2–14 jaundice</td></tr><tr><td>Child</td><td>NEW</td><td>CH-010</td><td>RED</td><td>Meningitis (stiff neck)</td></tr><tr><td>Child</td><td>NEW</td><td>CH-011</td><td>Y/RED</td><td>Dysentery (blood in stool)</td></tr><tr><td>Child</td><td>NEW</td><td>CH-012</td><td>Y/RED</td><td>Pallor / anaemia</td></tr><tr><td>Child</td><td>FIX</td><td>CH-002/003</td><td>—</td><td>Make escalations deterministic; dehydration sub-assessment</td></tr><tr><td>Infant</td><td>NEW</td><td>CH-013-i</td><td>RED</td><td>Lethargy/movement — <strong>was missing entirely</strong></td></tr><tr><td>Infant</td><td>NEW</td><td>CH-014-i</td><td>RED</td><td>Convulsions — was missing</td></tr><tr><td>Infant</td><td>NEW</td><td>CH-015-i</td><td>RED</td><td>Hypothermia / fontanelle</td></tr><tr><td>Infant</td><td>FIX</td><td>age split</td><td>—</td><td>0–2 m vs 2–12 m thresholds</td></tr><tr><td>Pregnancy</td><td>NEW</td><td>ANC-008</td><td>RED/Y</td><td>Severe anaemia — was missing</td></tr><tr><td>Pregnancy</td><td>NEW</td><td>ANC-009</td><td>RED/Y</td><td>Fever / sepsis — was missing</td></tr><tr><td>Pregnancy</td><td>NEW</td><td>ANC-010</td><td>RED</td><td>PROM / leaking liquor — was missing</td></tr><tr><td>Pregnancy</td><td>FIX</td><td>ANC-001</td><td>RED</td><td>Add epigastric pain (HELLP); separate BP/headache</td></tr><tr><td>Postpartum</td><td>NEW</td><td>PNC-007</td><td>RED</td><td><strong>Postpartum eclampsia — was missing</strong></td></tr><tr><td>Postpartum</td><td>NEW</td><td>PNC-008</td><td>RED</td><td>PE / DVT / cardiomyopathy</td></tr><tr><td>Postpartum</td><td>NEW</td><td>PNC-009</td><td>Y/RED</td><td>Postpartum depression screen</td></tr><tr><td>Immunisation</td><td>FIX</td><td>schedule</td><td>—</td><td>MR not MMR; add PCV, RVV, fIPV×2, Vit-A; WB rollout</td></tr><tr><td>Immunisation</td><td>NEW</td><td>IMM-006</td><td>Y</td><td>AEFI history</td></tr><tr><td>Emergency</td><td>NEW</td><td>EM-006..009</td><td>RED</td><td>Snakebite/bite, poisoning, shock, trauma/burns</td></tr></tbody></table>
+<hr>
+<h2>PART D — Implementation notes (engineering)</h2>
+<p>These are JSON/engine changes implied by the rules above. I've kept them descriptive rather than shipping merge-ready JSON, because (a) the rules must clear clinical sign-off first, and (b) I don't have your exact <code>clinical_decision_engine.json</code> field schema in front of me.</p>
+<p>1. <strong>Answer→band map per rule.</strong> Add an explicit <code>answer_band_map</code> to every rule object so intermediate    options (<code>খুব কম</code>, <code>কিছুটা</code>, <code>একবার</code>, …) resolve to a band. Today only <code>= হ্যাঁ</code> is honoured. 2. <strong>Uncertainty handling (A2).</strong> Add a <code>uncertain_policy</code> field at engine level + a <code>green_blocked</code> flag    that any <code>নিশ্চিত না</code> on a hard-stop sets. GREEN resolution must check <code>green_blocked == false</code>. 3. <strong>Escalation sub-questions (A3).</strong> Convert prose escalations into real child questions with their own    <code>condition_set</code> → band, so the path is deterministic and traceable. 4. <strong>Measurement inputs (A4).</strong> Add numeric-input question types (<code>type: "numeric"</code>, <code>unit</code>, <code>thresholds</code>)    gated by a per-cohort <code>device_available</code> config. If false, fall back to the yes/no proxy. 5. <strong>Age/GA intake (A5).</strong> Add <code>age_days</code> (paeds) and <code>gestational_weeks</code> (pregnancy) at case entry; let    rules read them in <code>condition_set</code>. 6. <strong>Pre-sweep ordering.</strong> GDS-01..04 must evaluate before module rule 1 and obey the same first-hard-stop    exit + band-lock + re-sweep invariant (EM-005). Re-sweep must re-check pre-sweep too. 7. <strong>Versioning.</strong> Cut <code>clinical_decision_engine.json</code> → v1.1.0 (logic: answer-maps, uncertainty,    escalations, pre-sweep) and <code>triage_cases.json</code> → v3.0.0 (new questions/rules). Keep a <code>signoff</code> block    per rule: <code>{ status: "draft" | "approved", approver, date, protocol_ref }</code>. The app should be able to    <strong>refuse to load any rule whose <code>status != "approved"</code></strong> in production — so drafts can't ship by accident. 8. <strong>Decision-trace fields.</strong> For MDSR defensibility, log per case: every question, answer, the rule(s)    fired, the band, timestamp, engine+cases version, and which signed-off rule version was active.</p>
+<hr>
+<h2>SIGN-OFF CHECKLIST (AIIH&amp;PH / Secretariat clinical committee)</h2>
+<p>For each <code>[DRAFT — SIGN-OFF]</code> item, the committee confirms: ✅ clinically correct · ✅ correct band · ✅ correct referral target · ✅ Bengali wording is accurate and plain · ✅ within ASHA scope (recognition + referral; any treatment step like MgSO4/misoprostol is ANM/MO scope unless explicitly delegated).</p>
+<p>Specific decisions needed:</p>
+<ul><li class="top check">☐ Uncertainty policy: <strong>Option 1 (force YELLOW)</strong> vs <strong>Option 2 (block GREEN only)</strong> — per PHC capacity.</li><li class="top check">☐ Which <strong>measurement devices</strong> are actually in the WB ASHA kit (enables A4 numeric thresholds).</li><li class="top check">☐ WB-specific <strong>PCV / Rotavirus rollout</strong> status and any district JE endemicity.</li><li class="top check">☐ Exact <strong>fever/temperature and Hb thresholds</strong> for confirmation.</li><li class="top check">☐ PPH <strong>"≥2 pads in 30 min"</strong> proxy (carried over, still open — README item #3).</li><li class="top check">☐ Placement of obstetric emergencies (cord prolapse / obstructed labour / birth asphyxia): Emergency module vs ANC/PNC.</li><li class="top check">☐ Native-Bengali clinical review of all new question strings.</li></ul>
+<hr>
+<p>*Drafted as a proposed upgrade to the tracked AshaMitra rule files. Bands unchanged: 🟢 Green = home care · 🟡 Yellow = PHC within 24 h · 🔴 Red = FRU/SNCU/DH immediately (≤30–60 min), call 108. A fired RED can never be downgraded (re-sweep invariant). No item here is clinically validated until signed off.*</p>
+<div class="foot">Rendered from AshaMitra_Decision_Rules_v3_DRAFT.md — proposed upgrade to engine v1.0.0 / cases v2.0.0.
+Bands: 🟢 Green = home care · 🟡 Yellow = PHC within 24 h · 🔴 Red = FRU/SNCU/DH immediately, call 108.</div>
+</body></html>

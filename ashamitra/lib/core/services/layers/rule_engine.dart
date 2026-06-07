@@ -5,6 +5,8 @@
 // Stages: hard_stop → combination_rules → numeric_rules → yellow_rules
 // ─────────────────────────────────────────────────────────────────────────────
 
+import '../answer_codes.dart';
+
 // ── Public question descriptor (used by VoiceTriageScreen / GeminiTriageService) ───
 class EngineQuestion {
   final String id;
@@ -53,7 +55,18 @@ class EngineCondition {
     if (questionId == null) return false;
     final answer = answers[questionId];
     if (answer == null) return false;
-    if (operator == 'EQUALS') return _equals(answer, value);
+    if (operator == 'EQUALS') {
+      // Graded answer codes: a value:true condition fires on an affirmative
+      // (yes / severe), a value:false condition on a negative (no). This keeps
+      // every existing boolean rule working while supporting graded replies.
+      // mild / unsure never fire a hard-stop here — RuleEngine handles them.
+      if (value is bool) {
+        return value == true
+            ? AnswerCodes.isAffirmative(answer)
+            : AnswerCodes.isNegative(answer);
+      }
+      return _equals(answer, value);
+    }
     if (operator == 'IN') {
       final list = (value as List).map((e) => e.toString()).toList();
       return list.contains(answer.toString());
@@ -371,13 +384,54 @@ class RuleEngine {
     // ── Risk score ────────────────────────────────────────────────────────────
     int riskScore = 0;
     for (final sr in module.scoreRules) {
-      final answer = answers[sr.condition];
-      if (answer == true || answer == 'true') riskScore += sr.score;
+      if (AnswerCodes.isAffirmative(answers[sr.condition])) riskScore += sr.score;
+    }
+
+    // ── Graded answers: mild → at least YELLOW; unsure → block GREEN ───────────
+    // A `mild` (intermittent/partial) reply on a danger-sign question is a real
+    // lesser sign, not "all clear". An `unsure` reply must never silently
+    // resolve GREEN — the clinician resolves uncertainty by referring. Neither
+    // can downgrade a fired RED (redLock wins).
+    bool mildPresent = false, unsurePresent = false;
+    answers.forEach((qid, v) {
+      if (!module.questions.containsKey(qid)) return;
+      if (AnswerCodes.isMild(v)) mildPresent = true;
+      if (AnswerCodes.isUnsure(v)) unsurePresent = true;
+    });
+    final gradedYellow = mildPresent || unsurePresent;
+    if (gradedYellow && !redLock) {
+      trace.add(RuleTraceEntry(
+        ruleId: unsurePresent ? 'GRADED-UNSURE' : 'GRADED-MILD',
+        stage: 'graded_answers',
+        fired: true,
+        band: 'YELLOW',
+        reason: unsurePresent
+            ? 'Uncertain answer on a danger sign — GREEN blocked, forced YELLOW'
+            : 'Mild/intermittent danger sign — at least YELLOW',
+      ));
+      dangerSignsSet.add(unsurePresent ? 'Uncertain danger sign' : 'Mild/intermittent sign');
+      // Give downstream a YELLOW winning rule so the action card is populated.
+      winningRule ??= EngineRule(
+        ruleId: unsurePresent ? 'GRADED-UNSURE' : 'GRADED-MILD',
+        priority: 99,
+        band: 'YELLOW',
+        actionBn: unsurePresent
+            ? 'নিশ্চিত নন এমন বিপদচিহ্ন আছে — নিরাপত্তার জন্য ২৪ ঘণ্টার মধ্যে PHC-তে দেখান।'
+            : 'মৃদু বা মাঝে মাঝে দেখা যাওয়া লক্ষণ — ২৪ ঘণ্টার মধ্যে PHC-তে দেখান।',
+        actionEn: unsurePresent
+            ? 'Uncertain danger sign present — refer PHC within 24 h to be safe.'
+            : 'Mild/intermittent sign — refer PHC within 24 h.',
+        referral: 'PHC within 24 h',
+        suspectedConditions: const [],
+        dangerSigns: unsurePresent ? const ['Uncertain danger sign'] : const ['Mild/intermittent sign'],
+        signOffPending: false,
+        conditionSet: const [],
+      );
     }
 
     final provisionalBand = redLock
         ? 'RED'
-        : (winningRule?.band == 'YELLOW' ? 'YELLOW' : 'GREEN');
+        : ((winningRule?.band == 'YELLOW' || gradedYellow) ? 'YELLOW' : 'GREEN');
 
     return RuleEngineResult(
       redLock: redLock,

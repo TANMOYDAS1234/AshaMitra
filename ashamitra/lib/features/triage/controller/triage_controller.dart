@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:asha_mitra/core/services/rule_executor.dart';
+import 'package:asha_mitra/core/services/patient_triage_context.dart';
 
 class TriageController extends GetxController {
   // ── Patient case fields ───────────────────────────────────────────────────
@@ -94,6 +95,8 @@ class TriageController extends GetxController {
       answers: rawAnswers,
       vitals: rawVitals,
       caseId: case_,
+      demographics: PatientTriageContext.demographicsFor(patientId.value),
+      history: PatientTriageContext.historyFor(patientId.value),
       ambulanceCalled: ambulance,
       distanceKm: distKm,
     );
@@ -109,6 +112,8 @@ class TriageController extends GetxController {
       answers: Map<String, dynamic>.from(answers),
       vitals: Map<String, dynamic>.from(vitals),
       caseId: caseId.value,
+      demographics: PatientTriageContext.demographicsFor(patientId.value),
+      history: PatientTriageContext.historyFor(patientId.value),
       ambulanceCalled: ambulanceCalled.value,
       distanceKm: distanceToFruKm.value,
     );
