@@ -17,6 +17,7 @@ import '../../../../core/services/rule_executor.dart';
 import '../../../../core/services/offline_brain.dart';
 import '../../../../core/services/answer_codes.dart';
 import '../../../../core/services/patient_triage_context.dart';
+import '../../../../features/patients/data/models/patient_model.dart';
 import '../../../../core/services/immediate_action_engine.dart';
 import '../../../../core/services/clup/clup_pipeline.dart';
 import '../../../../core/services/clup/situation_extractor.dart';
@@ -240,7 +241,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
                 status == SpeechToText.notListeningStatus) &&
             _isListening) {
           setState(() { _isListening = false; _orbState = OrbState.idle; });
-          if (_transcript.isNotEmpty) _processInput(_transcript);
+          _submitTranscript(_transcript);
         }
       },
     );
@@ -298,12 +299,13 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       await _stt.stop();
       await _sttFallback.stop();
       setState(() { _isListening = false; _orbState = OrbState.idle; });
-      if (_transcript.isNotEmpty) _processInput(_transcript);
+      _submitTranscript(_transcript);
       return;
     }
     if (!_sttAvailable || _isProcessing) return;
     // Tap-to-start always re-enables continuous mode.
     _autoListen = true;
+    _turnSubmitted = false; // new turn — allow exactly one submission
     await _tts.stop();
 
     // Pilot device pattern: first turn captures, every later turn
@@ -368,6 +370,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   Future<void> _onHoldStart() async {
     if (_isListening || _isProcessing || !_sttAvailable) return;
     _autoListen = false;
+    _turnSubmitted = false; // new turn — allow exactly one submission
     await _tts.stop(); // barge-in
     // Release any lingering session before re-opening (Infinix HiOS).
     try { await _stt.cancel(); } catch (_) {}
@@ -440,10 +443,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     // recognizer doesn't deliver a final event on this device.
     await _stt.stop();
     await _sttFallback.stop();
-    if (_transcript.isNotEmpty) {
-      _playAckFiller();
-      _processInput(_transcript);
-    }
+    _submitTranscript(_transcript);
   }
 
   void _onSpeechResult(SpeechRecognitionResult result) {
@@ -457,12 +457,11 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       _stt.stop();
       _sttFallback.stop();
       setState(() { _isListening = false; _orbState = OrbState.processing; });
-      // Bridge the network gap — play a 1-second cached ack ("বুঝেছি।")
-      // immediately so the worker never hears silence between speaking
-      // and the LLM response. Fire-and-forget; the real response will
-      // queue behind it once the audio player frees up.
-      _playAckFiller();
-      _processInput(text);
+      // Bridge the network gap — _submitTranscript plays a 1-second cached ack
+      // ("বুঝেছি।") immediately so the worker never hears silence between
+      // speaking and the LLM response. Deduped so the hold-release and
+      // done-status callbacks can't process this same utterance again.
+      _submitTranscript(text);
     }
   }
 
@@ -485,6 +484,20 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   Timer? _coldStartHintTimer;
 
   // ── Core: process any input through conversational AI ─────────
+  // One spoken turn → exactly ONE submission. The final STT result, the
+  // hold-release, and the STT done-status callback can all fire for the same
+  // utterance; without this guard a single "না" was processed 2–3 times and
+  // auto-answered the next question(s). Reset to false at every listen start.
+  bool _turnSubmitted = false;
+  void _submitTranscript(String text) {
+    if (_turnSubmitted || _isProcessing) return;
+    final t = text.trim();
+    if (t.isEmpty) return;
+    _turnSubmitted = true;
+    _playAckFiller();
+    _processInput(t);
+  }
+
   Future<void> _processInput(String input) async {
     if (input.trim().isEmpty || _isProcessing) return;
     setState(() {
@@ -494,6 +507,10 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       _statusText = 'connecting'.tr;
     });
     _history.add(ConversationTurn(role: 'asha', text: input));
+    // Patient-info question (name/age/village/…)? Answer from the linked
+    // profile and stop — it is not a triage answer, so don't advance the
+    // questionnaire or call Gemini.
+    if (_answerPatientInfoIfAsked(input)) return;
     _turnCount++;
     // Arm the cold-start hint. If a reply lands in < 5s the timer is
     // cancelled below; otherwise the worker sees "সার্ভার জাগাচ্ছি..."
@@ -511,6 +528,72 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     } else {
       await _processOnline(input);
     }
+  }
+
+  // Answers a worker's question about the LINKED patient (name/age/village/…)
+  // straight from the profile — deterministic, offline, and the patient's name
+  // never leaves the device (not sent to the LLM). Returns true if it handled
+  // the input, so triage skips it (not treated as an answer, no Gemini call).
+  bool _answerPatientInfoIfAsked(String input) {
+    final t = input.toLowerCase();
+    bool has(List<String> ks) => ks.any((k) => t.contains(k));
+    final name    = has(['নাম', 'name']);
+    final age     = has(['বয়স', 'কত বছর', 'কত মাস', 'বছরের', 'মাসের', 'age']);
+    final gender  = has(['লিঙ্গ', 'ছেলে না মেয়ে', 'gender']);
+    final village = has(['গ্রাম', 'ঠিকানা', 'village', 'address']);
+    final phone   = has(['মোবাইল', 'ফোন', 'নম্বর', 'phone', 'mobile']);
+    final visit   = has(['শেষ ভিজিট', 'শেষ কবে', 'আগের ভিজিট', 'last visit']);
+    final risk    = has(['ঝুঁকি', 'রিস্ক', 'risk']);
+    final details = has(['রোগীর তথ্য', 'পেশেন্ট', 'রোগী কে', 'patient detail', 'details', 'কার']);
+
+    final strong = name || gender || village || phone || visit || risk || details;
+    final looksLikeQuestion =
+        has(['কত', 'বলো', 'বলবে', 'বলতে', 'পারবে', 'জানো', 'কী', 'কি', '?']);
+    if (!strong && !(age && looksLikeQuestion)) return false;
+
+    final PatientModel? p = PatientTriageContext.lookup(_patientId);
+    String reply;
+    if (p == null) {
+      reply = 'এই ট্রায়াজটি কোনো নির্দিষ্ট রোগীর সাথে যুক্ত নয়, তাই রোগীর তথ্য বলতে পারছি না। '
+          'রোগী নির্বাচন করে ট্রায়াজ শুরু করলে আমি নাম, বয়স ইত্যাদি বলতে পারব।';
+    } else {
+      String unitBn(String u) => switch (u) { 'days' => 'দিন', 'months' => 'মাস', _ => 'বছর' };
+      final ageStr = p.age.trim().isEmpty ? '' : '${p.age} ${unitBn(p.ageUnit)}';
+      final riskBn = switch (p.risk.name) {
+        'emergency' => 'জরুরি',
+        'high' => 'উচ্চ ঝুঁকি',
+        _ => 'নিরাপদ',
+      };
+      final parts = <String>[];
+      if (name) parts.add('নাম ${p.name}');
+      if (age) parts.add(ageStr.isEmpty ? 'বয়স জানা নেই' : 'বয়স $ageStr');
+      if (gender && p.gender.trim().isNotEmpty) parts.add('লিঙ্গ ${p.gender}');
+      if (village && p.village.trim().isNotEmpty) parts.add('গ্রাম ${p.village}');
+      if (phone && p.mobile.trim().isNotEmpty) parts.add('মোবাইল ${p.mobile}');
+      if (visit && p.lastVisit.trim().isNotEmpty) parts.add('শেষ ভিজিট ${p.lastVisit}');
+      if (risk) parts.add('শেষ ঝুঁকি $riskBn');
+      if (details || parts.isEmpty) {
+        final s = <String>['নাম ${p.name}'];
+        if (ageStr.isNotEmpty) s.add('বয়স $ageStr');
+        if (p.gender.trim().isNotEmpty) s.add('লিঙ্গ ${p.gender}');
+        if (p.village.trim().isNotEmpty) s.add('গ্রাম ${p.village}');
+        reply = 'এই রোগীর তথ্য — ${s.join(', ')}।';
+      } else {
+        reply = 'এই রোগীর — ${parts.join(', ')}।';
+      }
+    }
+
+    _history.add(ConversationTurn(role: 'assistant', text: reply));
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+        _orbState = OrbState.idle;
+        _statusText = 'tap_mic_to_speak'.tr;
+        _transcript = '';
+      });
+    }
+    _speakNatural(reply);
+    return true;
   }
 
   // Single Gemini/backend conversation call — extracted so the online path can
