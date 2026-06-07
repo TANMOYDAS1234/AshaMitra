@@ -248,11 +248,41 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       ageUnit: _ageUnit,
       gender: _gender,
     );
-    Get.toNamed(AppRoutes.selectCase, arguments: {
-      'patientId': patient.id,
-      'patientName': patient.name,
-    });
+    // The worker already chose the case type on this form, so jump straight
+    // into that module's triage — carrying the patient so triage uses their
+    // age/history (adaptive band) and can answer name/age questions. 'Other'
+    // is ambiguous, so fall back to the case picker.
+    final caseId = _caseIdForType(_caseType);
+    if (caseId == null) {
+      Get.toNamed(AppRoutes.selectCase, arguments: {
+        'patientId': patient.id,
+        'patientName': patient.name,
+      });
+    } else {
+      Get.toNamed(AppRoutes.voiceTriage, arguments: {
+        'caseId': caseId,
+        'caseTitle': _caseTitleForId(caseId),
+        'patientId': patient.id,
+        'patientName': patient.name,
+      });
+    }
   }
+
+  // Registration case-type chip → triage case id. null for 'Other' (ambiguous)
+  // so the worker picks the case manually.
+  static String? _caseIdForType(String caseType) => switch (caseType) {
+        'Pregnancy' => 'pregnancy',
+        'Newborn' => 'newborn',
+        'Child' => 'child',
+        _ => null,
+      };
+
+  static String _caseTitleForId(String caseId) => switch (caseId) {
+        'pregnancy' => '🤰 গর্ভবতী মায়ের চেকআপ',
+        'newborn' => '👶 নবজাতক চেকআপ (০-২৮ দিন)',
+        'child' => '🧒 শিশু স্বাস্থ্য যাচাই (১-৫ বছর)',
+        _ => 'স্বাস্থ্য যাচাই',
+      };
 
   // Localized display labels for the English-valued gender / case options.
   // The stored value stays English (the patient model + reports rely on it);
