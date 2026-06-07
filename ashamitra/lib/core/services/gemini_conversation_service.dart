@@ -26,6 +26,14 @@ class ConversationResponse {
   final Map<String, double> extractedVitals;
   final bool shouldFinish;
   final String riskLevel;
+  /// The question id (e.g. "c7") that Gemini actually asked in
+  /// [spokenResponse], as reported by the model itself. The caller records the
+  /// worker's next bare yes/no against THIS id — eliminating the old, fragile
+  /// "guess the question from a priority list" attribution that caused the
+  /// triage loop (the guess list had drifted out of sync with the prompt's, so
+  /// "হ্যাঁ" was recorded against the wrong question and Gemini re-asked the
+  /// real one forever). Null when Gemini asked nothing (e.g. should_finish).
+  final String? askedQuestionId;
   /// MP3 bytes returned by the combined /chat-with-voice endpoint (2b).
   /// When non-null the caller can play these directly and skip the
   /// separate /tts round-trip — saving ~200-500ms on Render.
@@ -42,6 +50,7 @@ class ConversationResponse {
     this.extractedVitals = const {},
     required this.shouldFinish,
     required this.riskLevel,
+    this.askedQuestionId,
     this.prefetchedAudio,
     this.cancelSession = false,
   });
@@ -357,10 +366,13 @@ cancel_session: true সেট করলে should_finish ও extracted_answers
         : 'সব প্রশ্নের উত্তর পাওয়া গেছে';
     final turnsLeft = maxTurns - turnNumber;
 
+    final answeredList =
+        answeredIds.isEmpty ? 'কোনোটি নয়' : answeredIds.join(', ');
     final turnCtx = '''
 ══ কথোপকথনের বর্তমান অবস্থা ══
 প্রশ্ন নম্বর: $turnNumber / $maxTurns${turnsLeft <= 2 ? ' | সতর্কতা: মাত্র ${turnsLeft}টি প্রশ্ন বাকি' : ''}
 নিশ্চিত বিপদচিহ্ন: ${confirmedDanger.isEmpty ? 'এখনো কোনোটি নিশ্চিত নয়' : confirmedDanger}
+ইতিমধ্যে উত্তর পাওয়া প্রশ্ন (এগুলো আর জিজ্ঞেস করবে না): $answeredList
 এখনো অজানা (${unanswered.length}টি): ${unanswered.isEmpty ? 'সব জানা' : unanswered.map((id) => '${questionDescs[id] ?? id}($id)').join(' | ')}
 সবচেয়ে জরুরি অজানা প্রশ্ন: $mostUrgent
 ''';
@@ -392,7 +404,14 @@ $questionList
    - ✅ "মাথায় কি কোনো ভারী বা চাপা ভাব আসছে?"
    - ❌ "রক্তপাত হচ্ছে?"
    - ✅ "কোনো রক্তপাত বা তলপেট ব্যথা দেখা দিচ্ছে?"
-   - ইতিমধ্যে জানা প্রশ্ন আবার জিজ্ঞেস করবে না
+   - **ইতিমধ্যে উত্তর পাওয়া প্রশ্ন (উপরের তালিকা) কখনো আবার জিজ্ঞেস করবে না** —
+     ASHA হ্যাঁ/না যা-ই বলে থাকুন, সেই প্রশ্ন শেষ; পরের অজানা প্রশ্নে যাও।
+   - প্রতিটি টার্নে নতুন একটি প্রশ্ন করো — আগের টার্নের প্রশ্নের পুনরাবৃত্তি নয়।
+
+asked_question_id: তুমি এই উত্তরে (spoken_response-এ) যে প্রশ্নটি জিজ্ঞেস করছ
+তার ঠিক সেই id (যেমন "c7", "p1") — উপরের "ক্লিনিক্যাল প্রশ্নের তালিকা" থেকে।
+কোনো প্রশ্ন না করলে (should_finish বা cancel_session হলে) null দাও। এই id দিয়েই
+ASHA-র পরের সংক্ষিপ্ত "হ্যাঁ/না" সঠিক প্রশ্নে যুক্ত হবে — তাই অবশ্যই সঠিক id দাও।
 
 should_finish: true দাও যদি:
 - ২+ RED বিপদচিহ্ন নিশ্চিত
@@ -403,6 +422,7 @@ should_finish: true দাও যদি:
 {
   "spoken_response": "স্বাভাবিক বাংলা উত্তর — সর্বোচ্চ ৩ বাক্য",
   "extracted_answers": {"p1": true, "p3": false},
+  "asked_question_id": "p6",
   "should_finish": false,
   "cancel_session": false,
   "risk_level": "low"
@@ -535,6 +555,16 @@ extracted_answers শুধু সেই প্রশ্নগুলো যা �
       if (e.value is bool) extracted[e.key] = e.value as bool;
     }
 
+    // The id of the question Gemini just asked (so the caller attributes the
+    // worker's next bare yes/no to the RIGHT question). Validate it's a known
+    // id for this module; ignore anything malformed so a bad value can't
+    // mis-record an answer.
+    final rawAsked = (json['asked_question_id'] as String?)?.trim();
+    final askedQuestionId =
+        (rawAsked != null && questionDescs.containsKey(rawAsked))
+            ? rawAsked
+            : null;
+
     final jsonSpoken = (json['spoken_response'] as String?)?.trim();
     String spokenResponse = (jsonSpoken != null && jsonSpoken.isNotEmpty)
         ? jsonSpoken
@@ -550,6 +580,7 @@ extracted_answers শুধু সেই প্রশ্নগুলো যা �
       extractedVitals: spokenVitals,
       shouldFinish: json['should_finish'] == true,
       riskLevel: json['risk_level'] as String? ?? 'low',
+      askedQuestionId: askedQuestionId,
       prefetchedAudio: prefetchedAudio,
       cancelSession: json['cancel_session'] == true,
     );

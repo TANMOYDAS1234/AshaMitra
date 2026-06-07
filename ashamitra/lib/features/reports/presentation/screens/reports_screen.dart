@@ -664,7 +664,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final args = Get.arguments;
     if (args is Map) {
       final t = args['time']?.toString();
-      if (t != null && const ['today', 'week', 'month', 'all'].contains(t)) {
+      if (t != null && const ['today', 'yesterday', 'week', 'month', 'all'].contains(t)) {
         _timeFilter = t;
       }
       final b = args['band']?.toString();
@@ -703,6 +703,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
         return created.year == now.year &&
             created.month == now.month &&
             created.day == now.day;
+      case 'yesterday':
+        final y = now.subtract(const Duration(days: 1));
+        return created.year == y.year &&
+            created.month == y.month &&
+            created.day == y.day;
       case 'week':
         return now.difference(created).inDays < 7;
       case 'month':

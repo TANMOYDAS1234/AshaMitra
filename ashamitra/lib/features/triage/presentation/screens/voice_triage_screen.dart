@@ -107,9 +107,16 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   // The engine yes/no question OfflineBrain last asked — lets a terse
   // "হ্যাঁ/না" reply be recorded against it.
   EngineQuestion? _lastAskedQuestion;
-  // Tracks which question ID the online prompt told Gemini to ask last turn.
-  // Used to record bare "না"/"হ্যাঁ" replies without relying on Gemini extraction.
+  // The question id Gemini actually asked last turn (it reports it via
+  // asked_question_id). A terse "না"/"হ্যাঁ" this turn is recorded against it,
+  // so attribution no longer relies on a priority-list guess that could drift
+  // out of sync with the prompt (that drift was the cause of the triage loop).
   String? _lastOnlineQuestionId;
+  // Loop guard: how many turns in a row Gemini has asked the SAME question id.
+  // If it re-asks one ≥3 times (model ignoring the "already answered" list),
+  // we mark that question answered so the conversation always moves forward.
+  String? _repeatAskId;
+  int _repeatAskCount = 0;
 
 
   @override
@@ -706,21 +713,50 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     // Merge Gemini extractions (Gemini handles complex multi-symptom replies)
     _extractedAnswers.addAll(response.extractedAnswers);
 
-    // Track which question ID the prompt is about to tell Gemini to ask
-    // so next turn's bare yes/no can be recorded against it.
-    const priorityOrder = {
-      'pregnancy':    ['p1','p3','p7','p6','p9','p10','p8','p4','p11','p11d','p2','p12','p5'],
-      'delivery_pnc': ['pp1','pp2','pp4','pp6','pp3','pp5'],
-      'newborn':      ['n1','n2','n3','n5','n4','n6'],
-      'child':        ['c1','c5','c2','c3','c4','c6'],
-      'emergency':    ['e1','e2','e3','e4'],
-      'immunisation': ['im4','im2','im1','im5','im3'],
-    };
-    final order = priorityOrder[_moduleId] ?? <String>[];
-    _lastOnlineQuestionId = order
-        .cast<String?>()
-        .firstWhere((id) => !_extractedAnswers.containsKey(id),
-            orElse: () => null);
+    // ── Attribute the worker's NEXT bare yes/no to the right question ──
+    // Authoritative: Gemini tells us exactly which question it just asked
+    // (asked_question_id), so a terse "হ্যাঁ"/"না" next turn lands on the
+    // correct question. We no longer guess from a priority list that had
+    // drifted out of sync with the prompt's order — that drift recorded the
+    // reply against the wrong question, so Gemini never saw the real one
+    // answered and re-asked it forever (the triage loop).
+    String? asked = response.askedQuestionId;
+    if (asked == null) {
+      // Fallback only when the model omitted the id: first still-unanswered
+      // question, in the SAME order the prompt prioritises (kept in sync).
+      const fallbackOrder = {
+        'pregnancy':    ['p7','p1','p3','p6','p9','p10','p8','p4','p11','p11d','p2','p12','p5'],
+        'delivery_pnc': ['pp1','pp7','pp8','pp2','pp4','pp6','pp3','pp5','pp9'],
+        'newborn':      ['n7','n1','n2','n3','n5','n4','n6','n8','n9','n10'],
+        'child':        ['c7','c8','c9','c10','c1','c5','c2','c3','c11','c4','c6','c12'],
+        'emergency':    ['e1','e2','e3','e4','e5','e6','e7','e8'],
+        'immunisation': ['im4','im2','im1','im5','im3','im6'],
+      };
+      asked = (fallbackOrder[_moduleId] ?? const <String>[])
+          .cast<String?>()
+          .firstWhere((id) => !_extractedAnswers.containsKey(id),
+              orElse: () => null);
+    }
+
+    // ── Loop guard ──
+    // If Gemini keeps asking the SAME question (e.g. it ignored the answered
+    // list), count the repeats; after 3, mark that question answered "no" and
+    // stop attributing to it so the conversation always advances. "no" is
+    // band-neutral here — an unanswered danger sign and an explicit "no"
+    // produce the same band, and a later clear statement still upgrades it.
+    if (asked != null && asked == _repeatAskId) {
+      _repeatAskCount++;
+      if (_repeatAskCount >= 3) {
+        _extractedAnswers.putIfAbsent(asked, () => AnswerCodes.no);
+        _repeatAskId = null;
+        _repeatAskCount = 0;
+        asked = null;
+      }
+    } else {
+      _repeatAskId = asked;
+      _repeatAskCount = asked == null ? 0 : 1;
+    }
+    _lastOnlineQuestionId = asked;
 
     _extractedVitals.addAll(response.extractedVitals);
     _riskLevel = _computeLocalRiskLevel();
