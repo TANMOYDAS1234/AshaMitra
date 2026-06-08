@@ -453,8 +453,8 @@
             }
           ],
           "band": "RED",
-          "action_bn": "নাভি সংক্রমণ + জ্বর = সিস্টেমিক সেপসিসের ঝুঁকি। প্রথম ডোজ amoxicillin দিয়ে SNCU-তে রেফার করুন।",
-          "action_en": "Umbilical infection + fever = systemic sepsis risk. Give first dose amoxicillin, refer SNCU.",
+          "action_bn": "নাভি সংক্রমণ + জ্বর = সিস্টেমিক সেপসিসের ঝুঁকি (PSBI)। শিশুকে গরম রাখুন, বুকের দুধ খাওয়ানো চালিয়ে যান, এখনই ১০৮ ডেকে SNCU/FRU-তে নিয়ে যান এবং ANM/MO-কে জানান। নিজে কোনো ওষুধ দেবেন না।",
+          "action_en": "Umbilical infection + fever = systemic sepsis risk (PSBI). Keep the baby warm, keep breastfeeding, call 108 and take to SNCU/FRU now, and inform the ANM/MO. Do not give any medicine yourself.",
           "suspected_conditions": [
             "Omphalitis with systemic sepsis"
           ],
@@ -479,8 +479,8 @@
             }
           ],
           "band": "RED",
-          "action_bn": "দুধ না খাওয়া + জ্বর = PSBI নিশ্চিত। প্রথম ডোজ amoxicillin + IM gentamicin, এখনই SNCU।",
-          "action_en": "Not feeding + fever = PSBI confirmed. First dose amoxicillin + IM gentamicin, refer SNCU.",
+          "action_bn": "দুধ না খাওয়া + জ্বর = সম্ভাব্য গুরুতর সংক্রমণ (PSBI)। শিশুকে গরম রাখুন, বুকের দুধ খাওয়ানোর চেষ্টা চালিয়ে যান, এখনই ১০৮ ডেকে SNCU/FRU-তে নিয়ে যান এবং ANM/MO-কে জানান। নিজে কোনো ওষুধ বা ইনজেকশন দেবেন না।",
+          "action_en": "Not feeding + fever = possible serious infection (PSBI). Keep the baby warm, keep trying to breastfeed, call 108 and take to SNCU/FRU now, and inform the ANM/MO. Do not give any medicine or injection yourself.",
           "suspected_conditions": [
             "Possible serious bacterial infection (PSBI)"
           ],
@@ -854,8 +854,8 @@
           ],
           "band": "RED",
           "referral": "FRU immediately",
-          "action_bn": "গুরুতর পানিশূন্যতা = RED। এখনই ORS শুরু করুন। IV তরলের জন্য FRU-তে রেফার করুন।",
-          "action_en": "Severe dehydration. Start ORS. Refer FRU for IV fluids.",
+          "action_bn": "গুরুতর পানিশূন্যতা = RED। শিশু গিলতে পারলে চামচে ORS দিন (অজ্ঞান বা গিলতে না পারলে নয়)। এখনই ১০৮ ডেকে IV তরলের জন্য FRU-তে নিয়ে যান।",
+          "action_en": "Severe dehydration = RED. If the child can swallow, give ORS by spoon (NOT if unconscious or unable to swallow). Call 108 and take to FRU for IV fluids now.",
           "suspected_conditions": [
             "Severe dehydration"
           ],
@@ -1030,8 +1030,8 @@
             }
           ],
           "band": "RED",
-          "action_bn": "ডায়রিয়া + খেতে অস্বীকার = গুরুতর পানিশূন্যতার ঝুঁকি। ORS শুরু করুন, FRU-তে রেফার করুন।",
-          "action_en": "Diarrhoea + refusal to eat = severe dehydration risk. Start ORS, refer FRU.",
+          "action_bn": "ডায়রিয়া + খেতে অস্বীকার = গুরুতর পানিশূন্যতার ঝুঁকি। শিশু গিলতে পারলে চামচে ORS দিন, এখনই ১০৮ ডেকে FRU-তে রেফার করুন।",
+          "action_en": "Diarrhoea + refusal to eat = severe dehydration risk. If the child can swallow, give ORS by spoon; call 108 and refer to FRU now.",
           "suspected_conditions": [
             "Severe dehydration with feeding refusal"
           ],
@@ -1356,8 +1356,8 @@
             }
           ],
           "band": "YELLOW",
-          "action_bn": "SpO2 ৯০–৯৪% = মাঝারি হাইপক্সিয়া। PHC-তে রেফার করুন, অক্সিজেন প্রস্তুত রাখুন।",
-          "action_en": "SpO2 90–94% = moderate hypoxia. Refer PHC, prepare oxygen.",
+          "action_bn": "SpO2 ৯০–৯৪% = মাঝারি হাইপক্সিয়া। শিশুকে শান্ত ও সোজা করে রাখুন, দ্রুত PHC-তে রেফার করুন।",
+          "action_en": "SpO2 90–94% = moderate hypoxia. Keep the child calm and upright, refer to PHC promptly.",
           "danger_signs": [
             "Moderate hypoxia"
           ]
@@ -1653,8 +1653,8 @@
           ],
           "band": "RED",
           "referral": "FRU / DH immediately",
-          "action_bn": "এক্লাম্পসিয়া হার্ড-স্টপ। খিঁচুনি = জীবনসংকটাপন্ন। বাম কাতে শোয়ান, শ্বাসনালী খোলা রাখুন, MgSO4 প্রস্তুত করুন, এখনই FRU-তে রেফার করুন।",
-          "action_en": "Eclampsia hard-stop. Convulsion = life-threatening. Left lateral position, keep airway clear, prepare MgSO4, refer FRU immediately.",
+          "action_bn": "এক্লাম্পসিয়া হার্ড-স্টপ। খিঁচুনি = জীবনসংকটাপন্ন। বাম কাতে শোয়ান, আঘাত থেকে রক্ষা করুন ও শ্বাসনালী খোলা রাখুন, মুখে কিছু দেবেন না, এখনই ১০৮ ডেকে FRU-তে নিয়ে যান।",
+          "action_en": "Eclampsia hard-stop. Convulsion = life-threatening. Lay on left side, protect from injury and keep airway clear, give nothing by mouth, call 108 and take to FRU now.",
           "suspected_conditions": [
             "Eclampsia"
           ],
@@ -1806,8 +1806,8 @@
             }
           ],
           "band": "RED",
-          "action_bn": "উচ্চ BP + ঝাপসা দৃষ্টি = গুরুতর প্রি-এক্লাম্পসিয়া। MgSO4 প্রস্তুত করুন, এখনই FRU।",
-          "action_en": "High BP + blurred vision = severe pre-eclampsia. Prepare MgSO4, refer FRU.",
+          "action_bn": "উচ্চ BP + ঝাপসা দৃষ্টি = গুরুতর প্রি-এক্লাম্পসিয়া। বাম কাতে শোয়ান, এখনই ১০৮ ডেকে FRU-তে নিয়ে যান।",
+          "action_en": "High BP + blurred vision = severe pre-eclampsia. Lay on left side, call 108 and take to FRU now.",
           "suspected_conditions": [
             "Severe pre-eclampsia"
           ],
@@ -2067,8 +2067,8 @@
             }
           ],
           "band": "RED",
-          "action_bn": "সিস্টোলিক BP ≥ ১৬০ mmHg — গুরুতর হাইপারটেনশন। MgSO4 প্রস্তুত করুন, এখনই FRU।",
-          "action_en": "Systolic BP ≥ 160 mmHg — severe hypertension. Prepare MgSO4, refer FRU.",
+          "action_bn": "সিস্টোলিক BP ≥ ১৬০ mmHg — গুরুতর হাইপারটেনশন। বাম কাতে শোয়ান, এখনই ১০৮ ডেকে FRU-তে নিয়ে যান।",
+          "action_en": "Systolic BP ≥ 160 mmHg — severe hypertension. Lay on left side, call 108 and take to FRU now.",
           "danger_signs": [
             "Severe hypertension"
           ]
@@ -2169,8 +2169,8 @@
             }
           ],
           "band": "RED",
-          "action_bn": "TSH > ১০ mIU/L = ওভার্ট হাইপোথাইরয়েডিজম। Levothyroxine ৫০ μg/দিন এখনই শুরু করুন, ৬ সপ্তাহ পর পুনরায় TSH। ভ্রূণ মস্তিষ্ক বিকাশে গুরুত্বপূর্ণ।",
-          "action_en": "TSH >10 mIU/L = overt hypothyroidism. Start Levothyroxine 50 μg/day now, repeat TSH after 6 weeks. Critical for fetal brain development.",
+          "action_bn": "TSH > ১০ mIU/L রিপোর্টে = থাইরয়েড সমস্যা। PHC/MO-তে রেফার করুন — নিজে কোনো ওষুধ শুরু বা পরিবর্তন করবেন না।",
+          "action_en": "TSH > 10 mIU/L on report = thyroid problem. Refer to PHC/MO — do not start or change any medicine yourself.",
           "danger_signs": [
             "Overt hypothyroidism"
           ]
@@ -2189,8 +2189,8 @@
             }
           ],
           "band": "YELLOW",
-          "action_bn": "TSH ২.৫–১০ mIU/L = সাবক্লিনিক্যাল হাইপোথাইরয়েডিজম। Levothyroxine ২৫ μg/দিন শুরু করুন, ৬ সপ্তাহ পর TSH পুনরায়। লক্ষ্য < ২.৫ (১ম ট্রাইমেস্টার) বা < ৩ (২য়/৩য়)।",
-          "action_en": "TSH 2.5–10 mIU/L = subclinical hypothyroidism. Start Levothyroxine 25 μg/day, repeat TSH in 6 weeks. Target <2.5 (T1) or <3 (T2/T3).",
+          "action_bn": "TSH ২.৫–১০ mIU/L রিপোর্টে = থাইরয়েড একটু বেশি। PHC/MO-তে রেফার করুন; নিজে ওষুধ দেবেন না।",
+          "action_en": "TSH 2.5–10 mIU/L on report = mildly raised thyroid. Refer to PHC/MO; do not give medicine yourself.",
           "danger_signs": [
             "Subclinical hypothyroidism"
           ]
@@ -2206,8 +2206,8 @@
             }
           ],
           "band": "YELLOW",
-          "action_bn": "৭৫g OGTT ২-ঘণ্টা PG ≥ ১৪০ mg/dL = GDM (WHO/ভারত মাপকাঠি)। Medical Nutrition Therapy শুরু করুন, প্রয়োজনে ইনসুলিন। ২৪-২৮ সপ্তাহে স্ক্রিন করুন।",
-          "action_en": "75g OGTT 2-h PG ≥140 mg/dL = GDM (WHO/India criteria). Start Medical Nutrition Therapy, insulin if needed. Screen at 24–28 weeks.",
+          "action_bn": "রিপোর্টে সুগার বেশি (GDM)। GDM ব্যবস্থাপনার জন্য PHC/MO-তে রেফার করুন। ASHA-র কাজ: সুষম খাবারের পরামর্শ ও ফলো-আপ নিশ্চিত করা। নিজে ওষুধ বা ইনসুলিন দেবেন না।",
+          "action_en": "High sugar on report (GDM). Refer to PHC/MO for GDM management. ASHA role: counsel balanced diet and ensure follow-up. Do not give medicine or insulin yourself.",
           "danger_signs": [
             "Gestational diabetes mellitus"
           ]
@@ -2419,8 +2419,8 @@
           ],
           "band": "RED",
           "referral": "FRU / DH immediately",
-          "action_bn": "PPH হার্ড-স্টপ। এখনই FRU/DH-তে রেফার করুন। বাইম্যানুয়াল জরায়ু সংকোচন প্রয়োগ করুন।",
-          "action_en": "PPH hard-stop. Refer FRU/DH immediately. Bimanual uterine compression if trained.",
+          "action_bn": "PPH হার্ড-স্টপ। জরায়ুর উপরে পেটে শক্ত করে মালিশ করুন (fundal massage), মাকে শুইয়ে রাখুন, এখনই ১০৮ ডেকে FRU/DH-তে নিয়ে যান।",
+          "action_en": "PPH hard-stop. Do firm external fundal massage over the uterus, lay the mother down, call 108 and take to FRU/DH now.",
           "suspected_conditions": [
             "Postpartum haemorrhage",
             "Puerperal sepsis"
@@ -2442,8 +2442,8 @@
           ],
           "band": "RED",
           "referral": "FRU / DH immediately",
-          "action_bn": "প্রসব-পরবর্তী এক্লাম্পসিয়া হার্ড-স্টপ। খিঁচুনি = জীবনসংকটাপন্ন। বাম কাতে শোয়ান, শ্বাসনালী খোলা রাখুন, MgSO4 প্রস্তুত করুন, এখনই FRU।",
-          "action_en": "Postpartum eclampsia hard-stop. Convulsion = life-threatening. Left lateral, keep airway clear, prepare MgSO4, refer FRU immediately.",
+          "action_bn": "প্রসব-পরবর্তী এক্লাম্পসিয়া হার্ড-স্টপ। খিঁচুনি = জীবনসংকটাপন্ন। বাম কাতে শোয়ান, আঘাত থেকে রক্ষা করুন ও শ্বাসনালী খোলা রাখুন, মুখে কিছু দেবেন না, এখনই ১০৮ ডেকে FRU-তে নিয়ে যান।",
+          "action_en": "Postpartum eclampsia hard-stop. Convulsion = life-threatening. Lay on left side, protect from injury and keep airway clear, nothing by mouth, call 108 and take to FRU now.",
           "suspected_conditions": [
             "Postpartum eclampsia"
           ],
@@ -2778,8 +2778,8 @@
             }
           ],
           "band": "RED",
-          "action_bn": "প্রসবের পর সিস্টোলিক BP ≥ ১৪০ = পোস্টপার্টাম প্রি-এক্লাম্পসিয়া। MgSO4 প্রস্তুত করুন।",
-          "action_en": "Postpartum systolic BP ≥ 140 = postpartum pre-eclampsia. Prepare MgSO4.",
+          "action_bn": "প্রসবের পর সিস্টোলিক BP ≥ ১৪০ = পোস্টপার্টাম প্রি-এক্লাম্পসিয়া। বাম কাতে শোয়ান, এখনই ১০৮ ডেকে FRU-তে নিয়ে যান।",
+          "action_en": "Postpartum systolic BP ≥ 140 = postpartum pre-eclampsia. Lay on left side, call 108 and take to FRU now.",
           "danger_signs": [
             "Postpartum hypertension"
           ]
@@ -2846,8 +2846,8 @@
             }
           ],
           "band": "RED",
-          "action_bn": "তাপমাত্রা ≥ ৩৮.৯°C / ১০২°F প্রসবের পর = গুরুতর পিউরপেরাল সেপসিস। প্রথম ডোজ অ্যান্টিবায়োটিক, এখনই FRU।",
-          "action_en": "Temp ≥ 38.9°C / 102°F postpartum = severe puerperal sepsis. First dose antibiotic, refer FRU now.",
+          "action_bn": "তাপমাত্রা ≥ ৩৮.৯°C প্রসবের পর = গুরুতর পিউরপেরাল সেপসিস। মাকে গরম ও পর্যাপ্ত পানি দিন, নিজে ওষুধ দেবেন না, এখনই ১০৮ ডেকে FRU-তে নিয়ে যান।",
+          "action_en": "Temp ≥ 38.9°C postpartum = severe puerperal sepsis. Keep the mother warm and hydrated, do not give medicine yourself, call 108 and take to FRU now.",
           "danger_signs": [
             "Severe postpartum sepsis"
           ]
@@ -3231,8 +3231,8 @@
           ],
           "band": "RED",
           "referral": "FRU / DH ≤ 30 min",
-          "action_bn": "হার্ড-স্টপ। এখনই ১০৮ কল করুন। FRU/DH-তে ≤ ৩০ মিনিটে রেফার করুন। প্রসব-পরবর্তী হলে জরায়ু সংকোচন প্রয়োগ করুন।",
-          "action_en": "Hard-stop. Call 108. Refer FRU/DH ≤ 30 min. Uterine compression if postpartum.",
+          "action_bn": "হার্ড-স্টপ। এখনই ১০৮ কল করুন, ≤ ৩০ মিনিটে FRU/DH-তে নিয়ে যান। প্রসব-পরবর্তী রক্তপাত হলে জরায়ুর উপরে শক্ত করে মালিশ করুন (fundal massage)।",
+          "action_en": "Hard-stop. Call 108 now, reach FRU/DH within 30 min. If postpartum bleeding, do firm external fundal massage over the uterus.",
           "suspected_conditions": [
             "Haemorrhage"
           ],
