@@ -14,6 +14,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../../../core/utils/validators.dart';
 import '../../controller/patient_controller.dart';
 import '../../data/models/patient_model.dart';
+import '../../../../core/services/api_service.dart';
 
 class AddPatientScreen extends StatefulWidget {
   const AddPatientScreen({super.key});
@@ -233,8 +234,9 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     }
 
     // ADD mode
+    final name = _nameCtrl.text.trim();
     _ctrl.addPatient(
-      name: _nameCtrl.text.trim(),
+      name: name,
       type: _caseType,
       village: _villageCtrl.text.trim().isEmpty ? 'Unknown' : _villageCtrl.text.trim(),
       mobile: _mobileCtrl.text.trim(),
@@ -243,8 +245,24 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       gender: _gender,
     );
     Get.back();
-    _showSnack('patient_added'.tr,
-        'patient_added_msg'.trParams({'name': _nameCtrl.text.trim()}), AppColors.safeGreen);
+    if (ApiService.token == null) {
+      // Logged out → the patient is saved on the phone but can't reach the
+      // server (Atlas) until login. Tell the worker clearly (saving a patient
+      // needs login; triage doesn't, which is why this is confusing).
+      Get.snackbar(
+        'লগইন করুন',
+        '$name ফোনে সংরক্ষিত হয়েছে। সার্ভারে পাঠাতে লগইন করুন — লগইন করলে নিজে থেকেই সিঙ্ক হবে।',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.warningYellow,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        duration: const Duration(seconds: 5),
+      );
+    } else {
+      _showSnack('patient_added'.tr,
+          'patient_added_msg'.trParams({'name': name}), AppColors.safeGreen);
+    }
   }
 
   void _saveAndCheckup() {
@@ -258,6 +276,20 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       ageUnit: _ageUnit,
       gender: _gender,
     );
+    if (ApiService.token == null) {
+      // Logged out → patient saved locally only; warn (overlay survives the
+      // navigation into triage below).
+      Get.snackbar(
+        'লগইন করুন',
+        '${patient.name} ফোনে সংরক্ষিত হয়েছে। সার্ভারে পাঠাতে লগইন করুন।',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.warningYellow,
+        colorText: Colors.white,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12,
+        duration: const Duration(seconds: 5),
+      );
+    }
     // The worker already chose the case type on this form, so jump straight
     // into that module's triage — carrying the patient so triage uses their
     // age/history (adaptive band) and can answer name/age questions. 'Other'
