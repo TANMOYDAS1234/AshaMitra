@@ -720,23 +720,15 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     // drifted out of sync with the prompt's order — that drift recorded the
     // reply against the wrong question, so Gemini never saw the real one
     // answered and re-asked it forever (the triage loop).
+    // ONLY trust the id the model itself reported. We deliberately do NOT
+    // guess from a priority list when it's missing: guessing recorded the next
+    // bare "হ্যাঁ" against the first unanswered danger sign — for child that is
+    // c7 (seizure) — producing false REDs like "the child has had a
+    // convulsion" when the worker only confirmed a headache. When the model
+    // omits the id (e.g. Groq, which ignores the JSON contract), we rely on its
+    // extracted_answers + the offline situation extractor instead of
+    // attributing a terse reply to a guessed question.
     String? asked = response.askedQuestionId;
-    if (asked == null) {
-      // Fallback only when the model omitted the id: first still-unanswered
-      // question, in the SAME order the prompt prioritises (kept in sync).
-      const fallbackOrder = {
-        'pregnancy':    ['p7','p1','p3','p6','p9','p10','p8','p4','p11','p11d','p2','p12','p5'],
-        'delivery_pnc': ['pp1','pp7','pp8','pp2','pp4','pp6','pp3','pp5','pp9'],
-        'newborn':      ['n7','n1','n2','n3','n5','n4','n6','n8','n9','n10'],
-        'child':        ['c7','c8','c9','c10','c1','c5','c2','c3','c11','c4','c6','c12'],
-        'emergency':    ['e1','e2','e3','e4','e5','e6','e7','e8'],
-        'immunisation': ['im4','im2','im1','im5','im3','im6'],
-      };
-      asked = (fallbackOrder[_moduleId] ?? const <String>[])
-          .cast<String?>()
-          .firstWhere((id) => !_extractedAnswers.containsKey(id),
-              orElse: () => null);
-    }
 
     // ── Loop guard ──
     // If Gemini keeps asking the SAME question (e.g. it ignored the answered
