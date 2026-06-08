@@ -818,6 +818,15 @@
             "হ্যাঁ",
             "না"
           ]
+        },
+        {
+          "id": "c13",
+          "text_bn": "বুকের নিচের অংশ ভেতরে ঢুকে যাচ্ছে, বা বিশ্রামেও শ্বাসের শব্দ (stridor)?",
+          "text_en": "Lower chest indrawing, or stridor at rest?",
+          "options": [
+            "হ্যাঁ",
+            "না"
+          ]
         }
       ],
       "hard_stop_rules": [
@@ -959,6 +968,54 @@
             "Neck stiffness",
             "Severe headache with fever"
           ]
+        },
+        {
+          "ruleId": "CH-004",
+          "priority": 1,
+          "condition_set": [
+            {
+              "question_id": "c4",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "RED",
+          "referral": "FRU / DH immediately",
+          "action_bn": "খেতে বা দুধ খেতে একদম অস্বীকার = IMNCI সাধারণ বিপদচিহ্ন। এখনই ১০৮ ডেকে FRU-তে নিয়ে যান।",
+          "action_en": "Complete refusal to eat/feed = IMNCI general danger sign. Call 108 and take to FRU now.",
+          "suspected_conditions": [
+            "Very severe disease",
+            "Feeding refusal"
+          ],
+          "danger_signs": [
+            "Not able to drink or feed"
+          ],
+          "clinical_sign_off_pending": true,
+          "status": "draft"
+        },
+        {
+          "ruleId": "CH-013",
+          "priority": 1,
+          "condition_set": [
+            {
+              "question_id": "c13",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "RED",
+          "referral": "FRU / DH immediately",
+          "action_bn": "বুক ভেতরে ঢোকা বা বিশ্রামেও শ্বাসের শব্দ = গুরুতর নিউমোনিয়া। শিশুকে শান্ত রাখুন, এখনই ১০৮ ডেকে FRU-তে নিয়ে যান।",
+          "action_en": "Lower chest indrawing or stridor at rest = severe pneumonia / very severe disease. Keep the child calm, call 108 and take to FRU now.",
+          "suspected_conditions": [
+            "Severe pneumonia / very severe disease"
+          ],
+          "danger_signs": [
+            "Chest indrawing",
+            "Stridor at rest"
+          ],
+          "clinical_sign_off_pending": true,
+          "status": "draft"
         }
       ],
       "combination_rules": [
@@ -1109,27 +1166,6 @@
           "danger_signs": [
             "Diarrhoea",
             "Vomiting"
-          ]
-        },
-        {
-          "ruleId": "CH-004",
-          "priority": 3,
-          "condition_set": [
-            {
-              "question_id": "c4",
-              "operator": "EQUALS",
-              "value": true
-            }
-          ],
-          "band": "YELLOW",
-          "referral": "PHC within 24 h",
-          "action_bn": "অসুস্থতার কারণ মূল্যায়ন করুন। ২৪ ঘণ্টার মধ্যে PHC।",
-          "action_en": "Assess illness cause. Refer PHC within 24 h.",
-          "suspected_conditions": [
-            "Feeding refusal"
-          ],
-          "danger_signs": [
-            "Not eating"
           ]
         },
         {
@@ -1379,7 +1415,7 @@
           },
           {
             "condition": "c4",
-            "score": 1
+            "score": 3
           },
           {
             "condition": "c5",
@@ -1412,6 +1448,10 @@
           {
             "condition": "c12",
             "score": 2
+          },
+          {
+            "condition": "c13",
+            "score": 4
           }
         ],
         "thresholds": {
@@ -1547,6 +1587,15 @@
           "id": "p12",
           "text_bn": "মাথা ঘোরা বা দুর্বল লাগছে?",
           "text_en": "Is there dizziness or weakness?",
+          "options": [
+            "হ্যাঁ",
+            "না"
+          ]
+        },
+        {
+          "id": "p9r",
+          "text_bn": "জ্বরের সাথে কাঁপুনি বা শীত-শীত ভাব আছে?",
+          "text_en": "Fever WITH chills or rigors?",
           "options": [
             "হ্যাঁ",
             "না"
@@ -1710,6 +1759,30 @@
           "danger_signs": [
             "Leaking liquor"
           ]
+        },
+        {
+          "ruleId": "ANC-009R",
+          "priority": 1,
+          "condition_set": [
+            {
+              "question_id": "p9r",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "RED",
+          "referral": "FRU / DH immediately by 108",
+          "action_bn": "গর্ভাবস্থায় জ্বরের সাথে কাঁপুনি = ম্যালেরিয়া বা মারাত্মক সংক্রমণ (সেপসিস) হতে পারে। বাম কাতে শোয়ান, এখনই ১০৮ ডেকে FRU-তে নিয়ে যান।",
+          "action_en": "Fever with rigors in pregnancy = possible malaria or sepsis. Lay on left side, call 108 and take to FRU now.",
+          "suspected_conditions": [
+            "Malaria",
+            "Maternal sepsis / chorioamnionitis"
+          ],
+          "danger_signs": [
+            "Fever with rigors/chills"
+          ],
+          "clinical_sign_off_pending": true,
+          "status": "draft"
         }
       ],
       "combination_rules": [
@@ -2300,6 +2373,10 @@
           {
             "condition": "p12",
             "score": 1
+          },
+          {
+            "condition": "p9r",
+            "score": 4
           }
         ],
         "thresholds": {
@@ -2403,6 +2480,15 @@
             "হ্যাঁ",
             "না"
           ]
+        },
+        {
+          "id": "pp6s",
+          "text_bn": "মাথা ঘুরে পড়ে যাচ্ছেন, নাকি দাঁড়াতেও পারছেন না (তীব্র দুর্বলতা)?",
+          "text_en": "Fainting / collapsing, or unable to stand (severe weakness)?",
+          "options": [
+            "হ্যাঁ",
+            "না"
+          ]
         }
       ],
       "hard_stop_rules": [
@@ -2473,6 +2559,30 @@
           "danger_signs": [
             "Difficulty breathing"
           ]
+        },
+        {
+          "ruleId": "PNC-006S",
+          "priority": 1,
+          "condition_set": [
+            {
+              "question_id": "pp6s",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "RED",
+          "referral": "FRU / DH via 108 now",
+          "action_bn": "প্রসবের পর তীব্র মাথা ঘোরা/অজ্ঞান-ভাব = লুকানো রক্তক্ষরণ বা শক হতে পারে। পা উঁচু করে শোয়ান, এখনই ১০৮ ডেকে FRU-তে নিয়ে যান।",
+          "action_en": "Severe postpartum dizziness/collapse = possible concealed bleeding or shock. Lay flat with legs raised, call 108 and take to FRU now.",
+          "suspected_conditions": [
+            "Concealed PPH",
+            "Hypovolaemic shock"
+          ],
+          "danger_signs": [
+            "Severe postpartum dizziness / collapse"
+          ],
+          "clinical_sign_off_pending": true,
+          "status": "draft"
         }
       ],
       "combination_rules": [
@@ -2890,6 +3000,10 @@
           {
             "condition": "pp9",
             "score": 1
+          },
+          {
+            "condition": "pp6s",
+            "score": 4
           }
         ],
         "thresholds": {
