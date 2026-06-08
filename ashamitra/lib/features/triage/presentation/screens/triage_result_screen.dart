@@ -79,23 +79,26 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
       history: PatientTriageContext.historyFor(patientId),
     );
 
-    // If pipeline blocked (validation failed), use conversational risk level as fallback
+    // ── Gemini DECIDES the band (online-only triage) ──
+    // _riskLevel carried from the conversation is now Gemini's risk assessment.
     final conversationalRisk = _answers['_riskLevel'] ?? 'low';
-    final fallbackBand = switch (conversationalRisk) {
+    final geminiBand = switch (conversationalRisk) {
       'emergency' => 'RED',
       'high'      => 'RED',
       'medium'    => 'YELLOW',
       _           => 'GREEN',
     };
-    // FAIL SAFE: a blocked pipeline (contradiction/validation) must never
-    // contribute GREEN to the "worse-of" below — that silently classed a
-    // blocked danger-sign case as all-clear. Treat as YELLOW (recheck).
-    final engineBand = _engineResult.pipelineBlocked ? 'YELLOW' : _engineResult.band;
-    // Take the worse of engine band vs conversational risk — never downgrade
+    // SAFETY FLOOR: a confirmed life-threat (a red-locked hard-stop danger
+    // sign) forces RED; a blocked pipeline floors to YELLOW (never silently
+    // GREEN). Gemini may escalate ABOVE the floor but never below it.
+    final floorBand = _engineResult.pipelineBlocked
+        ? 'YELLOW'
+        : (_engineResult.redLock ? 'RED' : 'GREEN');
     const bandOrder = ['GREEN', 'YELLOW', 'RED'];
-    final effectiveBand = bandOrder.indexOf(engineBand) >= bandOrder.indexOf(fallbackBand)
-        ? engineBand
-        : fallbackBand;
+    final effectiveBand =
+        bandOrder.indexOf(geminiBand) >= bandOrder.indexOf(floorBand)
+            ? geminiBand
+            : floorBand;
     _outcome = switch (effectiveBand) {
       'RED'    => TriageOutcome.emergency,
       'YELLOW' => TriageOutcome.attention,
