@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/api_constants.dart';
 import '../utils/logger.dart';
-import 'ai_response_cache.dart';
 import 'answer_codes.dart';
 import 'api_service.dart';
 import 'vitals_extractor.dart';
@@ -435,25 +434,17 @@ risk_level অবশ্যই এর মধ্যে একটি: "low", "mediu
 extracted_answers শুধু সেই প্রশ্নগুলো যা কথোপকথন থেকে নিশ্চিতভাবে বোঝা গেছে
 ''';
 
-    // ── Check on-device cache first ───────────────────────────────────────────
-    // Same prompt has been answered before → reuse the cached response. This
-    // makes the conversational flow work offline (once any given prompt has
-    // been seen at least once with internet) and reduces Gemini/Groq cost.
-    // The server has a matching cache too, so even on a fresh device,
-    // commonly-asked prompts return instantly from server cache.
-    final cache = AiResponseCache();
-    final cached = await cache.get(prompt);
+    // ── Always fetch a FRESH decision — no cache, no replay ───────────────────
+    // Triage is online-only and Gemini DECIDES the band, so we must NEVER serve
+    // a cached reply: a repeated prompt has to hit Gemini again. (A stale
+    // Groq-era cache entry would otherwise replay an old, wrong attribution —
+    // exactly the "it still uses a fallback" behaviour.) We also tell the
+    // backend to skip ITS AiCache (skipCache:true) for the same reason.
     Map<String, dynamic>? bodyJson;
     List<int>? prefetchedAudio;
-    if (cached != null) {
-      bodyJson = cached;
-    } else {
-      // ── Combined chat + voice (2b) ──────────────────────────────────────────
-      // One round-trip instead of two. The server pulls "spoken_response"
-      // out of the LLM's JSON output itself and synthesizes TTS, so we get
-      // text + MP3 in a single response. On failure we fall through to the
-      // legacy /api/chat path so the worker is never left silent.
-      // Retry up to 2 times for cold-start / rural network.
+    {
+      // Combined chat + voice — one round-trip (text + MP3). Retry for
+      // cold-start / rural network; on failure fall through to legacy /chat.
       Map<String, dynamic>? combined;
       const timeouts = [Duration(seconds: 25), Duration(seconds: 35)];
       for (int attempt = 0; attempt < timeouts.length; attempt++) {
@@ -461,6 +452,7 @@ extracted_answers শুধু সেই প্রশ্নগুলো যা �
           prompt: prompt,
           voiceField: 'spoken_response',
           tone: 'normal',
+          skipCache: true,
           timeout: timeouts[attempt],
         );
         if (combined != null) break;
@@ -478,14 +470,14 @@ extracted_answers শুধু সেই প্রশ্নগুলো যা �
           } catch (_) { /* fall back to /tts in caller */ }
         }
       } else {
-        // ── Fallback: legacy /api/chat (no prefetched audio) ──────────────────
+        // Legacy /api/chat (no prefetched audio), also skipping the server cache.
         http.Response? response;
         for (int attempt = 0; attempt < timeouts.length; attempt++) {
           try {
             response = await http.post(
               Uri.parse('${ApiConstants.baseUrl}/chat'),
               headers: {'Content-Type': 'application/json'},
-              body: jsonEncode({'prompt': prompt}),
+              body: jsonEncode({'prompt': prompt, 'skipCache': true}),
             ).timeout(timeouts[attempt]);
             if (response.statusCode == 200) break;
             if (response.statusCode != 503) break;
@@ -500,16 +492,6 @@ extracted_answers শুধু সেই প্রশ্নগুলো যা �
           throw Exception('Backend chat error ${response?.statusCode}');
         }
         bodyJson = jsonDecode(response.body) as Map<String, dynamic>;
-      }
-
-      // Cache the text payload for offline reuse — but NOT the audio bytes
-      // (those are cached separately by VapiTtsService keyed on text+voice).
-      if ((bodyJson['text'] as String? ?? '').isNotEmpty) {
-        final cachePayload = Map<String, dynamic>.from(bodyJson)
-          ..remove('audio')
-          ..remove('audioMime')
-          ..remove('audioTone');
-        unawaited(cache.put(prompt, cachePayload));
       }
     }
     final raw = (bodyJson['text'] as String? ?? '')
