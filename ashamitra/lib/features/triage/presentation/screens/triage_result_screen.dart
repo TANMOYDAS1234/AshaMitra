@@ -87,7 +87,10 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
       'medium'    => 'YELLOW',
       _           => 'GREEN',
     };
-    final engineBand = _engineResult.pipelineBlocked ? 'GREEN' : _engineResult.band;
+    // FAIL SAFE: a blocked pipeline (contradiction/validation) must never
+    // contribute GREEN to the "worse-of" below — that silently classed a
+    // blocked danger-sign case as all-clear. Treat as YELLOW (recheck).
+    final engineBand = _engineResult.pipelineBlocked ? 'YELLOW' : _engineResult.band;
     // Take the worse of engine band vs conversational risk — never downgrade
     const bandOrder = ['GREEN', 'YELLOW', 'RED'];
     final effectiveBand = bandOrder.indexOf(engineBand) >= bandOrder.indexOf(fallbackBand)

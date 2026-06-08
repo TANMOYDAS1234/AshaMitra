@@ -78,14 +78,20 @@ class ContradictionChecker {
             'inconsistent in a newborn — lethargic neonates cannot feed normally.',
         blocking: false, // warn only — ASHA may have observed partial feeding
       ),
-      // Cyanosis (n6=true) with normal breathing (n3=false) is impossible
+      // Cyanosis (n6=true) reported with no breathing difficulty (n3=false).
+      // WARN ONLY — must NOT block. Central cyanosis from cyanotic congenital
+      // heart disease (transposition/TOF/TAPVR) classically presents as a "blue
+      // baby" with no obvious distress, and an ASHA may not register quiet
+      // tachypnoea as "difficult breathing". A blocking check here would
+      // suppress NB-006 (cyanosis → RED) and the baby would get NO band — the
+      // single most time-critical newborn sign must always reach RED.
       _ContraRule(
         code: 'CONTRA_NB_002',
         qA: 'n6', valA: true,
         qB: 'n3', valB: false,
-        reason: 'Cyanosis (n6=true) with no breathing difficulty (n3=false) is '
-            'physiologically impossible — cyanosis always implies respiratory compromise.',
-        blocking: true,
+        reason: 'Cyanosis (n6=true) reported without breathing difficulty '
+            '(n3=false) — unusual but valid (cyanotic CHD). Confirm; do not block.',
+        blocking: false,
       ),
     ],
 

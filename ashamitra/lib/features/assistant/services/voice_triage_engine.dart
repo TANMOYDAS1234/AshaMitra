@@ -255,9 +255,10 @@ class VoiceTriageEngine {
     );
 
     // pipelineBlocked means the engine couldn't decide (validation /
-    // contradiction errors). Treat as GREEN with a "could not complete"
-    // message — worker should redo via visual screen.
-    final band = result.pipelineBlocked ? 'GREEN' : result.band;
+    // contradiction errors). FAIL SAFE to YELLOW (recheck/attention) — never
+    // GREEN: a blocked pipeline on a danger-sign answer must not be silently
+    // classed all-clear. Worker should redo via the visual screen.
+    final band = result.pipelineBlocked ? 'YELLOW' : result.band;
 
     // Pull the first hard-stop's action when one fired; otherwise use
     // the engine's primary action sentence.

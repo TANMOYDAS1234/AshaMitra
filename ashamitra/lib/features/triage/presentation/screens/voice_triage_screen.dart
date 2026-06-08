@@ -1058,7 +1058,9 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       demographics: PatientTriageContext.demographicsFor(_patientId),
       history: PatientTriageContext.historyFor(_patientId),
     );
-    final band = result.pipelineBlocked ? 'GREEN' : result.band;
+    // FAIL SAFE: blocked pipeline → YELLOW (recheck), never GREEN — see
+    // triage_result_screen / contradiction_checker. Uncertainty is not safety.
+    final band = result.pipelineBlocked ? 'YELLOW' : result.band;
     return switch (band) {
       'RED'    => 'emergency',
       'YELLOW' => 'medium',
