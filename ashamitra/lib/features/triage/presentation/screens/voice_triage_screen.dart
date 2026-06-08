@@ -528,13 +528,16 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
         setState(() => _statusText = 'waking_server'.tr);
       }
     });
-    final online = await _hasInternet();
-    _isOffline = !online;
-    if (_isOffline) {
-      await _processOffline(input);
-    } else {
-      await _processOnline(input);
-    }
+    // Try Gemini FIRST (exactly like the assistant). We deliberately do NOT
+    // pre-gate on the Connectivity plugin: checkConnectivity() gives frequent
+    // false "no network" readings (network transitions, some Android states),
+    // and the old pre-check dropped triage to the OFFLINE rules without ever
+    // trying Gemini — then cached that "offline" verdict for 30s. The assistant
+    // has no such pre-check, which is why it "works perfectly". The offline
+    // fallback is preserved, but only fires inside _processOnline's catch when
+    // the Gemini call GENUINELY fails (it re-checks real connectivity there).
+    _isOffline = false;
+    await _processOnline(input);
   }
 
   // Answers a worker's question about the LINKED patient (name/age/village/…)
