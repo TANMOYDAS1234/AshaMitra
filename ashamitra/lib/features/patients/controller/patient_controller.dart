@@ -437,7 +437,21 @@ class PatientController extends GetxController {
 
     final data = p.toJson()..remove('id')..remove('syncState');
     final response = await ApiService.savePatient(data);
-    if (response == null) return; // queued for retry
+    if (response == null) {
+      // Don't fail silently — the patient is on the phone but NOT on the
+      // server (Atlas). Tell the worker why so a logged-out / offline save
+      // isn't invisible. It stays pendingCreate and the next sync retries.
+      final loggedOut = ApiService.token == null;
+      Get.snackbar(
+        loggedOut ? 'লগইন প্রয়োজন' : 'এখনো সিঙ্ক হয়নি',
+        loggedOut
+            ? 'রোগী ফোনে সংরক্ষিত হয়েছে, কিন্তু সার্ভারে পাঠাতে আবার লগইন করুন।'
+            : 'রোগী ফোনে সংরক্ষিত হয়েছে — ইন্টারনেট এলে নিজে থেকে সার্ভারে সিঙ্ক হবে।',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 4),
+      );
+      return; // queued for retry
+    }
     final serverId = response['id']?.toString();
     if (serverId == null || serverId.isEmpty) return;
 
