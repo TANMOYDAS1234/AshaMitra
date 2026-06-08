@@ -78,12 +78,22 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           ['Pregnancy', 'Newborn', 'Child', 'Other'].contains(preselected)) {
         _caseType = preselected;
       }
-      // Assistant pre-fill: name spoken via an "add <name>" voice command.
+      // Assistant pre-fill: name + age spoken via an "add <name> বয়স <n> বছর"
+      // voice command.
       final prefName = args['name']?.toString();
       if (prefName != null && prefName.trim().isNotEmpty) {
         _nameCtrl.text = prefName.trim();
       }
-      _ageUnit = _defaultAgeUnit(_caseType);
+      final prefAge = args['age']?.toString();
+      if (prefAge != null && prefAge.trim().isNotEmpty) {
+        _ageCtrl.text = prefAge.trim();
+      }
+      final prefUnit = args['ageUnit']?.toString();
+      if (prefUnit != null && const ['years', 'months', 'days'].contains(prefUnit)) {
+        _ageUnit = prefUnit;
+      } else {
+        _ageUnit = _defaultAgeUnit(_caseType);
+      }
     } else {
       _ageUnit = _defaultAgeUnit(_caseType);
     }

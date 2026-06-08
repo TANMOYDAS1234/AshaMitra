@@ -94,11 +94,15 @@ class IntentDispatcher {
         );
 
       case AssistantIntent.addPatient:
-        // Pull a name out of the spoken command ("সায়নি দাস কে অ্যাড করো" →
-        // "সায়নি দাস") and pre-fill the form so the worker doesn't retype it.
-        final addName = _extractPatientName(rawInput);
+        // Pull name + age out of the spoken command and pre-fill the form so the
+        // worker doesn't retype. Handles "...রোগীর নাম রিয়া বিশ্বাস বয়স ত্রিশ
+        // বছর", "যার নাম ...", "<name> কে অ্যাড করো", etc.
+        final parsed = parseAddPatient(rawInput);
+        final addName = parsed.name;
         Get.toNamed(AppRoutes.addPatient, arguments: {
           if (addName != null && addName.isNotEmpty) 'name': addName,
+          if (parsed.age != null) 'age': parsed.age,
+          if (parsed.ageUnit != null) 'ageUnit': parsed.ageUnit,
         });
         return DispatchResult(
           handled: true,
@@ -253,32 +257,122 @@ class IntentDispatcher {
     );
   }
 
-  /// Best-effort patient-name extraction from an "add patient" command.
-  /// Strips command / filler words; the readable remainder is treated as the
-  /// name ("সায়নি দাস কে অ্যাড করো" → "সায়নি দাস"). Returns null when nothing
-  /// name-like is left (e.g. "এই পেশেন্ট অ্যাড করো" — the name was in earlier
-  /// context, so we open the form blank rather than guess wrong).
-  static String? _extractPatientName(String input) {
-    if (input.trim().isEmpty) return null;
-    final s = input.replaceAll(RegExp(r'[।,.!?;:"()\[\]{}]+'), ' ');
-    const stop = {
-      'তুমি', 'আপনি', 'এই', 'এটা', 'এটাকে', 'ওই', 'একটা', 'একজন', 'নতুন',
-      'রোগী', 'রোগীকে', 'রুগী', 'পেশেন্ট', 'পেশেন্টকে', 'প্যাশেন্ট', 'কে',
-      'অ্যাড', 'এড', 'যোগ', 'করে', 'করো', 'কর', 'করুন', 'দাও', 'দিন', 'দে',
-      'রেজিস্টার', 'নাম', 'করছি', 'দিচ্ছি',
-      'मरीज़', 'मरीज', 'नया', 'जोड़', 'जोड़ो', 'करो', 'दो', 'को', 'यह', 'इस',
-      'नाम', 'रजिस्टर',
-      'add', 'new', 'patient', 'register', 'create', 'enroll', 'this', 'the',
-      'a', 'an', 'please', 'naam', 'natun', 'joro', 'rogi', 'mariz',
-    };
-    final tokens = s
-        .split(RegExp(r'\s+'))
+  /// Bengali / ASCII numeral words → value, for age parsing ("ত্রিশ বছর" → 30).
+  /// Covers the range ASHAs actually speak (0-40 + decades to 100); anything
+  /// unrecognised just skips age pre-fill — the name still works.
+  static const _bnNumWords = <String, int>{
+    'শূন্য': 0, 'এক': 1, 'দুই': 2, 'তিন': 3, 'চার': 4, 'পাঁচ': 5, 'পাচ': 5,
+    'ছয়': 6, 'সাত': 7, 'আট': 8, 'নয়': 9, 'নয': 9, 'দশ': 10, 'এগারো': 11,
+    'এগার': 11, 'বারো': 12, 'বার': 12, 'তেরো': 13, 'তের': 13, 'চৌদ্দ': 14,
+    'চোদ্দ': 14, 'পনেরো': 15, 'পনের': 15, 'ষোলো': 16, 'ষোল': 16, 'সতেরো': 17,
+    'সতের': 17, 'আঠারো': 18, 'আঠার': 18, 'ঊনিশ': 19, 'উনিশ': 19, 'কুড়ি': 20,
+    'বিশ': 20, 'একুশ': 21, 'বাইশ': 22, 'তেইশ': 23, 'চব্বিশ': 24, 'পঁচিশ': 25,
+    'পচিশ': 25, 'ছাব্বিশ': 26, 'সাতাশ': 27, 'আটাশ': 28, 'ঊনত্রিশ': 29,
+    'উনত্রিশ': 29, 'ত্রিশ': 30, 'একত্রিশ': 31, 'বত্রিশ': 32, 'তেত্রিশ': 33,
+    'চৌত্রিশ': 34, 'পঁয়ত্রিশ': 35, 'ছত্রিশ': 36, 'সাঁইত্রিশ': 37, 'আটত্রিশ': 38,
+    'ঊনচল্লিশ': 39, 'চল্লিশ': 40, 'পঞ্চাশ': 50, 'ষাট': 60, 'সত্তর': 70,
+    'আশি': 80, 'নব্বই': 90, 'একশো': 100, 'একশ': 100,
+  };
+
+  /// Command / filler words dropped when isolating a patient name.
+  static const _addStop = <String>{
+    'তুমি', 'আপনি', 'এই', 'এটা', 'এটাকে', 'ওই', 'একটা', 'একটি', 'একজন', 'নতুন',
+    'রোগী', 'রোগীর', 'রোগীকে', 'রুগী', 'রুগীর', 'পেশেন্ট', 'পেশেন্টের',
+    'পেশেন্টকে', 'প্যাশেন্ট', 'কে', 'যার', 'যাকে', 'যিনি', 'অ্যাড', 'এড', 'যোগ',
+    'করে', 'করো', 'কর', 'করুন', 'করতে', 'পারো', 'পারেন', 'পারিস', 'পারবে',
+    'পারবেন', 'দাও', 'দিন', 'দে', 'রেজিস্টার', 'রেজিস্ট্রেশন', 'ভর্তি', 'এন্ট্রি',
+    'নাম', 'নামটা', 'নামটি', 'করছি', 'দিচ্ছি', 'বয়স', 'বছর', 'বছরের', 'মাস',
+    'মাসের', 'দিনের',
+    'मरीज़', 'मरीज', 'नया', 'जोड़', 'जोड़ो', 'करो', 'दो', 'को', 'यह', 'इस', 'नाम',
+    'रजिस्टर', 'उम्र', 'साल',
+    'add', 'new', 'patient', 'register', 'create', 'enroll', 'this', 'the', 'a',
+    'an', 'please', 'name', 'naam', 'natun', 'joro', 'rogi', 'mariz', 'age',
+    'years', 'year', 'months', 'month', 'days', 'day', 'old', 'whose', 'named',
+  };
+
+  static int? _toNumber(String w) {
+    const bn = {'০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9'};
+    final ascii = w.split('').map((c) => bn[c] ?? c).join();
+    if (RegExp(r'^[0-9]{1,3}$').hasMatch(ascii)) {
+      final v = int.tryParse(ascii);
+      if (v != null && v >= 0 && v <= 120) return v;
+    }
+    return _bnNumWords[w];
+  }
+
+  static bool _isAgeUnit(String t) => RegExp(
+        r'^(বছর|বছরের|মাস|মাসের|দিন|দিনের|years?|months?|days?|saal|वर्ष|साल|महीने|महीना|दिन)$',
+      ).hasMatch(t.toLowerCase());
+
+  static String _ageUnitOf(String t) {
+    final l = t.toLowerCase();
+    if (RegExp(r'মাস|month|महीन').hasMatch(l)) return 'months';
+    if (RegExp(r'দিন|day|दिन').hasMatch(l)) return 'days';
+    return 'years';
+  }
+
+  static bool _isNameMarker(String t) {
+    final l = t.toLowerCase();
+    return l == 'নাম' || l == 'নামটা' || l == 'নামটি' || l == 'name' ||
+        l == 'naam' || l == 'नाम';
+  }
+
+  /// Parses an "add patient" voice command into (name, age, ageUnit). Handles
+  /// the natural phrasings ASHAs actually use, e.g.:
+  ///   "তুমি নতুন রোগী অ্যাড করো রোগীর নাম রিয়া বিশ্বাস রোগীর বয়স ত্রিশ বছর"
+  ///        → name "রিয়া বিশ্বাস", age 30, years
+  ///   "যার নাম রিয়া বিশ্বাস" → "রিয়া বিশ্বাস"
+  ///   "সায়নি দাস কে অ্যাড করো" → "সায়নি দাস"
+  ///   "তুমি নতুন রোগী এড করতে পারো" → null (just a command, no name)
+  /// Strategy: pull out the age phrase (number + বছর/মাস/দিন) first; then if a
+  /// "নাম"/"name" marker is present the name is what FOLLOWS it, else drop the
+  /// command/filler words and take what is left (≤ 4 tokens, ≥ 2 chars).
+  @visibleForTesting
+  static ({String? name, String? age, String? ageUnit}) parseAddPatient(
+      String input) {
+    if (input.trim().isEmpty) return (name: null, age: null, ageUnit: null);
+    final cleaned = input.replaceAll(RegExp(r'[।,.!?;:"()\[\]{}]+'), ' ');
+    var tokens =
+        cleaned.split(RegExp(r'\s+')).where((t) => t.trim().isNotEmpty).toList();
+
+    // ── Age: a number token immediately before a বছর/মাস/দিন unit ──
+    String? age, ageUnit;
+    final drop = <int>{};
+    for (int i = 1; i < tokens.length; i++) {
+      if (_isAgeUnit(tokens[i])) {
+        final n = _toNumber(tokens[i - 1]);
+        if (n != null) {
+          age = n.toString();
+          ageUnit = _ageUnitOf(tokens[i]);
+          drop.addAll([i - 1, i]);
+          if (i - 2 >= 0) {
+            final p = tokens[i - 2].toLowerCase();
+            if (p == 'বয়স' || p == 'age' || p == 'उम्र') drop.add(i - 2);
+          }
+          break;
+        }
+      }
+    }
+    if (drop.isNotEmpty) {
+      tokens = [for (int i = 0; i < tokens.length; i++) if (!drop.contains(i)) tokens[i]];
+    }
+
+    // ── Name: after the LAST নাম/name marker if present, else the remainder ──
+    int markerIdx = -1;
+    for (int i = 0; i < tokens.length; i++) {
+      if (_isNameMarker(tokens[i])) markerIdx = i;
+    }
+    final region = markerIdx >= 0 ? tokens.sublist(markerIdx + 1) : tokens;
+    final nameTokens = region
         .map((t) => t.replaceAll(RegExp(r'(কে|को)$'), '').trim())
-        .where((t) => t.isNotEmpty && !stop.contains(t.toLowerCase()))
+        .where((t) => t.isNotEmpty && !_addStop.contains(t.toLowerCase()))
         .toList();
-    if (tokens.isEmpty || tokens.length > 4) return null;
-    final name = tokens.join(' ').trim();
-    return name.length < 2 ? null : name;
+    String? name;
+    if (nameTokens.isNotEmpty && nameTokens.length <= 4) {
+      final n = nameTokens.join(' ').trim();
+      if (n.length >= 2) name = n;
+    }
+    return (name: name, age: age, ageUnit: ageUnit);
   }
 
   /// Parse a "show reports" utterance into Reports filters.
