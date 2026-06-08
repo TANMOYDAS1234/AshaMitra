@@ -530,25 +530,11 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     });
     final online = await _hasInternet();
     _isOffline = !online;
-    if (!online) {
-      // Triage is ONLINE-ONLY by design (Gemini decides the band). We never
-      // silently run the imperfect offline rules engine — instead tell the
-      // worker to reconnect and drop this unprocessed turn.
-      _coldStartHintTimer?.cancel();
-      _turnCount--;
-      if (_history.isNotEmpty) _history.removeLast(); // drop the asha turn
-      if (!mounted) return;
-      setState(() {
-        _isProcessing = false;
-        _orbState = OrbState.idle;
-        _statusText = 'ইন্টারনেট নেই — ট্রায়াজের জন্য সংযোগ দরকার';
-        _transcript = '';
-      });
-      await _speakNatural(
-          'এই মুহূর্তে ইন্টারনেট নেই। ট্রায়াজ করতে ইন্টারনেট সংযোগ দরকার — সংযোগ ফিরলে আবার বলুন।');
-      return;
+    if (_isOffline) {
+      await _processOffline(input);
+    } else {
+      await _processOnline(input);
     }
-    await _processOnline(input);
   }
 
   // Answers a worker's question about the LINKED patient (name/age/village/…)
@@ -672,28 +658,46 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     try {
       response = await _callGemini(input);
     } catch (e) {
-      // Online-only design: retry Gemini ONCE, then surface a clear error and
-      // let the worker retry. We NEVER silently fall back to the offline rules
-      // engine (the band must come from Gemini + the live engine).
+      // Gemini/backend call failed. Mode is decided ONLY by real connectivity,
+      // re-probed here (skipping the 30s cache):
+      //   • genuinely offline      → offline rules engine.
+      //   • still online (a hiccup: cold-start / 503 / weak signal) → retry
+      //     Gemini ONCE; if it still fails, finish THIS turn on the offline
+      //     rules so triage never stalls (the band is the same deterministic
+      //     engine) and STAY online — the next turn tries Gemini again. We
+      //     never silently drop to offline while the device has internet.
       if (!mounted) return;
       _coldStartHintTimer?.cancel();
       _cachedOnline = null;
-      try {
-        response = await _callGemini(input); // retry once
-      } catch (_) {
-        if (!mounted) return;
-        _turnCount--; // do not burn a wasted turn
+      final stillOnline = await _hasInternet();
+      if (!mounted) return;
+      if (stillOnline) {
+        try {
+          response = await _callGemini(input); // retry once, still online
+        } catch (_) {
+          if (!mounted) return;
+          _turnCount--; // do not burn a wasted turn
+          setState(() {
+            _isProcessing = false;
+            _orbState = OrbState.idle;
+            _streamingPartial = '';
+            _isOffline = false; // still online — only used rules for this turn
+          });
+          await _processOffline(input);
+          return;
+        }
+        // retry succeeded → fall through to Phase 2 with `response`.
+      } else {
+        _turnCount--;
         setState(() {
           _isProcessing = false;
           _orbState = OrbState.idle;
           _streamingPartial = '';
-          _statusText = 'সার্ভারে পৌঁছানো যাচ্ছে না — একটু পরে আবার বলুন';
-          _transcript = '';
+          _isOffline = true; // genuinely offline
         });
-        await _speakNatural('সার্ভারে পৌঁছাতে পারছি না। একটু পরে আবার চেষ্টা করুন।');
+        await _processOffline(input);
         return;
       }
-      // retry succeeded → fall through to Phase 2 with `response`.
     }
 
     // ── Phase 2: process the successful response ────────────────────────
@@ -747,20 +751,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     _lastOnlineQuestionId = asked;
 
     _extractedVitals.addAll(response.extractedVitals);
-    // ── Gemini DECIDES the band (online-only design) ──
-    // The deterministic engine still runs, but only as a SAFETY FLOOR: a
-    // confirmed life-threat (a red-locked hard-stop danger sign) forces
-    // emergency so a Gemini slip can't downgrade a true emergency. Everything
-    // else (the nuanced YELLOW/GREEN calls) is Gemini's decision.
-    final rules = Get.find<RuleExecutor>().execute(
-      moduleId: _moduleId,
-      answers: Map<String, dynamic>.from(_extractedAnswers),
-      vitals: Map<String, dynamic>.from(_extractedVitals),
-      demographics: PatientTriageContext.demographicsFor(_patientId),
-      history: PatientTriageContext.historyFor(_patientId),
-    );
-    final geminiRisk = _mapGeminiRisk(response.riskLevel);
-    _riskLevel = rules.redLock ? 'emergency' : geminiRisk;
+    _riskLevel = _computeLocalRiskLevel();
     _history.add(ConversationTurn(
         role: 'assistant', text: response.spokenResponse));
 
@@ -825,10 +816,6 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   }
 
   // ── Offline: CLUP + OfflineBrain dialogue ─────────────────────
-  // RETIRED: triage is now online-only (Gemini decides the band). Kept (not
-  // wired) so the offline engine can be re-enabled later via a toggle without
-  // rewriting it. Not called from anywhere in the online-only flow.
-  // ignore: unused_element
   Future<void> _processOffline(String input) async {
     if (!mounted) return;
 
@@ -1053,16 +1040,6 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
   // Runs the SAME 11-layer RuleExecutor that TriageResultScreen uses, so the
   // live badge always matches the final result. A hardcoded YES-count
   // heuristic could not — it missed combination rules that escalate two
-  // Maps Gemini's risk_level (low/medium/high/emergency) to the app's risk
-  // domain. Gemini DECIDES the band in the online-only flow; "high" is treated
-  // as emergency (RED) — the conservative reading.
-  String _mapGeminiRisk(String r) => switch (r.toLowerCase()) {
-        'emergency' => 'emergency',
-        'high'      => 'emergency',
-        'medium'    => 'medium',
-        _           => 'low',
-      };
-
   // YELLOW signs to a RED band.
   String _computeLocalRiskLevel() {
     if (_extractedAnswers.isEmpty) return 'low';
