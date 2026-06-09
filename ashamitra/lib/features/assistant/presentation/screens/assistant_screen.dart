@@ -45,6 +45,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/services/groq_stt_service.dart';
+import '../../../../core/services/case_detection_service.dart';
 import '../../../../shared/widgets/voice_orb.dart';
 import '../../services/assistant_chat_service.dart';
 import '../../services/intent_classifier.dart';
@@ -61,6 +62,9 @@ class AssistantScreen extends StatefulWidget {
 class _AssistantScreenState extends State<AssistantScreen> {
   // ── Services ───────────────────────────────────────────────────────────
   final _chat = AssistantChatService();
+  // Same dynamic case detector the SelectCase screen uses (on-device keywords
+  // + Gemini fallback). Lets "Yes, save" jump straight into the right case.
+  final _caseDetection = CaseDetectionService();
   // Device STT — the PRIMARY capture path. On-device Bengali/Hindi
   // recognition is noticeably more accurate for our workers than Groq
   // Whisper was, so we drive this directly. The historical "stuck on
@@ -1232,17 +1236,52 @@ class _AssistantScreenState extends State<AssistantScreen> {
   }
 
   // ── Save as report ─────────────────────────────────────────────────────
-  void _confirmSave() {
+  /// "হ্যাঁ, সংরক্ষণ করুন" from the assistant. Rather than dumping the worker
+  /// on the manual case picker, we DYNAMICALLY detect the case from the whole
+  /// conversation and jump STRAIGHT into (urgent) triage for that exact case.
+  /// No patient is attached yet — the urgent flow is "triage first, attach the
+  /// patient at the result screen". The manual picker is only the fallback when
+  /// detection can't recognise the situation.
+  Future<void> _confirmSave() async {
     setState(() => _showSaveChip = false);
-    // Hand off to existing patient context sheet flow — assistant content
-    // becomes the situation seed.
-    final lastUserMessage = _history.lastWhere(
-      (t) => t.role == 'user',
-      orElse: () => const AssistantTurn(role: 'user', text: ''),
+    // The clinical situation = everything the worker said this session.
+    final situation = _history
+        .where((t) => t.role == 'user')
+        .map((t) => t.text.trim())
+        .where((t) => t.isNotEmpty)
+        .join('. ');
+    if (situation.isEmpty) {
+      Get.toNamed(AppRoutes.selectCase);
+      return;
+    }
+    Get.dialog(
+      const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      barrierDismissible: false,
     );
-    Get.toNamed(AppRoutes.selectCase, arguments: {
-      'situation': lastUserMessage.text,
-    });
+    ({String caseId, double confidence, String method}) result;
+    try {
+      result = await _caseDetection.detect(situation);
+    } catch (_) {
+      result = (caseId: '', confidence: 0.0, method: 'none');
+    }
+    if (Get.isDialogOpen ?? false) Get.back();
+    if (!mounted) return;
+
+    if (result.confidence > 0.0 && result.caseId.isNotEmpty) {
+      // Detected → straight into urgent triage for that exact case.
+      final cases = await _caseDetection.loadCases();
+      final c = cases.firstWhere((x) => x.id == result.caseId,
+          orElse: () => cases.first);
+      Get.toNamed(AppRoutes.voiceTriage, arguments: {
+        'caseId': c.id,
+        'caseTitle': c.title,
+        'situation': situation,
+        // no patientId → urgent/anonymous; patient attached after triage
+      });
+    } else {
+      // Couldn't recognise the case → let the worker pick it manually.
+      Get.toNamed(AppRoutes.selectCase, arguments: {'situation': situation});
+    }
   }
 
   void _dismissSave() => setState(() => _showSaveChip = false);
