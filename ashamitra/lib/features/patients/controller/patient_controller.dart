@@ -1,4 +1,5 @@
 ﻿import 'package:get/get.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../data/models/patient_model.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/api_service.dart';
@@ -441,11 +442,18 @@ class PatientController extends GetxController {
       // Don't fail silently — the patient is on the phone but NOT on the
       // server (Atlas). Tell the worker why so a logged-out / offline save
       // isn't invisible. It stays pendingCreate and the next sync retries.
-      final loggedOut = ApiService.token == null;
+      // Work out the REAL reason so the message is accurate. Token missing →
+      // definitely logged out. Token present but the POST still failed *while
+      // online* → the session is invalid/expired (re-login needed), NOT an
+      // internet problem — so never show the misleading "will sync when
+      // internet comes" message when the phone clearly has internet.
+      final connectivity = await Connectivity().checkConnectivity();
+      final online = connectivity.any((c) => c != ConnectivityResult.none);
+      final needsLogin = ApiService.token == null || online;
       Get.snackbar(
-        loggedOut ? 'লগইন প্রয়োজন' : 'এখনো সিঙ্ক হয়নি',
-        loggedOut
-            ? 'রোগী ফোনে সংরক্ষিত হয়েছে, কিন্তু সার্ভারে পাঠাতে আবার লগইন করুন।'
+        needsLogin ? 'লগইন প্রয়োজন' : 'এখনো সিঙ্ক হয়নি',
+        needsLogin
+            ? 'রোগী ফোনে সংরক্ষিত হয়েছে — সার্ভারে পাঠাতে আবার লগইন করুন।'
             : 'রোগী ফোনে সংরক্ষিত হয়েছে — ইন্টারনেট এলে নিজে থেকে সার্ভারে সিঙ্ক হবে।',
         snackPosition: SnackPosition.BOTTOM,
         duration: const Duration(seconds: 4),
