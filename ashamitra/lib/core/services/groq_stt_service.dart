@@ -68,6 +68,11 @@ class GroqSttService {
   /// cleanup. Set by [_startRecording] just before the recorder begins.
   String? _activeFilePath;
 
+  /// The language Whisper auto-detected on the last transcription (e.g.
+  /// "bengali" / "hindi" / "english"), when called with languageCode='auto'.
+  /// Lets the assistant switch to whatever language the worker actually spoke.
+  String? lastDetectedLang;
+
   /// dBFS threshold above which we consider the worker to be speaking.
   /// Below this is "silence" — used both to suppress false-start uploads
   /// (if the worker tapped the orb and immediately tapped pause) and to
@@ -269,8 +274,11 @@ class GroqSttService {
         .timeout(const Duration(seconds: 25));
     if (resp.statusCode != 200) return null;
     final body = resp.body;
-    // Backend wraps the text in { success, text } — we extract it.
-    // Minimal hand-parse to avoid an extra json dependency here.
+    // Backend returns { success, text, language }. Minimal hand-parse to avoid
+    // a json dependency. Capture the detected language too so the assistant can
+    // auto-switch to whatever the worker spoke (languageCode='auto').
+    final langMatch = RegExp(r'"language"\s*:\s*"([^"]*)"').firstMatch(body);
+    lastDetectedLang = langMatch?.group(1)?.trim();
     final match = RegExp(r'"text"\s*:\s*"([^"]*)"').firstMatch(body);
     final extracted = match?.group(1)?.trim();
     if (extracted == null || extracted.isEmpty) return null;

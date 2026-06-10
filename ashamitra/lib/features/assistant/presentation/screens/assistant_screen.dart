@@ -269,11 +269,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
     await _tts.init();
     _wireTtsCallbacks();
     _sttReady = await _initStt();
-    // Device STT is the preferred path. Only fall back to Groq Whisper
-    // when the on-device recognizer failed to initialise (no Google app
-    // / OEM without a RecognitionService). On every normal phone
-    // _sttReady is true, so _useGroqStt stays false.
-    _useGroqStt = !_sttReady;
+    // Whisper-primary for the assistant: only Whisper can AUTO-DETECT the
+    // spoken language (the device recognizer is locked to one locale). So the
+    // worker just speaks Bengali / Hindi / English and it adapts — the
+    // transcript comes back in the right script and we switch the session to
+    // it. Device STT stays initialised; flip back to `!_sttReady` to revert.
+    _useGroqStt = true;
     if (!mounted) return;
     // Voice-first: greet immediately, then auto-listen when TTS done.
     await _speakGreeting();
@@ -549,7 +550,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
             _statusLine = _heardYouStatus(_activeLang);
           });
         },
-        languageCode: _activeLang.code,
+        languageCode: 'auto',
       );
       if (!mounted) return;
       _stopSttWatchdog();
@@ -558,7 +559,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
         _audioLevel = 0.0;
       });
       if (text != null && text.trim().isNotEmpty) {
-        setState(() => _liveTranscript = text.trim());
+        // Whisper auto-detected the language → switch the session to it so the
+        // reply, voice, and on-screen text all follow whatever the worker spoke.
+        final detected = _whisperToLang(_groqStt.lastDetectedLang);
+        setState(() {
+          if (detected != null) _activeLang = detected;
+          _liveTranscript = text.trim();
+        });
         _handleUserInput(text.trim());
         return;
       }
@@ -651,6 +658,19 @@ class _AssistantScreenState extends State<AssistantScreen> {
         }
       },
     );
+  }
+
+  /// Map Whisper's detected-language label ("bengali"/"hindi"/"english", or a
+  /// 2-letter code) to our AssistantLang. Null when it's none of the three.
+  AssistantLang? _whisperToLang(String? w) {
+    if (w == null || w.trim().isEmpty) return null;
+    final s = w.toLowerCase();
+    if (s.startsWith('bn') || s.contains('bengali') || s.contains('bangla')) {
+      return AssistantLang.bn;
+    }
+    if (s.startsWith('hi') || s.contains('hindi')) return AssistantLang.hi;
+    if (s.startsWith('en') || s.contains('english')) return AssistantLang.en;
+    return null;
   }
 
   void _onListenComplete() {
@@ -1054,7 +1074,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     if (_isListening && _useGroqStt) {
       // Force-commit the in-flight recording.
       await _groqStt.commit(
-        languageCode: _activeLang.code,
+        languageCode: 'auto',
         onProcessingStart: () {
           if (!mounted) return;
           _stopSttWatchdog();
@@ -1174,7 +1194,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     }
     if (_useGroqStt) {
       await _groqStt.commit(
-        languageCode: _activeLang.code,
+        languageCode: 'auto',
         onProcessingStart: () {
           if (!mounted) return;
           setState(() {
