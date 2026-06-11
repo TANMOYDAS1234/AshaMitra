@@ -1,6 +1,13 @@
 {
   "engine_id": "asha_cdss_engine_v2",
-  "version": "2.4.0-draft",
+  "version": "2.5.0-guideline-aligned",
+  "guideline_alignment": {
+    "source": "West Bengal NHM — \"নিরাপদ মাতৃত্বের বই\" (Safe Motherhood Book), ASHA & ANM Guideline",
+    "publisher": "National Health Mission, Dept. of Health & Family Welfare, Govt. of West Bengal",
+    "cross_checked_on": "2026-06-11",
+    "scope": "Danger signs (book pg 14–19) and the national immunization schedule (pg 25–26) were cross-checked against this engine; items the book mandates but the engine lacked were added. Numeric vitals thresholds remain IMNCI / RMNCH+A-derived. Graded RED/YELLOW bands are retained deliberately — the engine triages more granularly than the book's blanket 'refer to FRU', to avoid over-referral.",
+    "note": "Guideline-aligned; final ratification by the local Medical Officer is still recommended before pilot."
+  },
   "deterministic": true,
   "offline_capable": true,
   "engine_rules": {
@@ -129,6 +136,15 @@
           "id": "n10",
           "text_bn": "মাথার নরম অংশ (তালু) ফুলে উঁচু হয়ে আছে?",
           "text_en": "Is the soft spot on the head (fontanelle) bulging?",
+          "options": [
+            "হ্যাঁ",
+            "না"
+          ]
+        },
+        {
+          "id": "n11",
+          "text_bn": "শিশু কি প্রথম ২৪ ঘণ্টায় একবারও মলত্যাগ বা ৪৮ ঘণ্টায় মূত্রত্যাগ করেনি?",
+          "text_en": "Has the baby NOT passed stool in the first 24 h, or NOT passed urine in the first 48 h?",
           "options": [
             "হ্যাঁ",
             "না"
@@ -356,6 +372,29 @@
           ],
           "danger_signs": [
             "Bulging fontanelle"
+          ]
+        },
+        {
+          "ruleId": "NB-012",
+          "priority": 11,
+          "status": "guideline",
+          "source": "WB-NHM-SafeMotherhood-2024-pg18",
+          "condition_set": [
+            {
+              "question_id": "n11",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "RED",
+          "referral": "FRU / SNCU immediately",
+          "action_bn": "নবজাতক প্রথম ২৪ ঘণ্টায় মলত্যাগ বা ৪৮ ঘণ্টায় মূত্রত্যাগ করেনি = সম্ভাব্য অন্ত্র বা মূত্রনালীর প্রতিবন্ধকতা বা গুরুতর অসুস্থতা। এখনই FRU/SNCU-তে রেফার করুন।",
+          "action_en": "No stool in first 24 h or no urine in first 48 h = possible intestinal/urinary obstruction or serious neonatal illness. Refer FRU/SNCU immediately.",
+          "suspected_conditions": [
+            "Intestinal/urinary obstruction or serious neonatal illness"
+          ],
+          "danger_signs": [
+            "No stool in 24h / no urine in 48h"
           ]
         }
       ],
@@ -3084,6 +3123,19 @@
             "না"
           ]
         }
+      ],
+      "schedule_source": "WB NHM Safe Motherhood Book, pg 25–26 (UIP National Immunization Schedule)",
+      "schedule": [
+        { "age_bn": "জন্মের পরপরই (≤২৪ ঘণ্টা)", "age_en": "At birth (≤24 h)", "vaccines": ["BCG", "OPV-0", "Hepatitis B-0"] },
+        { "age_bn": "৬ সপ্তাহ", "age_en": "6 weeks", "vaccines": ["Pentavalent-1", "OPV-1", "Rotavirus-1", "fIPV-1"] },
+        { "age_bn": "১০ সপ্তাহ", "age_en": "10 weeks", "vaccines": ["Pentavalent-2", "OPV-2", "Rotavirus-2"] },
+        { "age_bn": "১৪ সপ্তাহ", "age_en": "14 weeks", "vaccines": ["Pentavalent-3", "OPV-3", "Rotavirus-3", "fIPV-2"] },
+        { "age_bn": "৯–১২ মাস", "age_en": "9–12 months", "vaccines": ["MR-1", "Vitamin A-1", "JE-1"] },
+        { "age_bn": "১৬–২৪ মাস", "age_en": "16–24 months", "vaccines": ["DPT booster-1", "MR-2", "OPV booster", "Vitamin A-2", "JE-2"] },
+        { "age_bn": "২–৫ বছর", "age_en": "2–5 years", "vaccines": ["Vitamin A (3rd–9th dose, every 6 months)"] },
+        { "age_bn": "৫–৬ বছর", "age_en": "5–6 years", "vaccines": ["DPT booster-2"] },
+        { "age_bn": "১০ বছর", "age_en": "10 years", "vaccines": ["TD"] },
+        { "age_bn": "১৬ বছর", "age_en": "16 years", "vaccines": ["TD"] }
       ],
       "hard_stop_rules": [],
       "combination_rules": [],
