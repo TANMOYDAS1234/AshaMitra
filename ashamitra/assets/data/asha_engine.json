@@ -149,6 +149,33 @@
             "হ্যাঁ",
             "না"
           ]
+        },
+        {
+          "id": "n12",
+          "text_bn": "শিশুর পাতলা পায়খানা (ডায়রিয়া) হচ্ছে?",
+          "text_en": "Does the baby have loose stools / diarrhoea?",
+          "options": [
+            "হ্যাঁ",
+            "না"
+          ]
+        },
+        {
+          "id": "n13",
+          "text_bn": "শিশুর চোখ লাল, ফোলা বা চোখ থেকে পুঁজ পড়ছে?",
+          "text_en": "Are the baby's eyes red, swollen, or draining pus?",
+          "options": [
+            "হ্যাঁ",
+            "না"
+          ]
+        },
+        {
+          "id": "n14",
+          "text_bn": "শিশুর কোনো অঙ্গের জন্মগত ত্রুটি (যেমন ঠোঁট/তালু ফাটা, অস্বাভাবিক অঙ্গ) আছে?",
+          "text_en": "Does the baby have a visible congenital defect (e.g. cleft lip/palate, abnormal limb)?",
+          "options": [
+            "হ্যাঁ",
+            "না"
+          ]
         }
       ],
       "hard_stop_rules": [
@@ -395,6 +422,77 @@
           ],
           "danger_signs": [
             "No stool in 24h / no urine in 48h"
+          ]
+        },
+        {
+          "ruleId": "NB-013",
+          "priority": 12,
+          "status": "guideline",
+          "source": "WB-NHM-SafeMotherhood-2024-pg22",
+          "condition_set": [
+            {
+              "question_id": "n12",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "RED",
+          "referral": "FRU / SNCU immediately",
+          "action_bn": "নবজাতকের পাতলা পায়খানা দ্রুত পানিশূন্যতা ঘটায় = প্রাণঘাতী। বুকের দুধ চালিয়ে যান, এখনই FRU/SNCU-তে রেফার করুন।",
+          "action_en": "Diarrhoea in a newborn causes rapid dehydration = life-threatening. Continue breastfeeding, refer FRU/SNCU immediately.",
+          "suspected_conditions": [
+            "Neonatal diarrhoea / dehydration"
+          ],
+          "danger_signs": [
+            "Diarrhoea"
+          ]
+        },
+        {
+          "ruleId": "NB-014",
+          "priority": 13,
+          "status": "guideline",
+          "source": "WB-NHM-SafeMotherhood-2024-pg22",
+          "condition_set": [
+            {
+              "question_id": "n13",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "RED",
+          "referral": "FRU / DH immediately",
+          "action_bn": "চোখ লাল/ফোলা বা চোখে পুঁজ = নবজাতকের চোখের সংক্রমণ (অফথ্যালমিয়া নিওনেটোরাম), দ্রুত অন্ধত্ব ঘটাতে পারে। এখনই রেফার করুন।",
+          "action_en": "Red/swollen eyes or eye pus = ophthalmia neonatorum; can blind within days. Refer immediately.",
+          "suspected_conditions": [
+            "Ophthalmia neonatorum"
+          ],
+          "danger_signs": [
+            "Eye infection / discharge"
+          ]
+        }
+      ],
+      "yellow_rules": [
+        {
+          "ruleId": "NB-Y-001",
+          "priority": 1,
+          "status": "guideline",
+          "source": "WB-NHM-SafeMotherhood-2024-pg22",
+          "condition_set": [
+            {
+              "question_id": "n14",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "YELLOW",
+          "referral": "PHC / DH for assessment",
+          "action_bn": "অঙ্গের জন্মগত ত্রুটি = মূল্যায়ন ও পরিকল্পিত রেফারেল প্রয়োজন। নিকটতম PHC/DH-তে দেখান।",
+          "action_en": "Congenital defect = needs assessment and planned referral. Take to nearest PHC/DH.",
+          "suspected_conditions": [
+            "Congenital anomaly"
+          ],
+          "danger_signs": [
+            "Congenital defect"
           ]
         }
       ],
@@ -2528,6 +2626,15 @@
             "হ্যাঁ",
             "না"
           ]
+        },
+        {
+          "id": "pp10",
+          "text_bn": "প্রস্রাব বা পায়খানা ধরে রাখতে পারছেন না (অসংযম)?",
+          "text_en": "Unable to control urine or stool (incontinence)?",
+          "options": [
+            "হ্যাঁ",
+            "না"
+          ]
         }
       ],
       "hard_stop_rules": [
@@ -2622,6 +2729,29 @@
           ],
           "clinical_sign_off_pending": true,
           "status": "draft"
+        },
+        {
+          "ruleId": "PNC-009",
+          "priority": 2,
+          "status": "guideline",
+          "source": "WB-NHM-SafeMotherhood-2024-pg21",
+          "condition_set": [
+            {
+              "question_id": "pp10",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "RED",
+          "referral": "FRU / DH immediately",
+          "action_bn": "প্রসবের পর প্রস্রাব-পায়খানা ধরে রাখতে না পারা (অসংযম) = সম্ভাব্য ফিস্টুলা বা গুরুতর জখম। এখনই FRU/DH-তে রেফার করুন।",
+          "action_en": "Postpartum inability to control urine/stool (incontinence) = possible obstetric fistula or severe injury. Refer FRU/DH immediately.",
+          "suspected_conditions": [
+            "Obstetric fistula / sphincter injury"
+          ],
+          "danger_signs": [
+            "Incontinence of urine/stool"
+          ]
         }
       ],
       "combination_rules": [

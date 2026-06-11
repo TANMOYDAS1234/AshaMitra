@@ -273,6 +273,7 @@ cancel_session: true সেট করলে should_finish ও extracted_answers
           'pp7': 'খিঁচুনি বা ফিট (পোস্টপার্টাম এক্লাম্পসিয়া)',
           'pp8': 'শ্বাস নিতে কষ্ট',
           'pp9': 'মন খারাপ, কান্না, বাচ্চার প্রতি আগ্রহ নেই (বিষণ্নতা)',
+          'pp10': 'প্রস্রাব/পায়খানা ধরে রাখতে পারছেন না (অসংযম)',
         },
         'newborn' => {
           'n1': 'দুধ খেতে পারছে না',
@@ -286,6 +287,9 @@ cancel_session: true সেট করলে should_finish ও extracted_answers
           'n9': 'ত্বকে ফুসকুড়ি/পুঁজ বা কানে পুঁজ',
           'n10': 'মাথার তালু ফুলে উঁচু (ফন্টানেল)',
           'n11': 'প্রথম ২৪ ঘণ্টায় মলত্যাগ বা ৪৮ ঘণ্টায় মূত্রত্যাগ করেনি',
+          'n12': 'পাতলা পায়খানা (ডায়রিয়া)',
+          'n13': 'চোখ লাল/ফোলা বা চোখে পুঁজ',
+          'n14': 'অঙ্গের জন্মগত ত্রুটি',
         },
         'child' => {
           'c1': 'পাঁচ দিনের বেশি জ্বর',
@@ -354,8 +358,8 @@ cancel_session: true সেট করলে should_finish ও extracted_answers
     final answeredIds = currentAnswers.keys.toSet();
     const priorityOrder = {
       'pregnancy':    ['p7','p9r','p1','p3','p6','p9','p10','p8','p4','p11','p11d','p2','p12','p5'],
-      'delivery_pnc': ['pp1','pp7','pp8','pp6s','pp2','pp4','pp6','pp3','pp5','pp9'],
-      'newborn':      ['n7','n1','n2','n3','n5','n4','n6','n11','n8','n9','n10'],
+      'delivery_pnc': ['pp1','pp7','pp8','pp6s','pp2','pp4','pp10','pp6','pp3','pp5','pp9'],
+      'newborn':      ['n7','n1','n2','n3','n5','n12','n4','n6','n13','n11','n8','n9','n10','n14'],
       'child':        ['c7','c13','c4','c8','c9','c10','c1','c5','c2','c3','c11','c6','c12'],
       'emergency':    ['e1','e2','e3','e4','e5','e6','e7','e8'],
       'immunisation': ['im4','im2','im1','im5','im3','im6'],
