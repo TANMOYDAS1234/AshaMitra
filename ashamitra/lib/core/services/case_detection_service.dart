@@ -32,8 +32,14 @@ class CaseDetectionService {
   /// Returns detected case id + confidence (0.0–1.0).
   /// If confidence == 0.0 the situation was completely unrecognised;
   /// callers should show a manual-selection prompt instead of proceeding.
+  ///
+  /// [forceAi] — when the caller already KNOWS the text is clinical (e.g. the
+  /// assistant "save as report" flow, where a full health conversation just
+  /// happened), pass true so Gemini still classifies even when no literal
+  /// keyword matched. Without it, terse answers ("শুধু প্যারাসিটাম", "হ্যাঁ")
+  /// score 0 and we'd wrongly fall back to the manual picker.
   Future<({String caseId, double confidence, String method})> detect(
-      String transcript) async {
+      String transcript, {bool forceAi = false}) async {
     final cases = await loadCases();
 
     // ── Stage 1: Rule-based keyword matching ──────────────────
@@ -46,10 +52,11 @@ class CaseDetectionService {
       );
     }
 
-    // ── Stage 2: Gemini AI fallback (only if we have some signal) ─
-    // Skip Gemini entirely when zero keywords matched — it would just
-    // hallucinate a case from a non-clinical utterance.
-    if (ruleResult.confidence > 0.0) {
+    // ── Stage 2: Gemini AI fallback ──────────────────────────────
+    // Normally we skip Gemini when zero keywords matched — it would just
+    // hallucinate a case from a non-clinical utterance. But [forceAi] callers
+    // (known-clinical context) want classification regardless.
+    if (ruleResult.confidence > 0.0 || forceAi) {
       try {
         final aiResult = await _geminiDetect(transcript, cases);
         if (aiResult.confidence > ruleResult.confidence) {

@@ -1265,6 +1265,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Future<void> _confirmSave() async {
     setState(() => _showSaveChip = false);
     // The clinical situation = everything the worker said this session.
+    // (Passed on to triage as the worker's own words.)
     final situation = _history
         .where((t) => t.role == 'user')
         .map((t) => t.text.trim())
@@ -1274,13 +1275,23 @@ class _AssistantScreenState extends State<AssistantScreen> {
       Get.toNamed(AppRoutes.selectCase);
       return;
     }
+    // For case DETECTION, feed the WHOLE conversation, not just the worker's
+    // terse answers. The assistant's own questions carry the clinical keywords
+    // (জ্বর, কাশি, শিশু, গর্ভবতী…) that short replies like "শুধু প্যারাসিটাম"
+    // leave out — without them the keyword score is 0 and we'd wrongly land on
+    // the manual picker. forceAi lets Gemini classify a saved health chat even
+    // when no literal keyword matched (it's always clinical by this point).
+    final convo = _history
+        .map((t) => t.text.trim())
+        .where((t) => t.isNotEmpty)
+        .join('. ');
     Get.dialog(
       const Center(child: CircularProgressIndicator(color: AppColors.primary)),
       barrierDismissible: false,
     );
     ({String caseId, double confidence, String method}) result;
     try {
-      result = await _caseDetection.detect(situation);
+      result = await _caseDetection.detect(convo, forceAi: true);
     } catch (_) {
       result = (caseId: '', confidence: 0.0, method: 'none');
     }
