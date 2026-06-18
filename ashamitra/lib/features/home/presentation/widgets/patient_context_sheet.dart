@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/patient_photo.dart';
 import '../../../patients/controller/patient_controller.dart';
 import '../../../patients/data/models/patient_model.dart';
 
@@ -416,14 +417,27 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
                               padding: const EdgeInsets.all(12),
                               child: Row(
                                 children: [
-                                  CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                                    child: Text(
-                                      p.name.isNotEmpty ? p.name[0].toUpperCase() : '?',
-                                      style: AppTextStyles.labelLg.copyWith(color: AppColors.primary),
-                                    ),
-                                  ),
+                                  Builder(builder: (ctx) {
+                                    final pb = p.mcpDetails['photo']?.toString();
+                                    final photo = patientPhotoProvider(pb);
+                                    return GestureDetector(
+                                      onLongPress: photo == null
+                                          ? null
+                                          : () => showPatientPhotoDialog(ctx, pb, name: p.name),
+                                      child: CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                                        backgroundImage: photo,
+                                        child: photo == null
+                                            ? Text(
+                                                p.name.isNotEmpty ? p.name[0].toUpperCase() : '?',
+                                                style: AppTextStyles.labelLg
+                                                    .copyWith(color: AppColors.primary),
+                                              )
+                                            : null,
+                                      ),
+                                    );
+                                  }),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(

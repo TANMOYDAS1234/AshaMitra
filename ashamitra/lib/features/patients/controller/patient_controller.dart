@@ -1,10 +1,23 @@
 ﻿import 'package:get/get.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import '../data/models/patient_model.dart';
+import '../data/patient_matcher.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/utils/logger.dart';
 import '../../../shared/widgets/risk_badge.dart';
+
+/// Where a just-created patient ended up:
+///   synced       → written to Atlas now
+///   queuedOffline→ kept on the phone (no internet), will auto-sync later
+///   needsLogin   → server rejected the session (401); the 401 hook has sent
+///                  the worker to login, and it syncs after re-login
+enum PatientSaveOutcome { synced, queuedOffline, needsLogin }
+
+class PatientSaveResult {
+  final PatientModel patient;
+  final PatientSaveOutcome outcome;
+  const PatientSaveResult(this.patient, this.outcome);
+}
 
 class PatientController extends GetxController {
   final isLoading = false.obs;
@@ -204,6 +217,7 @@ class PatientController extends GetxController {
 
       if (needsPost) {
         final data = p.toJson()..remove('id')..remove('syncState');
+        data['clientId'] = p.id; // idempotency key — safe POST retry / offline re-sync
         final response = await ApiService.savePatient(data);
         if (response == null) continue; // retry next cycle
         final serverId = response['id']?.toString();
@@ -339,7 +353,7 @@ class PatientController extends GetxController {
   }
 
   /// Sanitizes a report loaded from SharedPreferences.
-  /// JSON deserialization returns List<dynamic> and num — normalize all types.
+  /// JSON deserialization returns `List<dynamic>` and num — normalize all types.
   Map<String, dynamic> _sanitizeReport(Map<String, dynamic> r) => {
     ...r,
     'riskScore':        _toInt(r['riskScore']),
@@ -384,7 +398,34 @@ class PatientController extends GetxController {
     return [];
   }
 
-  PatientModel addPatient({
+  /// Local possible-duplicate check for the registration screen. Strong matches
+  /// (same RCH/MCTS id, or same mother+DOB+order for a child) come first; soft
+  /// matches (same name + phone/village) need the worker's judgement. Empty list
+  /// → safe to create. See [PatientMatcher] for the rationale (never silently
+  /// merge two real people who share a name + household phone).
+  List<DuplicateMatch> findDuplicates({
+    required String name,
+    required String mobile,
+    required String village,
+    String rchId = '',
+    String? motherId,
+    DateTime? dob,
+    int birthOrder = 0,
+    String? excludeId,
+  }) =>
+      PatientMatcher.find(
+        existing: patients.toList(),
+        name: name,
+        mobile: mobile,
+        village: village,
+        rchId: rchId,
+        motherId: motherId,
+        dob: dob,
+        birthOrder: birthOrder,
+        excludeId: excludeId,
+      );
+
+  Future<PatientSaveResult> addPatient({
     required String name,
     required String type,
     required String village,
@@ -397,7 +438,18 @@ class PatientController extends GetxController {
     String? reason,
     String? nextStep,
     List<Map<String, String>> qaHistory = const [],
-  }) {
+    // ── Maternal & child tracking (drives the auto-generated schedule) ──────
+    DateTime? dob,
+    DateTime? lmp,
+    DateTime? edd,
+    String guardianName = '',
+    String aadhaarMasked = '',
+    String? motherId,
+    bool isTwin = false,
+    int birthOrder = 0,
+    Map<String, dynamic> mcpDetails = const {},
+    bool highRisk = false,
+  }) async {
     final patient = PatientModel(
       id:        'p_${DateTime.now().millisecondsSinceEpoch}',
       name:      name,
@@ -408,64 +460,75 @@ class PatientController extends GetxController {
       ageUnit:   ageUnit,
       gender:    gender,
       lastVisit: 'এইমাত্র',
-      risk:      _riskFromOutcome(outcome),
+      // High-risk pregnancies (teenage / elderly / grand-multipara) are flagged
+      // at registration so they surface in the "High Risk" patient-list filter.
+      risk:      highRisk ? RiskLevel.high : _riskFromOutcome(outcome),
       situation: situation,
       outcome:   outcome,
       reason:    reason,
       nextStep:  nextStep,
       qaHistory: qaHistory,
       syncState: SyncState.pendingCreate,
+      dob:           dob,
+      lmp:           lmp,
+      edd:           edd,
+      guardianName:  guardianName,
+      aadhaarMasked: aadhaarMasked,
+      motherId:      motherId,
+      isTwin:        isTwin,
+      birthOrder:    birthOrder,
+      mcpDetails:    mcpDetails,
     );
     patients.insert(0, patient);
-    _save();
-    // Try to flush this new patient to the server right away. If it succeeds,
-    // the placeholder id gets swapped for the real Mongo _id and syncState
-    // moves to synced. If it fails (offline, Render cold-start), the patient
-    // stays in pendingCreate and the next syncFromServer cycle will retry.
-    _syncOnePendingCreate(patient.id);
-    return patient;
+    await _save(); // flush the local copy BEFORE any awaitable network/nav
+    // Atlas-first: await the server write so the caller can confirm "saved to
+    // Atlas". On success the placeholder id is swapped for the real Mongo _id
+    // and syncState→synced. On 401 the central hook redirects to login (the
+    // patient stays pendingCreate and syncs after re-login). Offline → stays
+    // pendingCreate and the next syncFromServer cycle retries. We cap the
+    // FOREGROUND wait at 20s so a healthy (even slow-mobile) save still
+    // confirms "Atlas ✓", while a truly stuck server doesn't freeze the
+    // worker forever — the underlying POST keeps running in the background
+    // and still swaps the id when it lands.
+    final saveOutcome = await _syncOnePendingCreate(patient.id).timeout(
+      const Duration(seconds: 20),
+      onTimeout: () => PatientSaveOutcome.queuedOffline,
+    );
+    return PatientSaveResult(patient, saveOutcome);
   }
 
   /// Tries to POST a single locally-created patient (syncState=pendingCreate)
   /// and, on success, swaps the placeholder id for the server _id + marks
   /// synced. Also re-points any reports that referenced the placeholder.
-  /// Best-effort — silent on failure (queued for next syncFromServer).
-  Future<void> _syncOnePendingCreate(String placeholderId) async {
+  /// Returns where it ended up so the caller can show an accurate message.
+  /// (On 401 the central [ApiService.onUnauthorized] hook redirects to login;
+  /// here we just report [PatientSaveOutcome.needsLogin].)
+  Future<PatientSaveOutcome> _syncOnePendingCreate(String placeholderId) async {
     final idx = patients.indexWhere((p) => p.id == placeholderId);
-    if (idx == -1) return;
+    if (idx == -1) return PatientSaveOutcome.queuedOffline;
     final p = patients[idx];
-    if (p.syncState != SyncState.pendingCreate) return;
+    if (p.syncState != SyncState.pendingCreate) return PatientSaveOutcome.synced;
 
     final data = p.toJson()..remove('id')..remove('syncState');
+    data['clientId'] = p.id; // idempotency key — safe POST retry / offline re-sync
     final response = await ApiService.savePatient(data);
     if (response == null) {
-      // Don't fail silently — the patient is on the phone but NOT on the
-      // server (Atlas). Tell the worker why so a logged-out / offline save
-      // isn't invisible. It stays pendingCreate and the next sync retries.
-      // Work out the REAL reason so the message is accurate. Token missing →
-      // definitely logged out. Token present but the POST still failed *while
-      // online* → the session is invalid/expired (re-login needed), NOT an
-      // internet problem — so never show the misleading "will sync when
-      // internet comes" message when the phone clearly has internet.
-      final connectivity = await Connectivity().checkConnectivity();
-      final online = connectivity.any((c) => c != ConnectivityResult.none);
-      final needsLogin = ApiService.token == null || online;
-      Get.snackbar(
-        needsLogin ? 'লগইন প্রয়োজন' : 'এখনো সিঙ্ক হয়নি',
-        needsLogin
-            ? 'রোগী ফোনে সংরক্ষিত হয়েছে — সার্ভারে পাঠাতে আবার লগইন করুন।'
-            : 'রোগী ফোনে সংরক্ষিত হয়েছে — ইন্টারনেট এলে নিজে থেকে সার্ভারে সিঙ্ক হবে।',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 4),
-      );
-      return; // queued for retry
+      // savePatient returns null for ANY failure (401, 5xx, timeout, DNS). A
+      // genuine 401 has already fired the onUnauthorized hook, which clears the
+      // token synchronously — so token==null is the reliable "session expired"
+      // signal. Every other failure (transient server/online OR offline) just
+      // stays pendingCreate and re-syncs later → report queuedOffline so the
+      // worker sees the reassuring "saved on phone" message, not a dead-end.
+      return ApiService.token == null
+          ? PatientSaveOutcome.needsLogin
+          : PatientSaveOutcome.queuedOffline;
     }
     final serverId = response['id']?.toString();
-    if (serverId == null || serverId.isEmpty) return;
+    if (serverId == null || serverId.isEmpty) return PatientSaveOutcome.synced;
 
     // The patient may have moved in the list since we started — re-locate by id.
     final currentIdx = patients.indexWhere((q) => q.id == placeholderId);
-    if (currentIdx == -1) return; // user deleted in the meantime
+    if (currentIdx == -1) return PatientSaveOutcome.synced; // deleted meanwhile
     final serverVersion = (response['version'] as num?)?.toInt() ?? 0;
     patients[currentIdx] = p.copyWith(
       id: serverId,
@@ -477,6 +540,7 @@ class PatientController extends GetxController {
     if (serverId != placeholderId) {
       _repointReportsPatientId(placeholderId, serverId);
     }
+    return PatientSaveOutcome.synced;
   }
 
   /// Auto-called from TriageResultScreen — saves full DecisionOutput to reports.

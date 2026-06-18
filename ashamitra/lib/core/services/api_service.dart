@@ -42,9 +42,18 @@ class ApiService {
     if (_token != null) 'Authorization': 'Bearer $_token',
   };
 
+  /// Invoked whenever an authenticated request returns 401, so the app can
+  /// force a clean re-login (registered by AuthController). Fires INSIDE
+  /// [_guard] before the throw, so it still runs where the exception is later
+  /// swallowed (e.g. savePatient's catch).
+  static void Function()? onUnauthorized;
+
   /// Throws [UnauthorizedException] on 401 — caller forces logout.
   static void _guard(int status) {
-    if (status == 401) throw UnauthorizedException();
+    if (status == 401) {
+      onUnauthorized?.call();
+      throw UnauthorizedException();
+    }
   }
 
   // ── Generic instance methods (used by datasources) ─────────────────────────
@@ -138,13 +147,18 @@ class ApiService {
         Uri.parse('$baseUrl/patients'),
         headers: _headers,
         body: jsonEncode(patient),
-      ).timeout(const Duration(seconds: 45)); // was 15 — Render cold-start can exceed
+      ).timeout(const Duration(seconds: 45));
       _guard(res.statusCode);
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      if (body['success'] != true) return null;
+      if (body['success'] != true) {
+        // Release-visible failure log (no PII) for a server-side rejection.
+        AppLogger.prod('savePatient rejected: status=${res.statusCode} msg=${body['message']}');
+        return null;
+      }
       final data = body['data'];
       return data is Map<String, dynamic> ? data : null;
-    } catch (_) {
+    } catch (e) {
+      AppLogger.e('savePatient', e); // debug-only; offline/401 are expected here
       return null;
     }
   }
@@ -169,7 +183,10 @@ class ApiService {
         headers: _headers,
         body: jsonEncode(patient),
       ).timeout(const Duration(seconds: 45));
-      if (res.statusCode == 401) throw UnauthorizedException();
+      if (res.statusCode == 401) {
+        onUnauthorized?.call();
+        throw UnauthorizedException();
+      }
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 200 && body['success'] == true) {
         return {'status': 'success', 'data': body['data']};
@@ -459,6 +476,111 @@ class ApiService {
     _guard(res.statusCode);
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     return body['data'] as List? ?? [];
+  }
+
+  // ── Schedule (ANC / immunization / HBNC due tracking) ──────────────────────
+
+  /// Worker's due/overdue shortlist. [withinDays] is the look-ahead horizon
+  /// (default 14); overdue items are always included. Optional [kind] filter:
+  /// 'vaccine' | 'anc' | 'hbnc'. Each item carries computed `overdue` +
+  /// `daysUntil`. Returns [] on any failure so the UI degrades gracefully.
+  static Future<List<dynamic>> getScheduleDue({int withinDays = 14, String? kind}) async {
+    try {
+      final q = StringBuffer('?withinDays=$withinDays');
+      if (kind != null && kind.isNotEmpty) q.write('&kind=$kind');
+      final res = await http
+          .get(Uri.parse('$baseUrl/schedule/due$q'), headers: _headers)
+          .timeout(const Duration(seconds: 30));
+      _guard(res.statusCode);
+      if (res.statusCode != 200) return [];
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['data'] as List? ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// All schedule events for one patient (full timeline). Returns [] on failure.
+  static Future<List<dynamic>> getScheduleForPatient(String patientId) async {
+    try {
+      final res = await http
+          .get(Uri.parse('$baseUrl/schedule?patientId=$patientId'), headers: _headers)
+          .timeout(const Duration(seconds: 30));
+      _guard(res.statusCode);
+      if (res.statusCode != 200) return [];
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['data'] as List? ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// Marks a schedule event: 'done' | 'missed' | 'skipped' | 'pending'.
+  /// [record] optionally carries what the worker recorded at the visit
+  /// (ANC vitals, vaccines given, danger-sign flags, notes).
+  /// Returns the updated event on success, null otherwise.
+  static Future<Map<String, dynamic>?> markScheduleEvent(
+    String id,
+    String status, {
+    Map<String, dynamic>? record,
+  }) async {
+    try {
+      final res = await http.patch(
+        Uri.parse('$baseUrl/schedule/$id'),
+        headers: _headers,
+        body: jsonEncode({
+          'status': status,
+          if (record != null) 'record': record,
+        }),
+      ).timeout(const Duration(seconds: 30));
+      _guard(res.statusCode);
+      if (res.statusCode != 200) return null;
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['success'] == true ? body['data'] as Map<String, dynamic>? : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Logs that the worker reminded the patient via [channel] ('call' |
+  /// 'whatsapp' | 'sms'). Returns the updated event (with lastRemindedAt) or null.
+  static Future<Map<String, dynamic>?> logReminder(String id, String channel) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/schedule/$id/remind'),
+        headers: _headers,
+        body: jsonEncode({'channel': channel}),
+      ).timeout(const Duration(seconds: 20));
+      _guard(res.statusCode);
+      if (res.statusCode != 200) return null;
+      final b = jsonDecode(res.body) as Map<String, dynamic>;
+      return b['success'] == true ? b['data'] as Map<String, dynamic>? : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ── Aadhaar OCR (server-side; image processed in memory, never stored) ──────
+  /// POSTs the Aadhaar photo bytes to the backend, which OCRs them with
+  /// Tesseract and returns best-effort {name, dob, gender, aadhaar(masked)}.
+  /// Returns null on any failure (offline / OCR not installed / unreadable).
+  static Future<Map<String, dynamic>?> ocrAadhaar(List<int> bytes) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/ocr/aadhaar'),
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          if (_token != null) 'Authorization': 'Bearer $_token',
+        },
+        body: bytes,
+      ).timeout(const Duration(seconds: 40));
+      _guard(res.statusCode);
+      if (res.statusCode != 200) return null;
+      final b = jsonDecode(res.body) as Map<String, dynamic>;
+      return b['success'] == true ? b : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   // ── Admin — Workers ────────────────────────────────────────────────────────

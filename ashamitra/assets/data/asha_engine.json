@@ -1,12 +1,12 @@
 {
   "engine_id": "asha_cdss_engine_v2",
-  "version": "2.5.0-guideline-aligned",
+  "version": "2.6.0-guideline-aligned",
   "guideline_alignment": {
     "source": "West Bengal NHM — \"নিরাপদ মাতৃত্বের বই\" (Safe Motherhood Book), ASHA & ANM Guideline",
     "publisher": "National Health Mission, Dept. of Health & Family Welfare, Govt. of West Bengal",
     "cross_checked_on": "2026-06-11",
     "scope": "Danger signs (book pg 14–19) and the national immunization schedule (pg 25–26) were cross-checked against this engine; items the book mandates but the engine lacked were added. Numeric vitals thresholds remain IMNCI / RMNCH+A-derived. Graded RED/YELLOW bands are retained deliberately — the engine triages more granularly than the book's blanket 'refer to FRU', to avoid over-referral.",
-    "note": "Guideline-aligned; final ratification by the local Medical Officer is still recommended before pilot."
+    "note": "Guideline-aligned; final ratification by the local Medical Officer is still recommended before pilot. v2.6.0: cross-checked against the Mother & Child Protection Card (MCP Card, 2018). Added the child Development Screening module (milestone danger signs, MCP pg 13–25) and the weight-for-age MAM (−3 to −2 Z) YELLOW zone. Pneumonia respiratory-rate thresholds (≥60 newborn / ≥50 for 2mo–1y / ≥40 for 1–5y) were confirmed already present and matching the card (pg 9)."
   },
   "deterministic": true,
   "offline_capable": true,
@@ -1496,6 +1496,26 @@
           "action_en": "WFA Z-score < -3 = severe underweight. Refer NRC.",
           "danger_signs": [
             "Severe underweight"
+          ]
+        },
+        {
+          "ruleId": "CH-VITAL-006b",
+          "clinical_sign_off_pending": true,
+          "condition_set": [
+            {
+              "vital": "weight_for_age_z",
+              "operator": "BETWEEN",
+              "value": [
+                -3,
+                -2
+              ]
+            }
+          ],
+          "band": "YELLOW",
+          "action_bn": "WFA Z-স্কোর -৩ থেকে -২ = মাঝারি কম ওজন (MAM)। অঙ্গনওয়াড়ি/ICDS-তে পরিপূরক পুষ্টির জন্য রেফার করুন, প্রতি মাসে ওজন নিন। (MCP কার্ড: হলুদ জোন, পৃ ২৮–৩১)",
+          "action_en": "WFA Z-score -3 to -2 = moderate underweight (MAM). Refer ICDS/Anganwadi for supplementary nutrition, weigh monthly. (MCP card: yellow zone, pg 28–31)",
+          "danger_signs": [
+            "Moderate underweight"
           ]
         },
         {
@@ -3421,6 +3441,91 @@
           {
             "condition": "im6",
             "score": 1
+          }
+        ],
+        "thresholds": {
+          "GREEN": [
+            0,
+            0
+          ],
+          "YELLOW": [
+            1,
+            100
+          ],
+          "RED": []
+        }
+      }
+    },
+    {
+      "module_id": "development",
+      "title_bn": "শিশু বিকাশ যাচাই (২ মাস–৩ বছর)",
+      "title_en": "Child Development Screening (2 months–3 years)",
+      "guideline_source": "Mother & Child Protection Card (MCP Card), 2018 — developmental milestone danger signs, pg 13–25",
+      "questions": [
+        {
+          "id": "d1",
+          "text_bn": "শিশুর বয়স কোন ধাপে?",
+          "text_en": "Which age band is the child in?",
+          "options": [
+            "২-৩ মাস",
+            "৪-৬ মাস",
+            "৭-৯ মাস",
+            "১০-১২ মাস",
+            "১৮ মাস",
+            "২৪ মাস",
+            "৩ বছর"
+          ]
+        },
+        {
+          "id": "d2",
+          "text_bn": "এই বয়সের জন্য তালিকাভুক্ত কোনো একটি বিপদচিহ্ন কি দেখা যাচ্ছে? (নিচের তালিকা দেখে নিন)",
+          "text_en": "Is ANY ONE of the danger signs listed for this age present? (check the list below)",
+          "options": [
+            "হ্যাঁ",
+            "না"
+          ]
+        }
+      ],
+      "milestones_by_age": [
+        { "age_bn": "২-৩ মাস", "age_en": "2–3 months", "danger_signs_bn": ["মুখের দিকে তাকায় না বা হাসে না", "জোর শব্দেও চমকে ওঠে না", "৩ মাসেও মাথা নেতিয়ে পড়ে", "হাত সবসময় শক্ত মুঠো করে রাখে"], "danger_signs_en": ["Does not look at faces or smile", "Does not startle to loud sound", "Head still flops at 3 months", "Hands stay tightly fisted"] },
+        { "age_bn": "৪-৬ মাস", "age_en": "4–6 months", "danger_signs_bn": ["সাহায্য ছাড়া মাথা সোজা রাখতে পারে না", "জিনিসের দিকে হাত বাড়ায় না", "হাত বা জিনিস মুখে নেয় না", "শব্দের দিকে মাথা ঘোরায় না"], "danger_signs_en": ["Cannot hold head steady without support", "Does not reach for objects", "Does not bring hand/objects to mouth", "Does not turn head toward sound"] },
+        { "age_bn": "৭-৯ মাস", "age_en": "7–9 months", "danger_signs_bn": ["সাহায্য ছাড়া বসতে পারে না", "বা-বা / মা-মা শব্দ করে না", "শব্দের উৎসের দিকে তাকায় না", "এক হাত থেকে অন্য হাতে জিনিস নেয় না"], "danger_signs_en": ["Cannot sit without support", "Does not babble (ba-ba/ma-ma)", "Does not look toward the source of a sound", "Does not transfer objects hand to hand"] },
+        { "age_bn": "১০-১২ মাস", "age_en": "10–12 months", "danger_signs_bn": ["ছোট জিনিস আঙুল দিয়ে তুলতে পারে না", "নিজের নাম শুনে সাড়া দেয় না", "পড়ে যাওয়া বা লুকানো জিনিস খোঁজে না", "পরিচিত খেলা খেলে না"], "danger_signs_en": ["No pincer grasp for small objects", "Does not respond to own name", "Does not search for a dropped/hidden object", "Does not play familiar games"] },
+        { "age_bn": "১৮ মাস", "age_en": "18 months", "danger_signs_bn": ["সাহায্য ছাড়া হাঁটতে পারে না", "মা / বাবা / দাদা বলে না", "আঙুল দিয়ে চেয়ে দেখায় না", "কাপ থেকে খেতে পারে না"], "danger_signs_en": ["Does not walk without support", "Does not say mama/baba/dada", "Does not point at things", "Cannot drink from a cup"] },
+        { "age_bn": "২৪ মাস", "age_en": "24 months", "danger_signs_bn": ["স্থিরভাবে হাঁটতে বা দৌড়াতে পারে না", "দুই শব্দের বাক্য বলে না", "সহজ নির্দেশ মানে না", "বড়দের নকল করে না"], "danger_signs_en": ["Cannot walk steadily or run", "Does not say two-word phrases", "Does not follow simple instructions", "Does not imitate others"] },
+        { "age_bn": "৩ বছর", "age_en": "3 years", "danger_signs_bn": ["২-৩ শব্দের বাক্য বলে না", "কথা স্পষ্ট নয়", "সিঁড়িতে পা বদলে ওঠানামা করতে পারে না", "অন্য শিশুদের সঙ্গে খেলে না"], "danger_signs_en": ["Does not make 2–3 word sentences", "Speech is unclear", "Cannot climb stairs with alternating feet", "Does not play with other children"] }
+      ],
+      "hard_stop_rules": [],
+      "combination_rules": [],
+      "yellow_rules": [
+        {
+          "ruleId": "DEV-001",
+          "priority": 1,
+          "condition_set": [
+            {
+              "question_id": "d2",
+              "operator": "EQUALS",
+              "value": true
+            }
+          ],
+          "band": "YELLOW",
+          "referral": "DEIC / নিকটতম স্বাস্থ্যকেন্দ্র — বিকাশ মূল্যায়ন",
+          "action_bn": "বয়স-অনুযায়ী বিকাশে বিলম্বের লক্ষণ। প্রাথমিক হস্তক্ষেপের জন্য DEIC (জেলা আর্লি ইন্টারভেনশন সেন্টার) বা স্বাস্থ্যকর্মীর কাছে রেফার করুন এবং অঙ্গনওয়াড়ি কর্মীকে জানান। (MCP কার্ড, পৃ ১৩–২৫)",
+          "action_en": "Age-specific developmental delay sign. Refer to DEIC (District Early Intervention Centre) or a health worker for assessment, and inform the Anganwadi worker. (MCP card, pg 13–25)",
+          "suspected_conditions": [
+            "Developmental delay"
+          ],
+          "danger_signs": [
+            "Milestone not met for age"
+          ]
+        }
+      ],
+      "numeric_rules": [],
+      "risk_engine": {
+        "score_rules": [
+          {
+            "condition": "d2",
+            "score": 3
           }
         ],
         "thresholds": {

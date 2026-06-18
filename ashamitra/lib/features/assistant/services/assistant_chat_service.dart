@@ -133,10 +133,18 @@ class AssistantChatService {
     required List<AssistantTurn> history,
     required AssistantLang appLanguage,
   }) async {
+    // Reply language is PINNED to the script of what the worker actually said
+    // (the transcript), not left to the LLM to re-infer from the text — that
+    // ambiguity is what caused "spoke Bengali, got another language back".
+    // userInput is the STT transcript, so its script is ground truth:
+    // Bengali script → bn, Devanagari → hi, Latin → en. Only when the text
+    // carries no clear script signal (e.g. a bare number) do we fall back to
+    // the app/session language.
+    final replyLang = _heuristicLang(userInput, appLanguage);
     final prompt = _buildPrompt(
       userInput: userInput,
       history: history,
-      appLanguage: appLanguage,
+      appLanguage: replyLang,
     );
 
     // On-device cache check first — same normalized prompt has been
@@ -252,8 +260,10 @@ class AssistantChatService {
         if (spoken.isNotEmpty) {
           return AssistantResponse(
             text: spoken,
-            detectedLanguage: _parseLang(
-                j['detected_language']?.toString() ?? appLanguage.code),
+            // Pin to the transcript's script (replyLang), not the LLM's
+            // self-reported detected_language — so the spoken reply and its
+            // TTS voice always match the language the worker actually used.
+            detectedLanguage: replyLang,
             isClinical: (j['is_clinical'] as bool?) ?? false,
             shouldOfferSave: (j['should_offer_save'] as bool?) ?? false,
             prefetchedAudio: audioBytes,
@@ -280,7 +290,7 @@ class AssistantChatService {
       if (spoken.isNotEmpty) {
         return AssistantResponse(
           text: spoken,
-          detectedLanguage: _heuristicLang(spoken, appLanguage),
+          detectedLanguage: replyLang,
           isClinical: false,
           shouldOfferSave: false,
           prefetchedAudio: audioBytes,
@@ -295,8 +305,8 @@ class AssistantChatService {
       RegExp(r'\s*\{[\s\S]*\}?\s*$', multiLine: true), '',
     ).trim();
     return AssistantResponse(
-      text: plainText.isEmpty ? _genericReply(appLanguage) : plainText,
-      detectedLanguage: _heuristicLang(userInput, appLanguage),
+      text: plainText.isEmpty ? _genericReply(replyLang) : plainText,
+      detectedLanguage: replyLang,
       isClinical: false,
       shouldOfferSave: false,
       prefetchedAudio: audioBytes,
@@ -338,12 +348,14 @@ class AssistantChatService {
 
     return '''
 ⚠️⚠️ সবচেয়ে জরুরি নিয়ম — সবার আগে মানো (এই নিয়ম ভাঙা যাবে না):
-ASHA এইমাত্র যে ভাষায় কথা বলেছেন, হুবহু সেই ভাষাতেই পুরো উত্তর দাও।
-- ইংরেজিতে বললে → পুরো উত্তর ইংরেজিতে (Indian English)।
-- হিন্দিতে বললে → পুরো উত্তর হিন্দিতে (देवनागरी, "दीदी"/"जी")।
-- বাংলায় বললে → পুরো উত্তর বাংলায়।
-এই নির্দেশনা পুরো বাংলায় লেখা হলেও — তুমি ASHA-র ভাষা মেনে উত্তর দেবে, কখনোই
-নিজে থেকে বাংলায় ফিরে যাবে না। উত্তরের ভাষা = ASHA-র শেষ বার্তার ভাষা।
+এই উত্তরের ভাষা ইতিমধ্যে নির্দিষ্ট করা হয়েছে: **${_langName(appLanguage)}**।
+পুরো উত্তর (spoken_text) শুধুমাত্র এই ভাষাতেই ও এই লিপিতেই দাও — অন্য কোনো
+ভাষা বা লিপিতে নয়, এক শব্দও নয়।
+- ভাষা যদি বাংলা হয় → শুধু বাংলা লিপিতে।
+- ভাষা যদি হিন্দি হয় → শুধু দেবনাগরীতে (Indian Hindi, "दीदी"/"जी")।
+- ভাষা যদি ইংরেজি হয় → শুধু Indian English-এ।
+এই নির্দেশনা বাংলায় লেখা হলেও — তুমি উপরের নির্দিষ্ট ভাষাতেই উত্তর দেবে, কখনোই
+নিজে থেকে অন্য ভাষায় বা লিপিতে যাবে না।
 
 তুমি "আশামিত্র" — পশ্চিমবঙ্গের ASHA দিদিদের জন্য একজন অভিজ্ঞ বড় দিদি।
 তুমি কথা বলো ঠিক যেমন বাংলার একজন বুদ্ধিমান, যত্নশীল দিদি কথা বলেন —
@@ -469,13 +481,6 @@ JSON খোলা ব্রেস `{` দিয়ে শুরু হবে, �
         AssistantLang.bn => 'বাংলা (Bengali)',
         AssistantLang.hi => 'हिन्दी (Hindi)',
         AssistantLang.en => 'English',
-      };
-
-  AssistantLang _parseLang(String code) => switch (code.toLowerCase()) {
-        'bn' => AssistantLang.bn,
-        'hi' => AssistantLang.hi,
-        'en' => AssistantLang.en,
-        _ => AssistantLang.bn,
       };
 
   // ── Heuristic language detection (offline / non-JSON fallback) ───────────

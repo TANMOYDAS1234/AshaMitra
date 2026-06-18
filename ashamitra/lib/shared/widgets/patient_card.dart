@@ -6,6 +6,7 @@ import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_shadows.dart';
 import '../../core/theme/app_text_styles.dart';
 import 'risk_badge.dart';
+import 'patient_photo.dart';
 
 class PatientCard extends StatelessWidget {
   final String name;
@@ -20,6 +21,10 @@ class PatientCard extends StatelessWidget {
   /// profile screen's big gradient avatar. Pass the patient id.
   final String? heroTag;
 
+  /// Base64 patient photo (mcpDetails['photo']). Shown in the avatar; long-press
+  /// opens the full-screen viewer.
+  final String? photoB64;
+
   const PatientCard({
     super.key,
     required this.name,
@@ -30,6 +35,7 @@ class PatientCard extends StatelessWidget {
     this.onTap,
     this.onCallTap,
     this.heroTag,
+    this.photoB64,
   });
 
   // Localize the stored case-type for display. Manually-added patients store
@@ -46,19 +52,25 @@ class PatientCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final photo = patientPhotoProvider(photoB64);
     final avatar = Container(
       width: 48,
       height: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AppColors.primary.withValues(alpha: 0.10),
+        image: photo != null
+            ? DecorationImage(image: photo, fit: BoxFit.cover)
+            : null,
       ),
-      child: Center(
-        child: Text(
-          initial,
-          style: AppTextStyles.h3.copyWith(color: AppColors.primary),
-        ),
-      ),
+      child: photo != null
+          ? null
+          : Center(
+              child: Text(
+                initial,
+                style: AppTextStyles.h3.copyWith(color: AppColors.primary),
+              ),
+            ),
     );
 
     return Container(
@@ -83,10 +95,15 @@ class PatientCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                if (heroTag != null)
-                  Hero(tag: 'patient_avatar_$heroTag', child: avatar)
-                else
-                  avatar,
+                GestureDetector(
+                  // Hold (long-press) the photo to view it full-screen.
+                  onLongPress: photo == null
+                      ? null
+                      : () => showPatientPhotoDialog(context, photoB64, name: name),
+                  child: heroTag != null
+                      ? Hero(tag: 'patient_avatar_$heroTag', child: avatar)
+                      : avatar,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

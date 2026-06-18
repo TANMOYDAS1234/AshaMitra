@@ -261,6 +261,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                             lastVisit: p.lastVisit,
                             riskLevel: p.riskFromOutcome,
                             heroTag: p.id,
+                            photoB64: p.mcpDetails['photo']?.toString(),
                             onTap: () => Get.toNamed(AppRoutes.patientProfile, arguments: p.toJson()),
                             onCallTap: p.mobile.isNotEmpty
                                 ? () => launchUrl(Uri.parse('tel:${p.mobile}'))

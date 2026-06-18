@@ -12,10 +12,38 @@ class AuthController extends GetxController {
   final user      = Rxn<UserModel>();
   final errorMsg  = ''.obs;
 
+  bool _sessionExpiring = false;
+
   @override
   void onInit() {
     super.onInit();
     ApiService.loadToken(); // non-blocking pre-warm; restoreSession also loads token
+    // Force a clean re-login whenever the backend rejects our token (401).
+    ApiService.onUnauthorized = handleSessionExpired;
+  }
+
+  /// Forced re-login when the backend rejects our session (401). SOFT logout:
+  /// clears only token + user — local patient/report data stays on the phone
+  /// and re-syncs automatically after the next login. Debounced so a burst of
+  /// parallel 401s triggers exactly one redirect.
+  void handleSessionExpired() {
+    if (_sessionExpiring) return;
+    if (ApiService.token == null && user.value == null) return; // already out
+    _sessionExpiring = true;
+    user.value = null;
+    ApiService.clearToken();
+    LocalStorageService.clearUser(); // keeps patients/reports on the device
+    Get.offAllNamed(AppRoutes.login);
+    // Defer the snackbar so it attaches to the login route, not the outgoing
+    // screen being torn down by offAllNamed's transition (GetX timing hazard).
+    Future.delayed(const Duration(milliseconds: 400), () {
+      Get.snackbar(
+        'সেশন শেষ হয়েছে',
+        'আবার লগইন করুন — আপনার তথ্য ফোনে নিরাপদ আছে, লগইন করলেই সিঙ্ক হবে।',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 5),
+      );
+    });
   }
 
   bool restoreSession() {
@@ -25,6 +53,7 @@ class AuthController extends GetxController {
     // Synchronously restore token so all subsequent API calls are authenticated
     final token = LocalStorageService.get('jwt_token');
     if (token != null) ApiService.setTokenInMemory(token);
+    _sessionExpiring = false; // a restored session re-arms the 401 handler
     return true;
   }
 
@@ -89,6 +118,7 @@ class AuthController extends GetxController {
         final u = UserModel.fromJson(res['user'] as Map<String, dynamic>);
         user.value = u;
         ApiService.setToken(res['token'] as String);
+        _sessionExpiring = false; // re-arm the 401 handler for this new session
         await LocalStorageService.saveUser(u.toJson());
         // Reload persisted data for this session
         Get.find<PatientController>().reloadFromStorage();
@@ -156,6 +186,7 @@ class AuthController extends GetxController {
   }
 
   void logout() {
+    _sessionExpiring = false; // reset the 401 debounce on a clean logout
     user.value = null;
     ApiService.clearToken();
     LocalStorageService.clearUser();

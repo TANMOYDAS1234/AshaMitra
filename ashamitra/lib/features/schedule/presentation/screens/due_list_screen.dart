@@ -1,0 +1,583 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/services/api_service.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_gradients.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/components/app_header.dart';
+import '../../../../app/routes.dart';
+
+/// Worker's due / overdue shortlist — the "easily shortlist due-vaccination
+/// patients" view. Consumes GET /api/schedule/due, which returns pending
+/// ANC / immunization / HBNC events due within a horizon (overdue included),
+/// soonest first. The worker can filter by kind and mark an item done with
+/// one tap (PATCH /api/schedule/:id).
+class DueListScreen extends StatefulWidget {
+  const DueListScreen({super.key});
+
+  @override
+  State<DueListScreen> createState() => _DueListScreenState();
+}
+
+class _DueListScreenState extends State<DueListScreen> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _events = []; // master list (all fetched)
+  String _kind = 'all';     // all | vaccine | anc | hbnc | hbyc
+  String _sort = 'due';     // due (soonest first) | name
+  bool _overdueOnly = false;
+  bool _notRemindedOnly = false;
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  // Look-ahead horizon (days). 30 covers "the next month" of due items.
+  static const _horizonDays = 30;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  // Fetch ALL due/overdue items once; filtering + sorting happen client-side
+  // (instant, no re-fetch on every chip tap).
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    final raw = await ApiService.getScheduleDue(withinDays: _horizonDays);
+    if (!mounted) return;
+    setState(() {
+      _events = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      _loading = false;
+    });
+  }
+
+  // ── Client-side filter + sort ────────────────────────────────────────────
+  bool _isReminded(Map<String, dynamic> e) =>
+      (e['lastRemindedAt']?.toString() ?? '').isNotEmpty;
+
+  List<Map<String, dynamic>> _apply(List<Map<String, dynamic>> src) {
+    final q = _query.trim().toLowerCase();
+    final list = src.where((e) {
+      if (_kind != 'all' && (e['kind']?.toString() ?? '') != _kind) return false;
+      if (_overdueOnly && e['overdue'] != true) return false;
+      if (_notRemindedOnly && _isReminded(e)) return false;
+      if (q.isNotEmpty) {
+        final hay =
+            '${e['patientName'] ?? ''} ${e['label'] ?? ''} ${_vaccinesLine(e)}'
+                .toLowerCase();
+        if (!hay.contains(q)) return false;
+      }
+      return true;
+    }).toList();
+    if (_sort == 'name') {
+      list.sort((a, b) => (a['patientName'] ?? '')
+          .toString()
+          .toLowerCase()
+          .compareTo((b['patientName'] ?? '').toString().toLowerCase()));
+    } else {
+      // 'due' — soonest / most-overdue first (daysUntil ascending).
+      list.sort((a, b) => ((a['daysUntil'] as num?)?.toInt() ?? 0)
+          .compareTo((b['daysUntil'] as num?)?.toInt() ?? 0));
+    }
+    return list;
+  }
+
+  int _countForKind(String kind) => kind == 'all'
+      ? _events.length
+      : _events.where((e) => (e['kind']?.toString() ?? '') == kind).length;
+
+  /// Open the unified visit screen to conduct + record the visit. Refresh the
+  /// list when it returns done (the event drops off the pending shortlist).
+  Future<void> _openVisit(Map<String, dynamic> e) async {
+    final result = await Get.toNamed(AppRoutes.visit, arguments: e);
+    if (result == true) _load();
+  }
+
+  // ── Remind the patient (Call / WhatsApp / SMS) + log it ──────────────────
+  String _reminderMsg(Map<String, dynamic> e) {
+    final name = (e['patientName'] ?? 'রোগী').toString();
+    final label = (e['label'] ?? '').toString();
+    final due = _dueText(e);
+    final kind = (e['kind'] ?? '').toString();
+    if (kind == 'anc') {
+      return 'নমস্কার, $name এর ANC পরীক্ষা ($label) $due। অনুগ্রহ করে নিকটতম স্বাস্থ্যকেন্দ্রে যান।';
+    }
+    if (kind == 'vaccine') {
+      return '$name এর টিকা ($label) $due। সময়মতো অঙ্গনওয়াড়ি বা স্বাস্থ্যকেন্দ্রে টিকা দিন।';
+    }
+    return '$name — $label: $due।';
+  }
+
+  String? _lastRemindedText(Map<String, dynamic> e) {
+    final at = e['lastRemindedAt']?.toString();
+    if (at == null || at.isEmpty) return null;
+    final dt = DateTime.tryParse(at);
+    if (dt == null) return null;
+    final days = DateTime.now().difference(dt).inDays;
+    final ch = (e['lastReminderChannel'] ?? '').toString();
+    final chBn = switch (ch) {
+      'call' => 'ফোন',
+      'whatsapp' => 'WhatsApp',
+      'sms' => 'SMS',
+      _ => '',
+    };
+    final whenBn = days <= 0 ? 'আজ' : '$days দিন আগে';
+    return 'মনে করানো হয়েছে ($chBn) — $whenBn';
+  }
+
+  Future<void> _remind(Map<String, dynamic> e) async {
+    final mobile = (e['patientMobile'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
+    if (mobile.isEmpty) {
+      Get.snackbar('নম্বর নেই', 'এই রোগীর মোবাইল নম্বর নেই — রেজিস্ট্রেশনে যোগ করুন।',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.warningYellow, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12);
+      return;
+    }
+    final channel = await showModalBottomSheet<String>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.call, color: AppColors.safeGreen),
+              title: const Text('ফোন করুন'),
+              subtitle: Text(mobile),
+              onTap: () => Navigator.pop(context, 'call'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat_bubble, color: Color(0xFF25D366)),
+              title: const Text('WhatsApp'),
+              onTap: () => Navigator.pop(context, 'whatsapp'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.sms_outlined, color: AppColors.primary),
+              title: const Text('SMS'),
+              onTap: () => Navigator.pop(context, 'sms'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (channel == null) return;
+    final msg = _reminderMsg(e);
+    final wa = mobile.length == 10 ? '91$mobile' : mobile;
+    final uri = switch (channel) {
+      'whatsapp' => Uri.parse('https://wa.me/$wa?text=${Uri.encodeComponent(msg)}'),
+      'sms' => Uri.parse('sms:$mobile?body=${Uri.encodeComponent(msg)}'),
+      _ => Uri.parse('tel:$mobile'),
+    };
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (!mounted) return;
+      Get.snackbar('খুলতে পারিনি', 'অ্যাপটি খোলা গেল না।',
+          snackPosition: SnackPosition.BOTTOM);
+    }
+    final updated = await ApiService.logReminder(e['id'].toString(), channel);
+    if (!mounted || updated == null) return;
+    setState(() {
+      final i = _events.indexWhere((x) => x['id'] == e['id']);
+      if (i != -1) {
+        _events[i]['lastRemindedAt'] = updated['lastRemindedAt'];
+        _events[i]['lastReminderChannel'] = updated['lastReminderChannel'];
+      }
+    });
+  }
+
+  Widget _remindBar(Map<String, dynamic> e) {
+    final last = _lastRemindedText(e);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => _remind(e),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.notifications_active_outlined,
+                    size: 15, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text('মনে করান',
+                    style: AppTextStyles.label.copyWith(
+                        color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+        ),
+        if (last != null) ...[
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(Icons.check_circle, size: 12, color: AppColors.safeGreen),
+              const SizedBox(width: 4),
+              Text(last,
+                  style: AppTextStyles.label
+                      .copyWith(color: AppColors.safeGreen, fontSize: 11)),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _markDone(Map<String, dynamic> e) async {
+    final id = e['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    // Optimistic: remove immediately for a snappy feel.
+    setState(() => _events.removeWhere((x) => x['id'] == id));
+    final ok = await ApiService.markScheduleEvent(id, 'done');
+    if (!mounted) return;
+    if (ok == null) {
+      // Failed — put it back and tell the worker.
+      setState(() => _events.add(e));
+      Get.snackbar('সংযোগ সমস্যা', 'এখন সম্পন্ন চিহ্নিত করা গেল না, আবার চেষ্টা করুন।',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.warningYellow, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12);
+    } else {
+      Get.snackbar('সম্পন্ন ✓', '${e['patientName'] ?? ''} — ${e['label'] ?? ''} সম্পন্ন চিহ্নিত হয়েছে।',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.safeGreen, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12,
+          duration: const Duration(seconds: 2));
+    }
+  }
+
+  // ── Display helpers ───────────────────────────────────────────────────────
+  String _dueText(Map<String, dynamic> e) {
+    final overdue = e['overdue'] == true;
+    final d = (e['daysUntil'] as num?)?.toInt() ?? 0;
+    if (d == 0) return 'আজ দেয়';
+    if (overdue) return '${d.abs()} দিন পার হয়েছে';
+    return '$d দিন বাকি';
+  }
+
+  IconData _kindIcon(String kind) => switch (kind) {
+        'vaccine' => Icons.vaccines_rounded,
+        'anc'     => Icons.pregnant_woman_rounded,
+        'hbnc'    => Icons.child_care_rounded,
+        'hbyc'    => Icons.child_friendly_rounded,
+        _         => Icons.event_note_rounded,
+      };
+
+  String _vaccinesLine(Map<String, dynamic> e) {
+    final meta = e['meta'];
+    if (meta is Map && meta['vaccines'] is List) {
+      return (meta['vaccines'] as List).join(', ');
+    }
+    return '';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = _loading ? <Map<String, dynamic>>[] : _apply(_events);
+    final overdue = visible.where((e) => e['overdue'] == true).toList();
+    final dueSoon = visible.where((e) => e['overdue'] != true).toList();
+
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppGradients.background),
+        child: SafeArea(
+          child: Column(
+            children: [
+              const AppHeader(title: 'বকেয়া টিকা ও পরীক্ষা'),
+              const SizedBox(height: 8),
+              _searchField(),
+              const SizedBox(height: 8),
+              _filterBar(),
+              const SizedBox(height: 6),
+              _controlsBar(),
+              const SizedBox(height: 4),
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : RefreshIndicator(
+                        onRefresh: _load,
+                        child: visible.isEmpty
+                            ? _emptyState()
+                            : ListView(
+                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                                children: [
+                                  if (overdue.isNotEmpty) ...[
+                                    _sectionHeader('পার হয়ে গেছে', overdue.length,
+                                        AppColors.emergencyRed),
+                                    ...overdue.map(_eventTile),
+                                    const SizedBox(height: 12),
+                                  ],
+                                  if (dueSoon.isNotEmpty) ...[
+                                    _sectionHeader('আসন্ন', dueSoon.length,
+                                        AppColors.warningYellow),
+                                    ...dueSoon.map(_eventTile),
+                                  ],
+                                ],
+                              ),
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _searchField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TextField(
+        controller: _searchCtrl,
+        onChanged: (v) => setState(() => _query = v),
+        textInputAction: TextInputAction.search,
+        style: AppTextStyles.body,
+        decoration: InputDecoration(
+          isDense: true,
+          hintText: 'রোগীর নাম খুঁজুন',
+          prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.primary),
+          suffixIcon: _query.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    setState(() => _query = '');
+                  },
+                ),
+          filled: true,
+          fillColor: AppColors.surface,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _filterBar() {
+    const filters = [
+      ('all', 'সব'),
+      ('vaccine', 'টিকা'),
+      ('anc', 'ANC'),
+      ('hbnc', 'নবজাতক'),
+      ('hbyc', 'শিশু যত্ন'),
+    ];
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: filters.map((f) {
+          final sel = _kind == f.$1;
+          final c = _countForKind(f.$1);
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(c > 0 ? '${f.$2} ($c)' : f.$2),
+              selected: sel,
+              selectedColor: AppColors.primary,
+              labelStyle: AppTextStyles.label.copyWith(
+                color: sel ? AppColors.onPrimary : AppColors.textSecondary,
+              ),
+              onSelected: (_) => setState(() => _kind = f.$1),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // Sort menu + workflow quick-toggles (overdue-only, not-yet-reminded).
+  Widget _controlsBar() {
+    return SizedBox(
+      height: 38,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          PopupMenuButton<String>(
+            initialValue: _sort,
+            onSelected: (v) => setState(() => _sort = v),
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'due', child: Text('তারিখ অনুযায়ী')),
+              PopupMenuItem(value: 'name', child: Text('নাম অনুযায়ী')),
+            ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.sort_rounded, size: 16, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text(_sort == 'name' ? 'নাম অনুযায়ী' : 'তারিখ অনুযায়ী',
+                      style: AppTextStyles.label.copyWith(fontSize: 12)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilterChip(
+            label: const Text('শুধু বকেয়া'),
+            selected: _overdueOnly,
+            showCheckmark: false,
+            selectedColor: AppColors.emergencyRed,
+            backgroundColor: AppColors.surface,
+            labelStyle: AppTextStyles.label.copyWith(
+                color: _overdueOnly ? Colors.white : AppColors.textSecondary,
+                fontSize: 12),
+            onSelected: (v) => setState(() => _overdueOnly = v),
+          ),
+          const SizedBox(width: 8),
+          FilterChip(
+            label: const Text('মনে করানো হয়নি'),
+            selected: _notRemindedOnly,
+            showCheckmark: false,
+            selectedColor: AppColors.primary,
+            backgroundColor: AppColors.surface,
+            labelStyle: AppTextStyles.label.copyWith(
+                color: _notRemindedOnly ? Colors.white : AppColors.textSecondary,
+                fontSize: 12),
+            onSelected: (v) => setState(() => _notRemindedOnly = v),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title, int count, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 8, left: 4),
+      child: Row(
+        children: [
+          Container(width: 8, height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          const SizedBox(width: 8),
+          Text('$title ($count)', style: AppTextStyles.h3.copyWith(color: color)),
+        ],
+      ),
+    );
+  }
+
+  Widget _eventTile(Map<String, dynamic> e) {
+    final overdue = e['overdue'] == true;
+    final color = overdue ? AppColors.emergencyRed : AppColors.warningYellow;
+    final kind = e['kind']?.toString() ?? '';
+    final mobile = e['patientMobile']?.toString() ?? '';
+    final vaccines = kind == 'vaccine' ? _vaccinesLine(e) : '';
+
+    return GestureDetector(
+      onTap: () => _openVisit(e),
+      child: Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border(left: BorderSide(color: color, width: 4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(_kindIcon(kind), color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(e['patientName']?.toString() ?? '—',
+                    style: AppTextStyles.body, maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Text(e['label']?.toString() ?? '',
+                    style: AppTextStyles.label, maxLines: 2, overflow: TextOverflow.ellipsis),
+                if (vaccines.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(vaccines,
+                      style: AppTextStyles.label.copyWith(
+                          color: AppColors.textSecondary, fontSize: 11),
+                      maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(_dueText(e),
+                        style: AppTextStyles.label.copyWith(
+                            color: color, fontWeight: FontWeight.w700, fontSize: 12)),
+                    if (mobile.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      const Icon(Icons.phone_outlined,
+                          size: 13, color: AppColors.textSecondary),
+                      const SizedBox(width: 3),
+                      Text(mobile,
+                          style: AppTextStyles.label
+                              .copyWith(color: AppColors.textSecondary, fontSize: 12)),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _remindBar(e),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // One-tap "done".
+          IconButton(
+            tooltip: 'সম্পন্ন',
+            onPressed: () => _markDone(e),
+            icon: const Icon(Icons.check_circle_outline_rounded,
+                color: AppColors.safeGreen, size: 28),
+          ),
+        ],
+      ),
+    ));
+  }
+
+  Widget _emptyState() {
+    // Distinguish "nothing due at all" from "filter/search hid everything".
+    final filtered = _events.isNotEmpty;
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(height: MediaQuery.of(context).size.height * 0.22),
+        Icon(filtered ? Icons.search_off_rounded : Icons.event_available_rounded,
+            size: 64,
+            color: filtered ? AppColors.textSecondary : AppColors.safeGreen),
+        const SizedBox(height: 14),
+        Center(
+          child: Text(filtered ? 'কোনো মিল পাওয়া যায়নি' : 'আপাতত কোনো বকেয়া নেই',
+              style: AppTextStyles.h3.copyWith(color: AppColors.textSecondary)),
+        ),
+        const SizedBox(height: 6),
+        Center(
+          child: Text(
+              filtered ? 'ফিল্টার বা খোঁজ বদলে দেখুন' : 'সব টিকা ও পরীক্ষা সময়মতো আছে',
+              style: AppTextStyles.label.copyWith(color: AppColors.textSecondary)),
+        ),
+      ],
+    );
+  }
+}

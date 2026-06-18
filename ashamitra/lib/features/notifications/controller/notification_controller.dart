@@ -41,7 +41,9 @@ class NotificationController extends GetxController {
           .get(Uri.parse('${ApiService.baseUrl}/notifications?limit=50'), headers: _headers)
           .timeout(const Duration(seconds: 30));
       if (res.statusCode == 401) {
-        // Auth handled elsewhere
+        // Route through the central session-expired handler so an expiry is
+        // detected even when the 90s poll is the only active network call.
+        ApiService.onUnauthorized?.call();
         return;
       }
       if (res.statusCode != 200) return;

@@ -9,6 +9,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/risk_badge.dart';
+import '../../../../shared/widgets/patient_photo.dart';
 import '../../controller/patient_controller.dart';
 import '../../data/models/patient_model.dart';
 
@@ -124,6 +125,9 @@ class PatientProfileScreen extends StatelessWidget {
     }
 
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final argPhotoB64 = (args['mcpDetails'] is Map)
+        ? (args['mcpDetails'] as Map)['photo']?.toString()
+        : null;
 
     return Scaffold(
       body: Container(
@@ -169,29 +173,56 @@ class PatientProfileScreen extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            Hero(
-                              tag: 'patient_avatar_$patientId',
-                              child: Container(
-                                width: 64, height: 64,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [AppColors.primary, AppColors.purple],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    initial,
-                                    style: AppTextStyles.display.copyWith(
-                                      fontSize: 26,
-                                      color: Colors.white,
+                            // Live photo: prefer the controller's current model
+                            // (so an edit reflects immediately) and fall back to
+                            // the navigation snapshot. Obx rebuilds on update.
+                            Obx(() {
+                              var pb = argPhotoB64;
+                              if (Get.isRegistered<PatientController>()) {
+                                final ctrl = Get.find<PatientController>();
+                                final i = ctrl.patients.indexWhere((p) => p.id == patientId);
+                                if (i != -1) {
+                                  pb = ctrl.patients[i].mcpDetails['photo']?.toString();
+                                }
+                              }
+                              final ph = patientPhotoProvider(pb);
+                              return GestureDetector(
+                                // Hold (long-press) to view the photo full-screen.
+                                onLongPress: ph == null
+                                    ? null
+                                    : () => showPatientPhotoDialog(context, pb, name: name),
+                                child: Hero(
+                                  tag: 'patient_avatar_$patientId',
+                                  child: Container(
+                                    width: 64, height: 64,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: ph == null
+                                          ? const LinearGradient(
+                                              colors: [AppColors.primary, AppColors.purple],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            )
+                                          : null,
+                                      image: ph != null
+                                          ? DecorationImage(image: ph, fit: BoxFit.cover)
+                                          : null,
                                     ),
+                                    child: ph != null
+                                        ? null
+                                        : Center(
+                                            child: Text(
+                                              initial,
+                                              style: AppTextStyles.display.copyWith(
+                                                fontSize: 26,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
                                   ),
                                 ),
-                              ),
-                            ),
+                              );
+                            }),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(

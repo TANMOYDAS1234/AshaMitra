@@ -14,6 +14,7 @@ import '../features/triage/presentation/screens/triage_result_screen.dart';
 import '../features/patients/presentation/screens/patient_list_screen.dart';
 import '../features/patients/presentation/screens/add_patient_screen.dart';
 import '../features/patients/presentation/screens/patient_profile_screen.dart';
+import '../features/registers/presentation/screens/registers_screen.dart';
 import '../features/emergency/presentation/screens/emergency_screen.dart';
 import '../features/emergency/presentation/screens/nearby_facilities_screen.dart';
 import '../features/reports/presentation/screens/reports_screen.dart';
@@ -24,6 +25,9 @@ import '../features/admin/presentation/screens/admin_add_asha_screen.dart';
 import '../features/admin/presentation/screens/admin_reports_screen.dart';
 import '../features/admin/presentation/screens/admin_profile_screen.dart';
 import '../features/assistant/presentation/screens/assistant_screen.dart';
+import '../features/schedule/presentation/screens/due_list_screen.dart';
+import '../features/schedule/presentation/screens/visit_screen.dart';
+import '../features/development/presentation/screens/development_screen.dart';
 
 /// Route-typed transition vocabulary.
 ///
@@ -52,6 +56,10 @@ class AppRoutes {
   static const reports         = '/reports';
   static const profile         = '/profile';
   static const assistant       = '/assistant';
+  static const dueList         = '/schedule/due';
+  static const visit           = '/schedule/visit';
+  static const registers       = '/registers';
+  static const development      = '/development';
   // Admin
   static const adminDashboard  = '/admin';
   static const adminAshaList   = '/admin/asha';
@@ -137,6 +145,36 @@ class AppRoutes {
       page: () => const AssistantScreen(),
       transition: Transition.zoom,
       transitionDuration: Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    ),
+
+    // Due / overdue reminder shortlist — forward step
+    GetPage(
+      name: dueList,
+      page: () => const DueListScreen(),
+      transition: Transition.rightToLeftWithFade,
+      transitionDuration: _medium,
+      curve: Curves.easeOutCubic,
+    ),
+    GetPage(
+      name: visit,
+      page: () => const VisitScreen(),
+      transition: Transition.rightToLeftWithFade,
+      transitionDuration: _medium,
+      curve: Curves.easeOutCubic,
+    ),
+    GetPage(
+      name: registers,
+      page: () => const RegistersScreen(),
+      transition: Transition.rightToLeftWithFade,
+      transitionDuration: _medium,
+      curve: Curves.easeOutCubic,
+    ),
+    GetPage(
+      name: development,
+      page: () => const DevelopmentScreen(),
+      transition: Transition.rightToLeftWithFade,
+      transitionDuration: _medium,
       curve: Curves.easeOutCubic,
     ),
 

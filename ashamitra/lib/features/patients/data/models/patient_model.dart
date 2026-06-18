@@ -32,6 +32,30 @@ class PatientModel {
   /// matches the server, the server returns 409 and the client refetches.
   final int version;
 
+  // ── Maternal & child tracking (MCP-card aligned) ──────────────────────────
+  /// Date of birth (child / newborn). Drives the immunization + HBNC schedule.
+  final DateTime? dob;
+  /// Last menstrual period (pregnancy). Drives the ANC1–4 schedule.
+  final DateTime? lmp;
+  /// Expected delivery date. Auto-computed server-side as lmp + 280 days when
+  /// not supplied.
+  final DateTime? edd;
+  /// Mother's name when this patient is a child.
+  final String guardianName;
+  /// Masked Aadhaar only (e.g. "XXXX-XXXX-1234"). The raw 12-digit number is
+  /// never stored (Aadhaar Act sensitivity).
+  final String aadhaarMasked;
+  /// Links a child record to its mother's patient id.
+  final String? motherId;
+  /// True for a multiple birth (twins).
+  final bool isTwin;
+  /// Birth order within a multiple birth (1, 2, …); 0 when not applicable.
+  final int birthOrder;
+  /// Full MCP-card identity fields (pg 3) — father's name, address, RCH/MCTS,
+  /// PMMVY/JSY + bank, gravida, birth-reg no., Anganwadi/LGD, facility, masked
+  /// Aadhaar, etc. Flexible map keyed by the registration form's field keys.
+  final Map<String, dynamic> mcpDetails;
+
   PatientModel({
     required this.id,
     required this.name,
@@ -51,7 +75,21 @@ class PatientModel {
     DateTime? createdAt,
     this.syncState = SyncState.synced,
     this.version = 0,
+    this.dob,
+    this.lmp,
+    this.edd,
+    this.guardianName = '',
+    this.aadhaarMasked = '',
+    this.motherId,
+    this.isTwin = false,
+    this.birthOrder = 0,
+    this.mcpDetails = const {},
   }) : createdAt = createdAt ?? DateTime.now();
+
+  /// Government RCH/MCTS registration id — the canonical real-world person key
+  /// (the maternal register's "Egiya Bangla Portal ID"). Captured in the form
+  /// as `mcpDetails.rchId`; surfaced here for the de-dup matcher + registers.
+  String get rchId => (mcpDetails['rchId'] ?? '').toString().trim();
 
   RiskLevel get riskFromOutcome {
     if (outcome == 'emergency') return RiskLevel.emergency;
@@ -92,6 +130,15 @@ class PatientModel {
         'createdAt': createdAt.toIso8601String(),
         'syncState': syncState.name,
         'version': version,
+        if (dob != null) 'dob': dob!.toIso8601String(),
+        if (lmp != null) 'lmp': lmp!.toIso8601String(),
+        if (edd != null) 'edd': edd!.toIso8601String(),
+        if (guardianName.isNotEmpty) 'guardianName': guardianName,
+        if (aadhaarMasked.isNotEmpty) 'aadhaarMasked': aadhaarMasked,
+        if (motherId != null) 'motherId': motherId,
+        if (isTwin) 'isTwin': isTwin,
+        if (birthOrder > 0) 'birthOrder': birthOrder,
+        if (mcpDetails.isNotEmpty) 'mcpDetails': mcpDetails,
       };
 
   factory PatientModel.fromJson(Map<String, dynamic> json) => PatientModel(
@@ -125,7 +172,26 @@ class PatientModel {
           orElse: () => SyncState.synced,
         ),
         version: (json['version'] as num?)?.toInt() ?? 0,
+        dob: _parseDate(json['dob']),
+        lmp: _parseDate(json['lmp']),
+        edd: _parseDate(json['edd']),
+        guardianName: json['guardianName'] as String? ?? '',
+        aadhaarMasked: json['aadhaarMasked'] as String? ?? '',
+        motherId: json['motherId'] as String?,
+        isTwin: json['isTwin'] as bool? ?? false,
+        birthOrder: (json['birthOrder'] as num?)?.toInt() ?? 0,
+        mcpDetails: (json['mcpDetails'] as Map?)?.cast<String, dynamic>() ?? const {},
       );
+
+  /// Parses a server date (ISO string) or null. Tolerates already-DateTime
+  /// values and empty strings so old/local rows never crash deserialization.
+  static DateTime? _parseDate(dynamic v) {
+    if (v == null) return null;
+    if (v is DateTime) return v;
+    final s = v.toString().trim();
+    if (s.isEmpty) return null;
+    return DateTime.tryParse(s);
+  }
 
   PatientModel copyWith({
     String? id,
@@ -145,6 +211,15 @@ class PatientModel {
     List<Map<String, String>>? qaHistory,
     SyncState? syncState,
     int? version,
+    DateTime? dob,
+    DateTime? lmp,
+    DateTime? edd,
+    String? guardianName,
+    String? aadhaarMasked,
+    String? motherId,
+    bool? isTwin,
+    int? birthOrder,
+    Map<String, dynamic>? mcpDetails,
   }) =>
       PatientModel(
         id: id ?? this.id,
@@ -165,5 +240,14 @@ class PatientModel {
         createdAt: createdAt,
         syncState: syncState ?? this.syncState,
         version: version ?? this.version,
+        dob: dob ?? this.dob,
+        lmp: lmp ?? this.lmp,
+        edd: edd ?? this.edd,
+        guardianName: guardianName ?? this.guardianName,
+        aadhaarMasked: aadhaarMasked ?? this.aadhaarMasked,
+        motherId: motherId ?? this.motherId,
+        isTwin: isTwin ?? this.isTwin,
+        birthOrder: birthOrder ?? this.birthOrder,
+        mcpDetails: mcpDetails ?? this.mcpDetails,
       );
 }
