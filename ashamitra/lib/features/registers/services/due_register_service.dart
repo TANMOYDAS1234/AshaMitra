@@ -23,15 +23,26 @@ typedef DueFetch = ({List<Map<String, dynamic>> events, bool fromCache});
 /// payload so a register can be generated without a network.
 class DueRegisterService {
   static const _cacheKey = 'due_register_cache_v1';
+  static const _cacheKeyAll = 'full_register_cache_v1';
 
-  /// The four register kinds in display order.
+  /// The four due-list kinds in display order.
   static const kindsAll = ['anc', 'vaccine', 'hbnc', 'hbyc'];
+
+  /// The cumulative full-register types (the actual paper notebooks).
+  static const kindsFull = ['maternal', 'immunization', 'diary'];
 
   static String kindLabel(String k) => switch (k) {
         'anc' => 'ANC (গর্ভকালীন)',
         'vaccine' => 'টিকাকরণ',
         'hbnc' => 'নবজাতক (HBNC)',
         'hbyc' => 'শিশু যত্ন (HBYC)',
+        _ => k,
+      };
+
+  static String fullLabel(String k) => switch (k) {
+        'maternal' => 'মাতৃ রেজিস্টার',
+        'immunization' => 'শিশু টিকা রেজিস্টার',
+        'diary' => 'আশা ডায়েরি',
         _ => k,
       };
 
@@ -215,6 +226,219 @@ class DueRegisterService {
         };
     }
   }
+
+  // ── Full (cumulative) registers — the notebook substitute ──────────────────
+  // Unlike the due-list (a monthly work-plan), these are the actual registers
+  // the worker hand-copies: one row per beneficiary with full history. Reuses
+  // the same generic PDF/CSV builder via the shared {title, sections} shape.
+  static Future<DueFetch> fetchAll() async {
+    final raw = await ApiService.getAllSchedule();
+    if (raw.isNotEmpty) {
+      final list = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      await LocalStorageService.set(_cacheKeyAll, jsonEncode(list));
+      return (events: list, fromCache: false);
+    }
+    final cached = LocalStorageService.get(_cacheKeyAll);
+    if (cached != null && cached.isNotEmpty) {
+      try {
+        final list = (jsonDecode(cached) as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        return (events: list, fromCache: true);
+      } catch (_) {}
+    }
+    return (events: const <Map<String, dynamic>>[], fromCache: false);
+  }
+
+  static Map<String, dynamic> assembleFull({
+    required List<Map<String, dynamic>> events,
+    required List<PatientModel> patients,
+    required List<String> registers,
+    Map<String, String> header = const {},
+  }) {
+    final byPatient = <String, List<Map<String, dynamic>>>{};
+    for (final e in events) {
+      final pid = e['patientId']?.toString() ?? '';
+      if (pid.isEmpty) continue;
+      (byPatient[pid] ??= []).add(e);
+    }
+    final sections = <Map<String, dynamic>>[];
+    if (registers.contains('maternal')) sections.add(_maternalSection(patients, byPatient));
+    if (registers.contains('immunization')) sections.add(_immunizationSection(patients, byPatient));
+    if (registers.contains('diary')) sections.add(_diarySection(patients, events));
+    return {
+      'title': 'পূর্ণ রেজিস্টার (নোটবুকের বিকল্প)',
+      'monthLabel': '',
+      'generatedAt': _stamp(),
+      'header': header,
+      'sections': sections,
+      'fileName': _fileName(header['block'], 'pdf').replaceFirst('due_register', 'full_register'),
+      'csvFileName': _fileName(header['block'], 'csv').replaceFirst('due_register', 'full_register'),
+    };
+  }
+
+  static bool _isDone(Map<String, dynamic> e) => (e['status']?.toString()) == 'done';
+  static DateTime? _doneOn(Map<String, dynamic> e) =>
+      DateTime.tryParse(e['doneDate']?.toString() ?? '');
+
+  static Map<String, dynamic> _maternalSection(
+      List<PatientModel> patients, Map<String, List<Map<String, dynamic>>> byPatient) {
+    final mothers = patients
+        .where((p) => p.type == 'Pregnancy' || p.lmp != null)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final rows = <List<String>>[];
+    for (var i = 0; i < mothers.length; i++) {
+      final p = mothers[i];
+      final anc = (byPatient[p.id] ?? [])
+          .where((e) => (e['kind']?.toString()) == 'anc')
+          .toList()
+        ..sort((a, b) => _due(a).compareTo(_due(b)));
+      String ancCell(int idx) {
+        if (idx >= anc.length) return '';
+        final e = anc[idx];
+        if (_isDone(e)) {
+          final dd = _d(_doneOn(e));
+          final v = _vitalsShort(e['record']);
+          return [dd, v].where((s) => s.isNotEmpty).join('\n');
+        }
+        return 'বকেয়া ${_d(_due(e))}';
+      }
+      var tt = 0;
+      for (final e in anc) {
+        if (!_isDone(e)) continue;
+        final r = e['record'];
+        if (r is Map && r['supplementsGiven'] is List &&
+            (r['supplementsGiven'] as List).any((s) => s.toString().contains('TD'))) {
+          tt++;
+        }
+      }
+      rows.add([
+        '${i + 1}', p.rchId, p.name, (p.mcpDetails['fatherName'] ?? '').toString(),
+        _village(p), _ageText(p), _d(p.lmp), _d(p.edd), _gpla(p),
+        (p.mcpDetails['highRisk'] == true) ? 'উচ্চ' : '',
+        ancCell(0), ancCell(1), ancCell(2), ancCell(3), tt > 0 ? '$tt' : '',
+      ]);
+    }
+    return {
+      'title': 'মাতৃ রেজিস্টার — সকল গর্ভবতী (${mothers.length})',
+      'columns': const [
+        '#', 'RCH/MCTS', 'নাম', 'স্বামী/পিতা', 'গ্রাম', 'বয়স', 'LMP', 'EDD',
+        'G-P-L-A', 'ঝুঁকি', 'ANC-১', 'ANC-২', 'ANC-৩', 'ANC-৪', 'TT',
+      ],
+      'rows': rows,
+      'note': 'প্রতিটি ANC ঘরে — সম্পন্ন হলে তারিখ + BP/ওজন/Hb; না হলে "বকেয়া <তারিখ>"। প্রসব ও PNC কলাম প্রসব-নথিভুক্তির পরে যুক্ত হবে।',
+    };
+  }
+
+  static Map<String, dynamic> _immunizationSection(
+      List<PatientModel> patients, Map<String, List<Map<String, dynamic>>> byPatient) {
+    final kids = patients
+        .where((p) => (p.type == 'Newborn' || p.type == 'Child') && p.dob != null)
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    // (label, lowWeeks, highWeeks) from DOB — robust to schedule code naming.
+    const buckets = [
+      ('জন্ম-ডোজ', -1, 2), ('৬ সপ্তাহ', 3, 8), ('১০ সপ্তাহ', 8, 12),
+      ('১৪ সপ্তাহ', 12, 20), ('৯ মাস', 28, 52), ('১৬-২৪ মাস', 56, 130),
+    ];
+    final rows = <List<String>>[];
+    for (var i = 0; i < kids.length; i++) {
+      final p = kids[i];
+      final vac = (byPatient[p.id] ?? [])
+          .where((e) => (e['kind']?.toString()) == 'vaccine')
+          .toList();
+      String cellFor(int lo, int hi) {
+        for (final e in vac) {
+          final w = _offsetWeeks(p.dob, e['dueDate']);
+          if (w == null || w < lo || w > hi) continue;
+          return _isDone(e) ? _d(_doneOn(e)) : 'বকেয়া';
+        }
+        return '';
+      }
+      rows.add([
+        '${i + 1}', p.rchId, p.name, _mother(p), _genderShort(p), _d(p.dob),
+        _birthWeight(p),
+        ...buckets.map((b) => cellFor(b.$2, b.$3)),
+      ]);
+    }
+    return {
+      'title': 'শিশু টিকা রেজিস্টার — সকল শিশু (${kids.length})',
+      'columns': const [
+        '#', 'RCH/MCTS', 'শিশুর নাম', 'মা', 'লিঙ্গ', 'DOB', 'জন্ম ওজন',
+        'জন্ম-ডোজ', '৬ সপ্তাহ', '১০ সপ্তাহ', '১৪ সপ্তাহ', '৯ মাস', '১৬-২৪ মাস',
+      ],
+      'rows': rows,
+      'note': 'প্রতিটি মাইলফলক ঘরে — দেওয়া হলে তারিখ; বাকি থাকলে "বকেয়া"।',
+    };
+  }
+
+  static Map<String, dynamic> _diarySection(
+      List<PatientModel> patients, List<Map<String, dynamic>> events) {
+    final entries = <(DateTime, List<String>)>[];
+    for (final p in patients) {
+      entries.add((p.createdAt, [
+        _d(p.createdAt), p.name, 'নিবন্ধন (${_caseTypeLabel(p.type)})', _village(p),
+      ]));
+    }
+    for (final e in events) {
+      if (_isDone(e)) {
+        final dt = _doneOn(e);
+        if (dt != null) {
+          final r = e['record'];
+          final danger = (r is Map && r['dangerFlags'] is List &&
+                  (r['dangerFlags'] as List).isNotEmpty)
+              ? 'বিপদচিহ্ন'
+              : '';
+          entries.add((dt, [
+            _d(dt), e['patientName']?.toString() ?? '', e['label']?.toString() ?? '', danger,
+          ]));
+        }
+      }
+      final rem = e['lastRemindedAt']?.toString();
+      if (rem != null && rem.isNotEmpty) {
+        final dt = DateTime.tryParse(rem);
+        if (dt != null) {
+          entries.add((dt, [
+            _d(dt), e['patientName']?.toString() ?? '',
+            'মনে করানো (${e['lastReminderChannel'] ?? ''})', '',
+          ]));
+        }
+      }
+    }
+    entries.sort((a, b) => b.$1.compareTo(a.$1));
+    final rows = entries.take(250).map((e) => e.$2).toList();
+    return {
+      'title': 'আশা ডায়েরি — কার্যকলাপ (${rows.length})',
+      'columns': const ['তারিখ', 'উপভোক্তা', 'পরিষেবা', 'মন্তব্য'],
+      'rows': rows,
+      'note': '',
+    };
+  }
+
+  static int? _offsetWeeks(DateTime? dob, dynamic dueIso) {
+    if (dob == null) return null;
+    final due = DateTime.tryParse(dueIso?.toString() ?? '');
+    if (due == null) return null;
+    return (due.difference(dob).inDays / 7).round();
+  }
+
+  static String _vitalsShort(dynamic record) {
+    if (record is! Map) return '';
+    String g(String k) => (record[k] ?? '').toString().trim();
+    final parts = <String>[];
+    if (g('bp').isNotEmpty) parts.add('BP${g('bp')}');
+    if (g('weight').isNotEmpty) parts.add('ওজ${g('weight')}');
+    if (g('hb').isNotEmpty) parts.add('Hb${g('hb')}');
+    return parts.join(' ');
+  }
+
+  static String _caseTypeLabel(String t) => switch (t) {
+        'Pregnancy' => 'গর্ভবতী',
+        'Newborn' => 'নবজাতক',
+        'Child' => 'শিশু',
+        _ => 'অন্যান্য',
+      };
 
   // ── Output ────────────────────────────────────────────────────────────────
   static Future<void> generatePdf(Map<String, dynamic> data) async {

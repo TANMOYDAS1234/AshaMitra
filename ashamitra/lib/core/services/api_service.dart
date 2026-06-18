@@ -500,6 +500,23 @@ class ApiService {
     }
   }
 
+  /// ALL schedule events for the worker (every patient, every status, with the
+  /// `record` captured at each completed visit). Powers the cumulative "full
+  /// register" (Maternal / Immunization / Diary). Returns [] on failure.
+  static Future<List<dynamic>> getAllSchedule() async {
+    try {
+      final res = await http
+          .get(Uri.parse('$baseUrl/schedule'), headers: _headers)
+          .timeout(const Duration(seconds: 45));
+      _guard(res.statusCode);
+      if (res.statusCode != 200) return [];
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['data'] as List? ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// All schedule events for one patient (full timeline). Returns [] on failure.
   static Future<List<dynamic>> getScheduleForPatient(String patientId) async {
     try {
