@@ -95,6 +95,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     (key: 'lastChildAge',     label: 'সর্বশেষ সন্তানের বয়স (বছর)',    section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
     (key: 'lastDeliveryPlace',label: 'সর্বশেষ প্রসবের স্থান',         section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: false, isBool: false),
     (key: 'plannedDelivery',  label: 'চিহ্নিত প্রসব কেন্দ্র',         section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: false, isBool: false),
+    (key: 'pregnancyOutcome', label: 'গর্ভাবস্থার ফলাফল',           section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: false, isBool: false),
     // ঝুঁকির ইতিহাস — prior obstetric complications (MCP card pg 5); any → high-risk
     (key: 'histAPH',        label: 'পূর্বে গর্ভকালীন রক্তস্রাব (APH)',     section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
     (key: 'histPPH',        label: 'পূর্বে প্রসবোত্তর রক্তস্রাব (PPH)',     section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
@@ -115,16 +116,26 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     (key: 'birthTime',     label: 'জন্মের সময়',             section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
     (key: 'deliveryPlace', label: 'প্রসবের স্থান',           section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
     (key: 'birthRegNo',    label: 'জন্ম নিবন্ধন নং',         section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
-    // প্রতিষ্ঠান
-    (key: 'anganwadiCentre', label: 'অঙ্গনওয়াড়ি কেন্দ্র',    section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'lgdCode',         label: 'LGD কোড',              section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'panchayat',       label: 'গ্রাম পঞ্চায়েত / ওয়ার্ড', section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'anmName',         label: 'ANM / MPW নাম',        section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'facilityName',    label: 'SH / PHC / CHC',       section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'district',        label: 'জেলা',                 section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'subcentreRegNo',  label: 'উপকেন্দ্র নিবন্ধন নং',  section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'referralHospital',label: 'রেফারেল হাসপাতাল',      section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'vhndDay',         label: 'স্বাস্থ্য পুষ্টি দিবস',  section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'childRchId',    label: 'শিশুর MCTS / RCH / নিবন্ধন নং', section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
+    // প্রতিষ্ঠান (MCP card pg 3 — institution block)
+    (key: 'anganwadiCentre', label: 'অঙ্গনওয়াড়ি কেন্দ্র',       section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'awcNumber',       label: 'অঙ্গনওয়াড়ি কেন্দ্র নং',    section: 'প্রতিষ্ঠান', cases: [], number: true,  isBool: false),
+    (key: 'lgdCode',         label: 'LGD কোড',                section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'panchayat',       label: 'গ্রাম পঞ্চায়েত / ওয়ার্ড',  section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'block',           label: 'ব্লক / মিউনিসিপ্যাল বডি',  section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'postOffice',      label: 'পোস্ট অফিস',             section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'pincode',         label: 'পোস্টাল কোড (পিন)',       section: 'প্রতিষ্ঠান', cases: [], number: true,  isBool: false),
+    (key: 'anmName',         label: 'ANM / FHW / FTS নাম',     section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'anmMobile',       label: 'ANM / FTS মোবাইল',        section: 'প্রতিষ্ঠান', cases: [], number: true,  isBool: false),
+    (key: 'deliveryCentrePhone', label: 'প্রসব কেন্দ্রের ফোন নং', section: 'প্রতিষ্ঠান', cases: [], number: true, isBool: false),
+    (key: 'facilityName',    label: 'প্রাথমিক স্বাস্থ্যকেন্দ্র (PHC/UPHC)', section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'bphc',            label: 'ব্লক প্রাথমিক স্বাস্থ্যকেন্দ্র (BPHC)', section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'ruralHospital',   label: 'গ্রামীণ হাসপাতাল (RH)',    section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'district',        label: 'জেলা',                   section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'subcentreName',   label: 'উপস্বাস্থ্যকেন্দ্রের নাম',  section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'subcentreRegNo',  label: 'উপকেন্দ্র নিবন্ধন নং',     section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'referralHospital',label: 'রেফারেল হাসপাতাল',        section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'vhndDay',         label: 'স্বাস্থ্য পুষ্টি দিবস',    section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
   ];
 
   // Enumerable fields render as dropdowns (better data quality than free text).
@@ -134,6 +145,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     'religion':   ['হিন্দু', 'মুসলিম', 'খ্রিস্টান', 'শিখ', 'বৌদ্ধ', 'অন্যান্য'],
     'caste':      ['সাধারণ (General)', 'SC', 'ST', 'OBC', 'BPL'],
     'bloodGroup': ['A+', 'A−', 'B+', 'B−', 'O+', 'O−', 'AB+', 'AB−', 'জানা নেই'],
+    'pregnancyOutcome': ['জীবিত শিশুর প্রসব', 'মৃত শিশুর প্রসব', 'প্রযোজ্য নয়'],
   };
 
   // ── Speak-to-fill (voice dictation for free-text fields) ────────────────
@@ -1361,7 +1373,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       age: _ageCtrl.text.trim(),
       ageUnit: _ageUnit,
       gender: _gender,
-      dob:          (_caseType == 'Newborn' || _caseType == 'Child') ? _dob : null,
+      dob:          _dob, // record for all cases; backend guards baby-vaccine gen to child/newborn
       lmp:          _caseType == 'Pregnancy' ? _lmp : null,
       edd:          _caseType == 'Pregnancy' ? _edd : null,
       guardianName: _guardianCtrl.text.trim(),
@@ -1407,7 +1419,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       age: _ageCtrl.text.trim(),
       ageUnit: _ageUnit,
       gender: _gender,
-      dob:          (_caseType == 'Newborn' || _caseType == 'Child') ? _dob : null,
+      dob:          _dob, // record for all cases; backend guards baby-vaccine gen to child/newborn
       lmp:          _caseType == 'Pregnancy' ? _lmp : null,
       edd:          _caseType == 'Pregnancy' ? _edd : null,
       guardianName: _guardianCtrl.text.trim(),
