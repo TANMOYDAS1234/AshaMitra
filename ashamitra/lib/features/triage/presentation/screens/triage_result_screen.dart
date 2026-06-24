@@ -262,6 +262,28 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
     // every report would be POSTed twice and duplicated on the server.
   }
 
+  /// Opens the referral form (Form 3) pre-filled from this triage: patient,
+  /// band, danger signs, and the engine's recommended facility. Turns a RED/
+  /// YELLOW verdict into a trackable, printable referral in one tap.
+  void _openReferralForm() {
+    final referral = _engineResult.referral;
+    final referredTo = (referral.isNotEmpty && referral != 'None')
+        ? referral
+        : _engineResult.facilityType;
+    final symptoms = _engineResult.dangerSigns.isNotEmpty
+        ? _engineResult.dangerSigns.join(', ')
+        : (_answers['_situation'] ?? '');
+    Get.toNamed(AppRoutes.referralForm, arguments: {
+      'patientId': _args['_patientId']?.toString() ?? '',
+      'patientName': _args['_patientName']?.toString() ?? '',
+      'caseType': _caseType,
+      'band': _outcome == TriageOutcome.emergency ? 'RED' : 'YELLOW',
+      'reason': _reasonText,
+      'symptoms': symptoms,
+      'referredTo': referredTo,
+    });
+  }
+
   void _saveFollowUp() {
     final ctrl = Get.find<PatientController>();
     final outcomeStr = _outcome.name == 'safe'
@@ -454,6 +476,16 @@ class _TriageResultScreenState extends State<TriageResultScreen> {
                     ),
                   ],
                 ),
+                // Turn a RED/YELLOW verdict into a trackable Form 3 referral.
+                if (_outcome != TriageOutcome.safe) ...[
+                  const SizedBox(height: 12),
+                  AppButton(
+                    label: 'রেফার স্লিপ তৈরি করুন (Form 3)',
+                    onPressed: _openReferralForm,
+                    width: double.infinity,
+                    icon: Icons.assignment_outlined,
+                  ),
+                ],
                 const SizedBox(height: 12),
                 AppButton(
                   label: 'হোমে ফিরুন',

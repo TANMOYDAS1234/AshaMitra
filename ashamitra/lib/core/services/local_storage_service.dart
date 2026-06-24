@@ -11,6 +11,8 @@ class LocalStorageService {
   static const _keyReports = 'session_reports';
   static const _keyPendingDeletes = 'session_pending_deletes';
   static const _keyPendingReportDeletes = 'session_pending_report_deletes';
+  static const _keyReferrals = 'session_referrals';
+  static const _keyPendingReferralDeletes = 'session_pending_referral_deletes';
 
   static Future<void> init() async =>
       _prefs = await SharedPreferences.getInstance();
@@ -101,6 +103,33 @@ class LocalStorageService {
       _prefs.setString(_keyPendingReportDeletes, jsonEncode(list));
   static List<Map<String, dynamic>> loadPendingReportDeletes() {
     final raw = _prefs.getString(_keyPendingReportDeletes);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (_) { return []; }
+  }
+
+  // ── Referrals (ASHA Form 3 + outcome tracking) ───────────────
+  static Future<void> saveReferrals(List<Map<String, dynamic>> list) =>
+      _prefs.setString(_keyReferrals, jsonEncode(list));
+  static List<Map<String, dynamic>> loadReferrals() {
+    final raw = _prefs.getString(_keyReferrals);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (_) { return []; }
+  }
+
+  // Referrals the worker deleted while offline — hidden from UI, flushed and
+  // re-excluded by the next sync (mirrors the patient/report pending-delete).
+  static Future<void> savePendingReferralDeletes(List<Map<String, dynamic>> list) =>
+      _prefs.setString(_keyPendingReferralDeletes, jsonEncode(list));
+  static List<Map<String, dynamic>> loadPendingReferralDeletes() {
+    final raw = _prefs.getString(_keyPendingReferralDeletes);
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)

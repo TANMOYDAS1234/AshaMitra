@@ -8,6 +8,7 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/services/case_detection_service.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../shared/components/bottom_nav.dart';
+import '../../../referrals/controller/referral_controller.dart';
 import '../widgets/greeting_header.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/patient_context_sheet.dart';
@@ -179,6 +180,84 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Referrals + outcome tracking entry. Shows a badge with the number of
+  /// "open" referrals (pending/reached) so the worker remembers to follow up —
+  /// the field-flagged gap of "patient vanishes after referral".
+  Widget _referralsBanner() {
+    final ctrl = Get.isRegistered<ReferralController>()
+        ? Get.find<ReferralController>()
+        : Get.put(ReferralController(), permanent: true);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => Get.toNamed(AppRoutes.referralList),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: AppShadows.low,
+              border: Border.all(color: AppColors.emergencyRed.withValues(alpha: 0.18)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.emergencyRed.withValues(alpha: 0.10),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.local_hospital_rounded,
+                        color: AppColors.emergencyRed, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('রেফারেল ও ট্র্যাকিং',
+                            style: AppTextStyles.h3
+                                .copyWith(fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 2),
+                        Text('রোগী রেফার করুন ও ফলাফল ট্র্যাক করুন',
+                            style: AppTextStyles.bodySm
+                                .copyWith(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  Obx(() {
+                    final open = ctrl.openCount;
+                    if (open == 0) {
+                      return const Icon(Icons.chevron_right_rounded,
+                          color: AppColors.emergencyRed, size: 24);
+                    }
+                    return Container(
+                      constraints: const BoxConstraints(minWidth: 34),
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.emergencyRed,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text('$open',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.label.copyWith(
+                              color: Colors.white, fontWeight: FontWeight.w800)),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Emergency goes straight through — urgency overrides patient context.
   /// Every other case opens the [PatientContextSheet] which nudges the
   /// worker to pick / add a patient first (or proceed anonymously).
@@ -241,6 +320,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 4),
                       _dueBanner(),
                       _registersBanner(),
+                      _referralsBanner(),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Row(

@@ -222,6 +222,88 @@ class ApiService {
     }
   }
 
+  // ── Referrals (ASHA Form 3 + outcome tracking) ─────────────────────────────
+
+  /// GET /referrals — all referrals for this worker. Throws on failure so the
+  /// controller can distinguish offline from a real empty state.
+  static Future<List<dynamic>> getReferrals() async {
+    final res = await http
+        .get(Uri.parse('$baseUrl/referrals'), headers: _headers)
+        .timeout(const Duration(seconds: 45));
+    _guard(res.statusCode);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return body['data'] as List? ?? [];
+  }
+
+  /// POST /referrals — create a referral. [referral] must carry `clientId`
+  /// (idempotency key). Returns the server doc (with Mongo `id`) on success,
+  /// null on any failure → caller keeps the local row "not yet synced".
+  static Future<Map<String, dynamic>?> createReferral(Map<String, dynamic> referral) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/referrals'),
+        headers: _headers,
+        body: jsonEncode(referral),
+      ).timeout(const Duration(seconds: 45));
+      _guard(res.statusCode);
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (body['success'] != true) {
+        AppLogger.prod('createReferral rejected: status=${res.statusCode} msg=${body['message']}');
+        return null;
+      }
+      final data = body['data'];
+      return data is Map<String, dynamic> ? data : null;
+    } catch (e) {
+      AppLogger.e('createReferral', e); // offline/401 expected here
+      return null;
+    }
+  }
+
+  /// PUT /referrals/:id — update (typically the outcome). [referral] should
+  /// include `version`; on mismatch the server returns 409 with its current doc.
+  /// Returns `{status: 'success'|'conflict'|'failure', data: Map?}`.
+  static Future<Map<String, dynamic>> updateReferral(String id, Map<String, dynamic> referral) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl/referrals/$id'),
+        headers: _headers,
+        body: jsonEncode(referral),
+      ).timeout(const Duration(seconds: 45));
+      if (res.statusCode == 401) {
+        onUnauthorized?.call();
+        throw UnauthorizedException();
+      }
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode == 200 && body['success'] == true) {
+        return {'status': 'success', 'data': body['data']};
+      }
+      if (res.statusCode == 409) {
+        return {'status': 'conflict', 'data': body['current']};
+      }
+      return {'status': 'failure', 'data': null};
+    } catch (_) {
+      return {'status': 'failure', 'data': null};
+    }
+  }
+
+  /// DELETE /referrals/:id — [id] must be a real server _id (skip placeholder
+  /// `ref_<ts>` ids). Returns true on confirmed delete, false on any failure.
+  static Future<bool> deleteReferral(String id) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$baseUrl/referrals/$id'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 45));
+      _guard(res.statusCode);
+      if (res.statusCode != 200 && res.statusCode != 204) return false;
+      if (res.body.isEmpty) return true;
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['success'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ── Reports ────────────────────────────────────────────────────────────────
 
   /// Returns the server-created report doc (with the real Mongo `_id` mapped
