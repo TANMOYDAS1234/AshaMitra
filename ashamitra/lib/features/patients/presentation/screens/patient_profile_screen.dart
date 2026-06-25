@@ -12,6 +12,8 @@ import '../../../../shared/widgets/risk_badge.dart';
 import '../../../../shared/widgets/patient_photo.dart';
 import '../../controller/patient_controller.dart';
 import '../../data/models/patient_model.dart';
+import '../../services/mcp_report_pdf.dart';
+import '../../../../core/services/local_storage_service.dart';
 
 class PatientProfileScreen extends StatelessWidget {
   const PatientProfileScreen({super.key});
@@ -321,6 +323,45 @@ class PatientProfileScreen extends StatelessWidget {
                         },
                         icon: Icons.mic_rounded,
                         width: double.infinity,
+                      ),
+                      const SizedBox(height: 10),
+                      // One-tap "মা ও শিশুর কার্ড" — compiles registration +
+                      // captured visit records into a printable MCP-card report.
+                      AppButton(
+                        label: 'মা ও শিশুর রিপোর্ট (PDF)',
+                        outlined: true,
+                        icon: Icons.picture_as_pdf_outlined,
+                        width: double.infinity,
+                        onPressed: () async {
+                          if (!Get.isRegistered<PatientController>()) return;
+                          final ctrl = Get.find<PatientController>();
+                          final i = ctrl.patients
+                              .indexWhere((p) => p.id == patientId);
+                          if (i == -1) {
+                            Get.snackbar('রিপোর্ট', 'রোগীর তথ্য পাওয়া গেল না।',
+                                snackPosition: SnackPosition.BOTTOM,
+                                backgroundColor: AppColors.warningYellow,
+                                colorText: Colors.white,
+                                margin: const EdgeInsets.all(16),
+                                borderRadius: 12);
+                            return;
+                          }
+                          final u = LocalStorageService.loadUser() ?? const {};
+                          String s(List<String> keys) {
+                            for (final k in keys) {
+                              final v = (u[k] ?? '').toString().trim();
+                              if (v.isNotEmpty) return v;
+                            }
+                            return '';
+                          }
+                          await McpReportPdf.generate(ctrl.patients[i], header: {
+                            'asha': s(['name', 'fullName']),
+                            'block': s(['block']),
+                            'district': s(['district']),
+                            'facility':
+                                s(['subCentre', 'subcentre', 'facilityName', 'facility']),
+                          });
+                        },
                       ),
                       const SizedBox(height: 24),
                       // ── Last assessment — real triage data ───────────

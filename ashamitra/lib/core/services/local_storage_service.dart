@@ -111,6 +111,19 @@ class LocalStorageService {
     } catch (_) { return []; }
   }
 
+  // ── Visit drafts (resume a half-done checkup later) ──────────
+  // A worker can save a partly-filled visit and come back to it; keyed by the
+  // schedule event id so reopening the same event restores what she entered.
+  static String _visitDraftKey(String id) => 'visit_draft_$id';
+  static Future<void> saveVisitDraft(String id, Map<String, dynamic> d) =>
+      _prefs.setString(_visitDraftKey(id), jsonEncode(d));
+  static Map<String, dynamic>? loadVisitDraft(String id) {
+    final raw = _prefs.getString(_visitDraftKey(id));
+    if (raw == null) return null;
+    try { return jsonDecode(raw) as Map<String, dynamic>; } catch (_) { return null; }
+  }
+  static Future<void> clearVisitDraft(String id) => _prefs.remove(_visitDraftKey(id));
+
   // ── Referrals (ASHA Form 3 + outcome tracking) ───────────────
   static Future<void> saveReferrals(List<Map<String, dynamic>> list) =>
       _prefs.setString(_keyReferrals, jsonEncode(list));

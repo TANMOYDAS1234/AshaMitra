@@ -1,0 +1,302 @@
+import 'dart:isolate';
+import 'dart:typed_data';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import '../../../core/services/api_service.dart';
+import '../../../core/utils/pdf_helper.dart';
+import '../data/models/patient_model.dart';
+
+/// Generates a one-/two-page "মা ও শিশুর সুরক্ষা কার্ড — সারসংক্ষেপ" (MCP-card
+/// summary / ANC report) for a single patient: identity + pregnancy summary,
+/// a high-risk banner, the ANC visit table (from captured visit records), the
+/// immunization table, and upcoming due items. Reuses the Bengali PDF pipeline.
+class McpReportPdf {
+  static Future<void> generate(
+    PatientModel p, {
+    Map<String, String> header = const {},
+  }) async {
+    // Pull the patient's schedule timeline (ANC / vaccine / HBNC events with the
+    // record captured at each completed visit). Empty for a not-yet-synced row.
+    final events = await ApiService.getScheduleForPatient(p.id);
+    final data = _data(p, events, header);
+    final regular = await PdfHelper.loadFontBytes(bold: false);
+    final bold = await PdfHelper.loadFontBytes(bold: true);
+    List<int> bytes;
+    try {
+      bytes = await Isolate.run(() => buildMcpReportPdf((regular, bold, data)))
+          .timeout(const Duration(seconds: 60));
+    } catch (_) {
+      bytes = await buildMcpReportPdf((regular, bold, data))
+          .timeout(const Duration(seconds: 45));
+    }
+    await PdfHelper.saveAndOpen(bytes, data['fileName']!.toString())
+        .timeout(const Duration(seconds: 15));
+  }
+
+  static String _fmt(dynamic iso) {
+    final s = (iso ?? '').toString().trim();
+    if (s.isEmpty) return '';
+    final d = DateTime.tryParse(s);
+    if (d == null) return s;
+    String p(int n) => n.toString().padLeft(2, '0');
+    return '${p(d.day)}/${p(d.month)}/${d.year}';
+  }
+
+  static String _kindBn(String k) => switch (k) {
+        'anc' => 'ANC',
+        'vaccine' => 'টিকা',
+        'hbnc' => 'নবজাতক',
+        'hbyc' => 'শিশু',
+        _ => k,
+      };
+
+  static String _caseBn(String t) => switch (t) {
+        'Pregnancy' || 'pregnancy' => 'গর্ভবতী',
+        'Newborn' || 'newborn' => 'নবজাতক',
+        'Child' || 'child' => 'শিশু',
+        _ => 'অন্যান্য',
+      };
+
+  static Map<String, dynamic> _data(
+      PatientModel p, List<dynamic> events, Map<String, String> header) {
+    final md = p.mcpDetails;
+    String m(String k) => (md[k] ?? '').toString().trim();
+
+    // ── Identity + pregnancy summary ──────────────────────────────────────
+    final idRows = <List<String>>[
+      ['নাম', p.name],
+      ['বয়স', '${p.age} ${switch (p.ageUnit) { 'days' => 'দিন', 'months' => 'মাস', _ => 'বছর' }}'],
+      ['কেস', _caseBn(p.type)],
+      if (m('fatherName').isNotEmpty) ['স্বামী/বাবা', m('fatherName')],
+      if (p.village.isNotEmpty && p.village != 'Unknown') ['গ্রাম', p.village],
+      if (p.mobile.isNotEmpty) ['মোবাইল', p.mobile],
+      if (m('rchId').isNotEmpty) ['RCH/MCTS', m('rchId')],
+      if (m('motherAadhaar').isNotEmpty) ['মায়ের আধার', m('motherAadhaar')],
+      if (m('bloodGroup').isNotEmpty) ['রক্তের গ্রুপ', m('bloodGroup')],
+      if (p.lmp != null) ['LMP', _fmt(p.lmp!.toIso8601String())],
+      if (p.edd != null) ['EDD', _fmt(p.edd!.toIso8601String())],
+      if (m('gravida').isNotEmpty)
+        ['গর্ভ (G/P/L)', '${m('gravida')}/${m('para')}/${m('prevLiveBirths')}'],
+    ];
+
+    // ── ANC visits, immunization, upcoming ────────────────────────────────
+    final anc = <List<String>>[];
+    final vac = <List<String>>[];
+    final due = <List<String>>[];
+    for (final e in events) {
+      if (e is! Map) continue;
+      final kind = (e['kind'] ?? '').toString();
+      final status = (e['status'] ?? '').toString();
+      final rec = (e['record'] is Map)
+          ? (e['record'] as Map).cast<String, dynamic>()
+          : const <String, dynamic>{};
+      String r(String k) => (rec[k] ?? '').toString().trim();
+      final date = _fmt(rec['completedAt'] ?? e['dueDate']);
+      final label = (e['label'] ?? '').toString();
+
+      if (status == 'pending') {
+        due.add([label, _kindBn(kind), _fmt(e['dueDate'])]);
+        continue;
+      }
+      if (status != 'done') continue;
+      if (kind == 'anc') {
+        final flags = <String>[
+          ...((rec['dangerFlags'] as List?)?.map((e) => e.toString()) ?? const []),
+          ...((rec['tbSymptoms'] as List?)?.map((e) => e.toString()) ?? const []),
+        ];
+        anc.add([
+          label, date, r('weight'), r('bp'), r('hb'),
+          '${r('urineAlbumin')}/${r('urineSugar')}',
+          r('fundalHeight'),
+          ((rec['supplementsGiven'] as List?)?.join(', ') ?? ''),
+          flags.isEmpty ? '—' : flags.join(', '),
+        ]);
+      } else if (kind == 'vaccine') {
+        vac.add([
+          label, date,
+          ((rec['givenVaccines'] as List?)?.join(', ') ?? ''),
+          rec['allGiven'] == true ? 'সম্পূর্ণ' : 'আংশিক',
+        ]);
+      }
+    }
+
+    return {
+      'fileName': 'mcp_report_${p.name.replaceAll(RegExp(r"\s+"), "_")}.pdf',
+      'generatedAt': _fmt(DateTime.now().toIso8601String()),
+      'title': 'মা ও শিশুর সুরক্ষা কার্ড — সারসংক্ষেপ',
+      'header': {
+        'asha': header['asha'] ?? '',
+        'block': header['block'] ?? '',
+        'district': header['district'] ?? '',
+        'facility': header['facility'] ?? '',
+      },
+      'highRisk': md['highRisk'] == true,
+      'highRiskReason': (md['highRiskReason'] ?? '').toString(),
+      'idRows': idRows,
+      'anc': anc,
+      'vac': vac,
+      'due': due,
+    };
+  }
+}
+
+/// Isolate-safe builder. Receives font bytes + a plain data map.
+Future<List<int>> buildMcpReportPdf(
+    (Uint8List, Uint8List, Map<String, dynamic>) args) async {
+  final (regularBytes, boldBytes, data) = args;
+  pw.Font makeFont(Uint8List b) =>
+      b.isNotEmpty ? pw.Font.ttf(b.buffer.asByteData()) : pw.Font.helvetica();
+  final theme = pw.ThemeData.withFont(
+    base: makeFont(regularBytes),
+    bold: makeFont(boldBytes),
+    italic: makeFont(regularBytes),
+    boldItalic: makeFont(boldBytes),
+  );
+  final doc = pw.Document(theme: theme);
+
+  final header = (data['header'] as Map?)?.cast<String, dynamic>() ?? {};
+  final idRows = (data['idRows'] as List?) ?? const [];
+  final anc = (data['anc'] as List?) ?? const [];
+  final vac = (data['vac'] as List?) ?? const [];
+  final due = (data['due'] as List?) ?? const [];
+
+  List<List<String>> rows(List src) =>
+      src.map((r) => (r as List).map((c) => c.toString()).toList()).toList();
+
+  pw.Widget table(List<String> cols, List<List<String>> data) =>
+      pw.TableHelper.fromTextArray(
+        headers: cols,
+        data: data,
+        border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.4),
+        headerStyle: pw.TextStyle(
+            fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+        headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey600),
+        cellStyle: const pw.TextStyle(fontSize: 7.5),
+        cellAlignment: pw.Alignment.centerLeft,
+        cellPadding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 2.5),
+        oddRowDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey50),
+      );
+
+  pw.Widget sectionTitle(String t) => pw.Padding(
+        padding: const pw.EdgeInsets.only(top: 12, bottom: 4),
+        child: pw.Text(t,
+            style: pw.TextStyle(
+                fontSize: 11,
+                fontWeight: pw.FontWeight.bold,
+                color: PdfColors.blueGrey800)),
+      );
+
+  doc.addPage(
+    pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.all(24),
+      footer: (ctx) => pw.Align(
+        alignment: pw.Alignment.centerRight,
+        child: pw.Text('পৃষ্ঠা ${ctx.pageNumber}/${ctx.pagesCount}',
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+      ),
+      build: (ctx) => [
+        // Header
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text((data['title'] ?? '').toString(),
+                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                pw.Text('AshaMitra', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
+              ],
+            ),
+            pw.Text('তৈরি: ${(data['generatedAt'] ?? '').toString()}',
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+          ],
+        ),
+        if ([header['asha'], header['block'], header['district'], header['facility']]
+            .any((e) => (e ?? '').toString().isNotEmpty)) ...[
+          pw.SizedBox(height: 4),
+          pw.Text(
+            [
+              if ((header['asha'] ?? '').toString().isNotEmpty) 'আশা: ${header['asha']}',
+              if ((header['facility'] ?? '').toString().isNotEmpty) 'কেন্দ্র: ${header['facility']}',
+              if ((header['block'] ?? '').toString().isNotEmpty) 'ব্লক: ${header['block']}',
+              if ((header['district'] ?? '').toString().isNotEmpty) 'জেলা: ${header['district']}',
+            ].join('   |   '),
+            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
+          ),
+        ],
+        pw.Divider(height: 10, thickness: 0.6),
+
+        // High-risk banner
+        if (data['highRisk'] == true)
+          pw.Container(
+            width: double.infinity,
+            margin: const pw.EdgeInsets.only(bottom: 6),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: pw.BoxDecoration(
+                color: PdfColors.red50,
+                border: pw.Border.all(color: PdfColors.red400, width: 0.8),
+                borderRadius: pw.BorderRadius.circular(4)),
+            child: pw.Text(
+                'উচ্চ ঝুঁকি: ${(data['highRiskReason'] ?? '').toString().isNotEmpty ? data['highRiskReason'] : 'হ্যাঁ'}',
+                style: pw.TextStyle(
+                    fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
+          ),
+
+        // Identity
+        sectionTitle('পরিচয় ও গর্ভাবস্থার তথ্য'),
+        pw.Wrap(
+          spacing: 18,
+          runSpacing: 3,
+          children: rows(idRows)
+              .map((r) => pw.SizedBox(
+                    width: 250,
+                    child: pw.Row(children: [
+                      pw.SizedBox(
+                          width: 90,
+                          child: pw.Text('${r[0]}:',
+                              style: pw.TextStyle(
+                                  fontSize: 9, fontWeight: pw.FontWeight.bold))),
+                      pw.Expanded(
+                          child: pw.Text(r.length > 1 ? r[1] : '',
+                              style: const pw.TextStyle(fontSize: 9))),
+                    ]),
+                  ))
+              .toList(),
+        ),
+
+        // ANC visits
+        if (anc.isNotEmpty) ...[
+          sectionTitle('ANC ভিজিট (পরিমাপ)'),
+          table(const ['ভিজিট', 'তারিখ', 'ওজন', 'BP', 'Hb', 'মূত্র(A/S)', 'জরায়ু', 'দেওয়া হয়েছে', 'বিপদ/TB'], rows(anc)),
+        ],
+
+        // Immunization
+        if (vac.isNotEmpty) ...[
+          sectionTitle('টিকাকরণ'),
+          table(const ['ভিজিট', 'তারিখ', 'যে টিকা দেওয়া হয়েছে', 'অবস্থা'], rows(vac)),
+        ],
+
+        // Upcoming
+        if (due.isNotEmpty) ...[
+          sectionTitle('আসন্ন / বকেয়া'),
+          table(const ['কাজ', 'ধরন', 'তারিখ'], rows(due)),
+        ],
+
+        if (anc.isEmpty && vac.isEmpty && due.isEmpty)
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 10),
+            child: pw.Text('— এখনও কোনো ভিজিট/সূচি নেই —',
+                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
+          ),
+
+        pw.SizedBox(height: 14),
+        pw.Text('AshaMitra দ্বারা স্বয়ংক্রিয়ভাবে তৈরি — তথ্য মিলিয়ে নিন।  আশা স্বাক্ষর: ____________________',
+            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+      ],
+    ),
+  );
+
+  return doc.save();
+}

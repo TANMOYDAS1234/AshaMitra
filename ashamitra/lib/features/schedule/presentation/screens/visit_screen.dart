@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/services/local_storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -39,6 +40,13 @@ class _VisitScreenState extends State<VisitScreen> {
   // Supplements / injections given this ANC visit.
   final Set<String> _ancGiven = {};
   static const _ancSupplements = ['IFA', 'ক্যালসিয়াম', 'অ্যালবেন্ডাজল', 'TD টিকা'];
+  // WB MCP-card pg-5 TB screening inside ANC — any flag ⇒ prompt a NAAT test.
+  final Set<String> _tb = {};
+  static const _ancTbSigns = [
+    'কাশি / জ্বর (২ সপ্তাহের বেশি)',
+    'রাতে ঘাম হওয়া',
+    'গত ৩ মাসে ওজন বাড়েনি',
+  ];
   // Danger-sign flags (ANC / newborn / young-child).
   final Set<String> _flags = {};
 
@@ -81,6 +89,55 @@ class _VisitScreenState extends State<VisitScreen> {
     _e = args is Map ? Map<String, dynamic>.from(args) : <String, dynamic>{};
     // Pre-tick all vaccines for this visit (worker unticks any not given).
     if (_kind == 'vaccine') _given.addAll(_vaccines);
+    _loadDraft(); // resume a half-filled visit, if any
+  }
+
+  // ── Draft (resume later) ────────────────────────────────────────────────
+  /// Everything the worker entered, so a half-done visit can be reopened.
+  Map<String, dynamic> _draftMap() => {
+        'given': _given.toList(),
+        'ancGiven': _ancGiven.toList(),
+        'flags': _flags.toList(),
+        'tb': _tb.toList(),
+        'bp': _bp.text, 'weight': _weight.text, 'hb': _hb.text,
+        'bsugar': _bsugar.text, 'urineAlb': _urineAlb.text,
+        'urineSugar': _urineSugar.text, 'fundal': _fundal.text,
+      };
+
+  void _applyDraft(Map<String, dynamic> d) {
+    void fill(TextEditingController c, String k) {
+      final v = d[k];
+      if (v != null) c.text = v.toString();
+    }
+    fill(_bp, 'bp'); fill(_weight, 'weight'); fill(_hb, 'hb');
+    fill(_bsugar, 'bsugar'); fill(_urineAlb, 'urineAlb');
+    fill(_urineSugar, 'urineSugar'); fill(_fundal, 'fundal');
+    void addAll(Set<String> s, String k) {
+      final v = d[k];
+      if (v is List) s.addAll(v.map((e) => e.toString()));
+    }
+    if (d['given'] is List) { _given.clear(); addAll(_given, 'given'); }
+    addAll(_ancGiven, 'ancGiven');
+    addAll(_flags, 'flags');
+    addAll(_tb, 'tb');
+  }
+
+  void _loadDraft() {
+    if (_id.isEmpty) return;
+    final d = LocalStorageService.loadVisitDraft(_id);
+    if (d != null) _applyDraft(d);
+  }
+
+  Future<void> _saveDraft() async {
+    if (_id.isEmpty) { Get.back(); return; }
+    await LocalStorageService.saveVisitDraft(_id, _draftMap());
+    if (!mounted) return;
+    Get.back(result: false); // event stays pending → reopen to resume
+    Get.snackbar('খসড়া সংরক্ষিত', 'পরে এই ভিজিট থেকে আবার শুরু করতে পারবেন।',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: AppColors.warningYellow, colorText: Colors.white,
+        margin: const EdgeInsets.all(16), borderRadius: 12,
+        duration: const Duration(seconds: 2));
   }
 
   @override
@@ -159,6 +216,10 @@ class _VisitScreenState extends State<VisitScreen> {
         'urineSugar': _urineSugar.text.trim(),
         'fundalHeight': _fundal.text.trim(),
         'supplementsGiven': _ancGiven.toList(),
+        if (_tb.isNotEmpty) ...{
+          'tbSymptoms': _tb.toList(),
+          'naatNeeded': true,
+        },
       },
       if (_flags.isNotEmpty) 'dangerFlags': _flags.toList(),
       'completedAt': DateTime.now().toIso8601String(),
@@ -173,6 +234,7 @@ class _VisitScreenState extends State<VisitScreen> {
           margin: const EdgeInsets.all(16), borderRadius: 12);
       return;
     }
+    await LocalStorageService.clearVisitDraft(_id); // visit done → drop the draft
     Get.back(result: true); // due list refreshes
     Get.snackbar('ভিজিট সম্পন্ন ✓', '${_e['patientName'] ?? ''} — $_label',
         snackPosition: SnackPosition.BOTTOM,
@@ -222,6 +284,15 @@ class _VisitScreenState extends State<VisitScreen> {
                         onPressed: _saving ? null : _complete,
                         width: double.infinity,
                         icon: Icons.check_circle_outline_rounded,
+                      ),
+                      const SizedBox(height: 10),
+                      // Save a half-done visit and resume it later from the due list.
+                      AppButton(
+                        label: 'খসড়া সংরক্ষণ করুন (পরে শেষ করব)',
+                        onPressed: _saving ? null : _saveDraft,
+                        outlined: true,
+                        width: double.infinity,
+                        icon: Icons.save_outlined,
                       ),
                     ],
                   ),
@@ -397,10 +468,20 @@ class _VisitScreenState extends State<VisitScreen> {
       ),
       const SizedBox(height: 18),
       ..._flagBody('বিপদচিহ্ন যাচাই করুন', _ancDangerSigns),
+      const SizedBox(height: 18),
+      ..._flagBody('যক্ষ্মা (TB) লক্ষণ যাচাই', _ancTbSigns,
+          target: _tb, color: AppColors.warningYellow),
+      if (_tb.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        _naatBanner(),
+      ],
     ];
   }
 
-  List<Widget> _flagBody(String title, List<String> signs) {
+  List<Widget> _flagBody(String title, List<String> signs,
+      {Set<String>? target, Color? color}) {
+    final set = target ?? _flags;
+    final c = color ?? AppColors.emergencyRed;
     return [
       Text(title, style: AppTextStyles.label),
       const SizedBox(height: 8),
@@ -408,22 +489,48 @@ class _VisitScreenState extends State<VisitScreen> {
         spacing: 8,
         runSpacing: 8,
         children: signs.map((s) {
-          final sel = _flags.contains(s);
+          final sel = set.contains(s);
           return FilterChip(
             label: Text(s),
             selected: sel,
             showCheckmark: false,
-            selectedColor: AppColors.emergencyRed,
+            selectedColor: c,
             backgroundColor: AppColors.surface,
             labelStyle: AppTextStyles.label.copyWith(
               color: sel ? Colors.white : AppColors.textSecondary,
             ),
             onSelected: (on) =>
-                setState(() => on ? _flags.add(s) : _flags.remove(s)),
+                setState(() => on ? set.add(s) : set.remove(s)),
           );
         }).toList(),
       ),
     ];
+  }
+
+  /// Shown when a TB symptom is flagged at ANC (WB MCP card → NAAT test).
+  Widget _naatBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.warningYellow.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.warningYellow, width: 1),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.coronavirus_outlined, color: AppColors.warningYellow),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'টিবি সন্দেহ — কফ পরীক্ষা / NAAT করান এবং নিকটস্থ TB কেন্দ্রে জানান।',
+              style: AppTextStyles.label.copyWith(
+                  color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _dangerBanner() {
