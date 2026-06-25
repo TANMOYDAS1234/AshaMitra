@@ -259,8 +259,21 @@ class _VisitScreenState extends State<VisitScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _patientCard(),
-                      const SizedBox(height: 18),
-                      ..._body(),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: AppColors.primary.withValues(alpha: 0.08)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: _body(),
+                        ),
+                      ),
                       if (_hasDanger) ...[
                         const SizedBox(height: 16),
                         _dangerBanner(),
@@ -321,22 +334,46 @@ class _VisitScreenState extends State<VisitScreen> {
       _ => Icons.event_note_rounded,
     };
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(14),
+        gradient: LinearGradient(
+          colors: [color.withValues(alpha: 0.18), color.withValues(alpha: 0.04)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(width: 12),
+          // Friendly illustration — drop a PNG at assets/illustrations/<kind>.png
+          // (anc/hbnc/hbyc/vaccine). Falls back to a Material icon when absent,
+          // so a missing file never breaks anything.
+          Container(
+            width: 58,
+            height: 58,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.6),
+              shape: BoxShape.circle,
+            ),
+            child: Image.asset(
+              'assets/illustrations/$_kind.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Icon(icon, color: color, size: 30),
+            ),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(_e['patientName']?.toString() ?? 'রোগী',
                     style: AppTextStyles.h3),
-                Text(_label, style: AppTextStyles.label),
+                const SizedBox(height: 2),
+                Text(_label,
+                    style: AppTextStyles.label
+                        .copyWith(color: color, fontWeight: FontWeight.w700)),
               ],
             ),
           ),

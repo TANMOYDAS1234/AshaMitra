@@ -14,6 +14,7 @@ import '../../controller/patient_controller.dart';
 import '../../data/models/patient_model.dart';
 import '../../services/mcp_report_pdf.dart';
 import '../../../../core/services/local_storage_service.dart';
+import 'pregnancy_timeline_screen.dart';
 
 class PatientProfileScreen extends StatelessWidget {
   const PatientProfileScreen({super.key});
@@ -363,6 +364,19 @@ class PatientProfileScreen extends StatelessWidget {
                           });
                         },
                       ),
+                      // Pregnancy patients: see every pregnancy of this woman.
+                      if (type.toLowerCase().contains('pregnan') ||
+                          type.contains('গর্ভ')) ...[
+                        const SizedBox(height: 10),
+                        AppButton(
+                          label: 'গর্ভ-ইতিহাস (সব গর্ভ)',
+                          outlined: true,
+                          icon: Icons.timeline_rounded,
+                          width: double.infinity,
+                          onPressed: () => Get.to(
+                              () => PregnancyTimelineScreen(patientId: patientId)),
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       // ── Last assessment — real triage data ───────────
                       if (hasAssessment) ...[

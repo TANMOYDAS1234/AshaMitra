@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/services/local_storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -482,6 +483,10 @@ class _DueListScreenState extends State<DueListScreen> {
     final kind = e['kind']?.toString() ?? '';
     final mobile = e['patientMobile']?.toString() ?? '';
     final vaccines = kind == 'vaccine' ? _vaccinesLine(e) : '';
+    // A half-filled visit was saved for this event — show a "খসড়া" chip so the
+    // worker knows to reopen and finish it.
+    final hasDraft =
+        LocalStorageService.loadVisitDraft(e['id']?.toString() ?? '') != null;
 
     return GestureDetector(
       onTap: () => _openVisit(e),
@@ -527,6 +532,29 @@ class _DueListScreenState extends State<DueListScreen> {
                     Text(_dueText(e),
                         style: AppTextStyles.label.copyWith(
                             color: color, fontWeight: FontWeight.w700, fontSize: 12)),
+                    if (hasDraft) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.warningYellow.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.edit_note_rounded,
+                                size: 13, color: AppColors.warningYellow),
+                            const SizedBox(width: 3),
+                            Text('খসড়া',
+                                style: AppTextStyles.label.copyWith(
+                                    color: AppColors.warningYellow,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                      ),
+                    ],
                     if (mobile.isNotEmpty) ...[
                       const SizedBox(width: 10),
                       const Icon(Icons.phone_outlined,

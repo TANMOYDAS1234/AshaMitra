@@ -427,6 +427,39 @@ class PatientController extends GetxController {
         excludeId: excludeId,
       );
 
+  /// All pregnancy records for the SAME mother (her pregnancy episodes), newest
+  /// first — grouped by the stable motherPersonId, else her real Aadhaar, else
+  /// name+phone. Always includes [m] herself. Powers the pregnancy timeline so
+  /// a worker can see every pregnancy of one woman and open each one's report.
+  List<PatientModel> pregnancyEpisodesFor(PatientModel m) {
+    bool isPreg(PatientModel p) =>
+        p.type == 'Pregnancy' || p.type == 'pregnancy';
+    final pid = (m.mcpDetails['motherPersonId'] ?? '').toString().trim();
+    final aad = (m.mcpDetails['motherAadhaar'] ?? '').toString().trim();
+    final aadReal = RegExp(r'\d{4}$').hasMatch(aad);
+    final name = PatientMatcher.normName(m.name);
+    final phone = PatientMatcher.normPhone(m.mobile);
+    final out = patients.where((p) {
+      if (p.id == m.id) return true; // always include herself
+      if (!isPreg(p) || p.syncState == SyncState.pendingDelete) return false;
+      final ppid = (p.mcpDetails['motherPersonId'] ?? '').toString().trim();
+      if (pid.isNotEmpty && ppid == pid) return true;
+      if (aadReal &&
+          (p.mcpDetails['motherAadhaar'] ?? '').toString().trim() == aad) {
+        return true;
+      }
+      if (name.isNotEmpty &&
+          PatientMatcher.normName(p.name) == name &&
+          phone.isNotEmpty &&
+          PatientMatcher.normPhone(p.mobile) == phone) {
+        return true;
+      }
+      return false;
+    }).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return out;
+  }
+
   Future<PatientSaveResult> addPatient({
     required String name,
     required String type,
