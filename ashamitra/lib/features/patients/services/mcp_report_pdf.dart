@@ -62,26 +62,40 @@ class McpReportPdf {
     final md = p.mcpDetails;
     String m(String k) => (md[k] ?? '').toString().trim();
 
-    // ── Identity + pregnancy summary ──────────────────────────────────────
+    // ── Identity summary — adapts to the case (mother vs child) ───────────
+    final t = p.type;
+    final isChild =
+        t == 'Newborn' || t == 'Child' || t == 'newborn' || t == 'child';
+    final genderBn =
+        switch (p.gender) { 'Female' => 'মেয়ে', 'Male' => 'ছেলে', _ => p.gender };
     final idRows = <List<String>>[
       ['নাম', p.name],
       ['বয়স', '${p.age} ${switch (p.ageUnit) { 'days' => 'দিন', 'months' => 'মাস', _ => 'বছর' }}'],
-      ['কেস', _caseBn(p.type)],
-      if (m('fatherName').isNotEmpty) ['স্বামী/বাবা', m('fatherName')],
+      ['কেস', _caseBn(t)],
+      if (isChild && p.guardianName.isNotEmpty) ['মায়ের নাম', p.guardianName],
+      if (!isChild && m('fatherName').isNotEmpty) ['স্বামী/বাবা', m('fatherName')],
       if (p.village.isNotEmpty && p.village != 'Unknown') ['গ্রাম', p.village],
       if (p.mobile.isNotEmpty) ['মোবাইল', p.mobile],
-      if (m('rchId').isNotEmpty) ['RCH/MCTS', m('rchId')],
-      if (m('motherAadhaar').isNotEmpty) ['মায়ের আধার', m('motherAadhaar')],
+      // Child-specific identity
+      if (isChild && p.dob != null) ['জন্ম তারিখ', _fmt(p.dob!.toIso8601String())],
+      if (isChild && p.gender.isNotEmpty) ['লিঙ্গ', genderBn],
+      if (isChild && m('birthWeight').isNotEmpty) ['জন্ম ওজন', '${m('birthWeight')} কেজি'],
+      if (isChild && m('childRchId').isNotEmpty) ['শিশুর RCH', m('childRchId')],
+      // Mother-specific identity
+      if (!isChild && m('rchId').isNotEmpty) ['RCH/MCTS', m('rchId')],
+      if (m('motherAadhaar').isNotEmpty) ['আধার', m('motherAadhaar')],
       if (m('bloodGroup').isNotEmpty) ['রক্তের গ্রুপ', m('bloodGroup')],
-      if (p.lmp != null) ['LMP', _fmt(p.lmp!.toIso8601String())],
-      if (p.edd != null) ['EDD', _fmt(p.edd!.toIso8601String())],
-      if (m('gravida').isNotEmpty)
+      if (!isChild && p.lmp != null) ['LMP', _fmt(p.lmp!.toIso8601String())],
+      if (!isChild && p.edd != null) ['EDD', _fmt(p.edd!.toIso8601String())],
+      if (!isChild && m('gravida').isNotEmpty)
         ['গর্ভ (G/P/L)', '${m('gravida')}/${m('para')}/${m('prevLiveBirths')}'],
     ];
 
     // ── ANC visits, immunization, upcoming ────────────────────────────────
     final anc = <List<String>>[];
     final vac = <List<String>>[];
+    final hbnc = <List<String>>[];
+    final hbyc = <List<String>>[];
     final due = <List<String>>[];
     for (final e in events) {
       if (e is! Map) continue;
@@ -117,6 +131,12 @@ class McpReportPdf {
           ((rec['givenVaccines'] as List?)?.join(', ') ?? ''),
           rec['allGiven'] == true ? 'সম্পূর্ণ' : 'আংশিক',
         ]);
+      } else if (kind == 'hbnc' || kind == 'hbyc') {
+        final flags =
+            (rec['dangerFlags'] as List?)?.map((e) => e.toString()).toList() ??
+                const [];
+        (kind == 'hbnc' ? hbnc : hbyc).add(
+            [label, date, flags.isEmpty ? 'কোনো বিপদচিহ্ন নেই' : flags.join(', ')]);
       }
     }
 
@@ -135,6 +155,8 @@ class McpReportPdf {
       'idRows': idRows,
       'anc': anc,
       'vac': vac,
+      'hbnc': hbnc,
+      'hbyc': hbyc,
       'due': due,
     };
   }
@@ -158,6 +180,8 @@ Future<List<int>> buildMcpReportPdf(
   final idRows = (data['idRows'] as List?) ?? const [];
   final anc = (data['anc'] as List?) ?? const [];
   final vac = (data['vac'] as List?) ?? const [];
+  final hbnc = (data['hbnc'] as List?) ?? const [];
+  final hbyc = (data['hbyc'] as List?) ?? const [];
   final due = (data['due'] as List?) ?? const [];
 
   List<List<String>> rows(List src) =>
@@ -278,13 +302,25 @@ Future<List<int>> buildMcpReportPdf(
           table(const ['ভিজিট', 'তারিখ', 'যে টিকা দেওয়া হয়েছে', 'অবস্থা'], rows(vac)),
         ],
 
+        // Newborn home visits (HBNC)
+        if (hbnc.isNotEmpty) ...[
+          sectionTitle('নবজাতক গৃহ পরিদর্শন (HBNC)'),
+          table(const ['ভিজিট', 'তারিখ', 'পর্যবেক্ষণ'], rows(hbnc)),
+        ],
+
+        // Young-child home visits (HBYC)
+        if (hbyc.isNotEmpty) ...[
+          sectionTitle('শিশু গৃহ পরিদর্শন (HBYC)'),
+          table(const ['ভিজিট', 'তারিখ', 'পর্যবেক্ষণ'], rows(hbyc)),
+        ],
+
         // Upcoming
         if (due.isNotEmpty) ...[
           sectionTitle('আসন্ন / বকেয়া'),
           table(const ['কাজ', 'ধরন', 'তারিখ'], rows(due)),
         ],
 
-        if (anc.isEmpty && vac.isEmpty && due.isEmpty)
+        if (anc.isEmpty && vac.isEmpty && hbnc.isEmpty && hbyc.isEmpty && due.isEmpty)
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(vertical: 10),
             child: pw.Text('— এখনও কোনো ভিজিট/সূচি নেই —',
