@@ -8,7 +8,13 @@ class DuplicateMatch {
   /// Strong = an unambiguous key matched (RCH/MCTS id, or same mother+DOB+order
   /// for a child). Soft = name + phone/village heuristic (worker must decide).
   final bool strong;
-  const DuplicateMatch(this.patient, this.reason, this.strong);
+  /// True when this is the SAME WOMAN across pregnancies (same mother's Aadhaar,
+  /// or a name+phone/village hit on an existing pregnancy). Lets the UI offer
+  /// "নতুন গর্ভ হিসেবে যোগ করুন" vs "পুরোনো রেকর্ড খুলুন" instead of a plain
+  /// duplicate warning — a new MCP card is issued every pregnancy, same mother.
+  final bool sameMother;
+  const DuplicateMatch(this.patient, this.reason, this.strong,
+      {this.sameMother = false});
 }
 
 /// Identity matching for the patient register.
@@ -50,6 +56,7 @@ class PatientMatcher {
     required String mobile,
     required String village,
     String rchId = '',
+    String motherAadhaar = '',
     String? motherId,
     DateTime? dob,
     int birthOrder = 0,
@@ -60,6 +67,10 @@ class PatientMatcher {
     final nPhone = normPhone(mobile);
     final nVillage = village.toLowerCase().trim();
     final nRch = rchId.trim();
+    final nAadhaar = motherAadhaar.trim();
+    // A "real" masked Aadhaar carries the last 4 digits (XXXX-XXXX-1234); the
+    // fallback 'XXXX' (no digits) must never be treated as a joinable key.
+    final aadhaarReal = RegExp(r'\d{4}$').hasMatch(nAadhaar);
 
     for (final p in existing) {
       if (excludeId != null && p.id == excludeId) continue;
@@ -69,6 +80,15 @@ class PatientMatcher {
       if (nRch.isNotEmpty && p.rchId.isNotEmpty && p.rchId == nRch) {
         out.add(DuplicateMatch(p, 'একই RCH/MCTS আইডি', true));
         continue;
+      }
+      // 1b. Strong — same mother's Aadhaar = same woman (across pregnancies).
+      // RCH differs each pregnancy, so Aadhaar is the stable cross-pregnancy key.
+      if (aadhaarReal) {
+        final pa = (p.mcpDetails['motherAadhaar'] ?? '').toString().trim();
+        if (pa == nAadhaar) {
+          out.add(DuplicateMatch(p, 'একই আধার — একই মা', true, sameMother: true));
+          continue;
+        }
       }
       // 2. Strong — same child: same mother + same DOB + same birth order.
       if (dob != null &&
@@ -87,8 +107,12 @@ class PatientMatcher {
         final sameVillage =
             nVillage.isNotEmpty && p.village.toLowerCase().trim() == nVillage;
         if (samePhone || sameVillage) {
+          // A name+phone/village hit on an existing PREGNANCY is very likely the
+          // same woman returning for another pregnancy → offer the new-pregnancy
+          // choice even when she has no Aadhaar on file.
           out.add(DuplicateMatch(
-              p, samePhone ? 'একই নাম ও মোবাইল নম্বর' : 'একই নাম ও গ্রাম', false));
+              p, samePhone ? 'একই নাম ও মোবাইল নম্বর' : 'একই নাম ও গ্রাম', false,
+              sameMother: p.type == 'Pregnancy'));
         }
       }
     }

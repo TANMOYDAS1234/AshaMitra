@@ -48,6 +48,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   // due-date schedule for this patient. All optional so a quick save still works.
   final _guardianCtrl = TextEditingController(); // mother's name when child
   String? _motherId; // linked mother's patient id (anchors a child's identity)
+  String? _motherPersonId; // stable mother identity (groups her pregnancies)
   DateTime? _dob;   // child / newborn date of birth
   DateTime? _lmp;   // last menstrual period (pregnancy)
   bool _isTwin = false;
@@ -196,6 +197,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         }
       }
       _photoB64 = args.mcpDetails['photo']?.toString();
+      _motherPersonId = args.mcpDetails['motherPersonId']?.toString();
     } else if (args is Map<String, dynamic>) {
       // 1b fix: when the worker reaches Add Patient from a case tile on the
       // dashboard, the case ID is passed in as 'caseType'. Pre-select that
@@ -651,6 +653,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       mobile: _mobileCtrl.text.trim(),
       village: _villageCtrl.text.trim(),
       rchId: _mcpCtrl('rchId').text.trim(),
+      motherAadhaar: _mcpCtrl('motherAadhaar').text.trim(),
       motherId: _motherId,
       dob: (_caseType == 'Newborn' || _caseType == 'Child') ? _dob : null,
       birthOrder: _isTwin ? _birthOrder : 0,
@@ -723,7 +726,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                                   ? AppColors.emergencyRed
                                   : AppColors.warningYellow)),
                     ),
-                    onTap: () => Navigator.pop(ctx, p),
+                    onTap: () => Navigator.pop(ctx, m),
                   );
                 }).toList(),
               ),
@@ -754,11 +757,200 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         ),
       ),
     );
-    if (res is PatientModel) {
-      Get.toNamed(AppRoutes.patientProfile, arguments: res.toJson());
+    if (res is DuplicateMatch) {
+      final p = res.patient;
+      // Same woman + we're registering a pregnancy → a NEW MCP card is issued
+      // each pregnancy, so offer "new pregnancy (same mother)" vs "open existing".
+      if (res.sameMother && _caseType == 'Pregnancy' && mounted) {
+        final choice = await _sameMotherChoice(p);
+        if (choice == 'new') {
+          _prefillFromMother(p);
+          return true; // proceed to create a fresh pregnancy record
+        }
+        if (choice == 'open') {
+          Get.toNamed(AppRoutes.patientProfile, arguments: p.toJson());
+        }
+        return false; // 'open' or cancel → don't create here
+      }
+      Get.toNamed(AppRoutes.patientProfile, arguments: p.toJson());
       return false;
     }
     return res == 'new';
+  }
+
+  /// Returns 'new' | 'open' | null. Lets the worker say it's the same mother
+  /// starting another pregnancy, vs the existing record.
+  Future<String?> _sameMotherChoice(PatientModel m) => showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('একই মা'),
+          content: Text(
+              '${m.name} আগে থেকেই তালিকায় আছেন। প্রতিটি গর্ভাবস্থার জন্য আলাদা MCP কার্ড হয় — '
+              'এটি কি নতুন গর্ভ, নাকি পুরোনো রেকর্ড দেখবেন?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'open'),
+              child: const Text('পুরোনো রেকর্ড খুলুন'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, 'new'),
+              child: const Text('নতুন গর্ভ হিসেবে যোগ করুন'),
+            ),
+          ],
+        ),
+      );
+
+  static bool _realAadhaar(String s) => RegExp(r'\d{4}$').hasMatch(s.trim());
+
+  /// Carries a returning mother's STABLE details into the form for a new
+  /// pregnancy: identity, demographics, family, bank, institution, and the
+  /// risk/chronic history (these inform this pregnancy's risk). Pregnancy-
+  /// specific fields stay fresh — LMP/EDD/outcome/RCH are NOT copied (a new
+  /// pregnancy gets its own). Links her pregnancies via [_motherPersonId].
+  void _prefillFromMother(PatientModel m) {
+    final md = m.mcpDetails;
+    setState(() {
+      _caseType = 'Pregnancy';
+      _gender = 'Female';
+      _ageUnit = 'years';
+      if (_nameCtrl.text.trim().isEmpty) _nameCtrl.text = m.name;
+      if (_villageCtrl.text.trim().isEmpty && m.village != 'Unknown') {
+        _villageCtrl.text = m.village;
+      }
+      if (_mobileCtrl.text.trim().isEmpty) _mobileCtrl.text = m.mobile;
+      // DOB is stable → carry it and recompute age; fresh pregnancy ⇒ no LMP yet.
+      if (m.dob != null) {
+        _dob = m.dob;
+        _setAgeFromDob(m.dob!);
+      } else if (_ageCtrl.text.trim().isEmpty && m.age.isNotEmpty) {
+        _ageCtrl.text = m.age;
+      }
+      _lmp = null;
+
+      // Stable text/dropdown fields to carry forward (NOT rchId — per pregnancy).
+      const carry = [
+        'fatherName', 'address', 'fatherMobile', 'motherAadhaar',
+        'religion', 'caste', 'bloodGroup',
+        'bankName', 'bankAccount', 'ifsc',
+        'anganwadiCentre', 'awcNumber', 'lgdCode', 'panchayat', 'block',
+        'postOffice', 'pincode', 'anmName', 'anmMobile', 'deliveryCentrePhone',
+        'facilityName', 'bphc', 'ruralHospital', 'district', 'subcentreName',
+        'subcentreRegNo', 'referralHospital', 'vhndDay',
+        'para', 'prevLiveBirths', 'lastDeliveryPlace', 'lastChildAge',
+      ];
+      for (final k in carry) {
+        final v = md[k];
+        if (v != null && v.toString().trim().isNotEmpty) _mcpCtrl(k).text = v.toString();
+      }
+      // New gravidity = previous + 1 (best-effort; worker can adjust).
+      final oldG = int.tryParse((md['gravida'] ?? '').toString().trim());
+      if (oldG != null) _mcpCtrl('gravida').text = '${oldG + 1}';
+
+      // Carry-forward boolean history: prior obstetric complications + chronic
+      // disease persist and inform this pregnancy; PMMVY eligibility too.
+      for (final k in [..._highRiskHistory.keys, 'pmmvyEligible']) {
+        if (md[k] == true) _mcpBools[k] = true;
+      }
+
+      // Link her pregnancies under one stable id (prefer Aadhaar — same every
+      // pregnancy; else reuse an existing personId; else her record id).
+      final existingPersonId = (md['motherPersonId'] ?? '').toString().trim();
+      final aad = (md['motherAadhaar'] ?? '').toString().trim();
+      _motherPersonId = existingPersonId.isNotEmpty
+          ? existingPersonId
+          : (_realAadhaar(aad) ? aad : m.id);
+    });
+    _showSnack('একই মা — নতুন গর্ভ',
+        'পূর্বের তথ্য বসানো হয়েছে — এখন নতুন LMP দিন।', AppColors.safeGreen);
+  }
+
+  // Sections promoted OUT of the collapse and shown inline (clinical priority):
+  // the high-risk history drives the auto high-risk flag, so it must not be
+  // buried. Only relevant to Pregnancy.
+  static const Set<String> _promotedSections = {'ঝুঁকির ইতিহাস', 'দীর্ঘমেয়াদি অসুখ'};
+
+  /// How many collapsed MCP fields (relevant to this case, excluding the
+  /// promoted risk sections) are filled — drives the "X/Y পূরণ" header badge so
+  /// completeness is visible without forcing every field on-screen.
+  ({int filled, int total}) _mcpProgress() {
+    int filled = 0, total = 0;
+    for (final f in _mcpFields) {
+      if (!(f.cases.isEmpty || f.cases.contains(_caseType))) continue;
+      if (_promotedSections.contains(f.section)) continue;
+      total++;
+      final isFilled = f.isBool
+          ? (_mcpBools[f.key] == true)
+          : ((_mcpCtrls[f.key]?.text.trim() ?? '').isNotEmpty);
+      if (isFilled) filled++;
+    }
+    return (filled: filled, total: total);
+  }
+
+  /// Pregnancy high-risk history shown INLINE (not inside the collapse) because
+  /// it's clinical, not administrative — and it live-flags উচ্চ ঝুঁকি as toggles
+  /// are set. Renders the 'ঝুঁকির ইতিহাস' + 'দীর্ঘমেয়াদি অসুখ' fields.
+  Widget _riskHistorySection() {
+    if (_caseType != 'Pregnancy') return const SizedBox.shrink();
+    final hist = _mcpFields
+        .where((f) => f.section == 'ঝুঁকির ইতিহাস' &&
+            (f.cases.isEmpty || f.cases.contains(_caseType)))
+        .toList();
+    final chronic = _mcpFields
+        .where((f) => f.section == 'দীর্ঘমেয়াদি অসুখ' &&
+            (f.cases.isEmpty || f.cases.contains(_caseType)))
+        .toList();
+    if (hist.isEmpty && chronic.isEmpty) return const SizedBox.shrink();
+    final hr = _assessHighRisk();
+    final accent = hr.high ? AppColors.emergencyRed : AppColors.primary;
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.lgR,
+        boxShadow: AppShadows.low,
+        border: Border.all(color: accent.withValues(alpha: 0.30)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.health_and_safety_outlined, color: accent, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('ঝুঁকির ইতিহাস (উচ্চ-ঝুঁকি যাচাই)',
+                    style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700)),
+              ),
+              if (hr.high)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.emergencyRed.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('উচ্চ ঝুঁকি',
+                      style: AppTextStyles.label.copyWith(
+                          color: AppColors.emergencyRed,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text('পূর্বের গর্ভ-জটিলতা বা দীর্ঘমেয়াদি অসুখ থাকলে চিহ্নিত করুন',
+              style: AppTextStyles.label
+                  .copyWith(color: AppColors.textSecondary, fontSize: 11)),
+          ...hist.map(_mcpFieldWidget),
+          if (chronic.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text('দীর্ঘমেয়াদি অসুখ',
+                style: AppTextStyles.label.copyWith(color: AppColors.primary)),
+            ...chronic.map(_mcpFieldWidget),
+          ],
+        ],
+      ),
+    );
   }
 
   // ── Full MCP-card identity section (collapsible) ─────────────────────────
@@ -775,6 +967,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     ];
     final children = <Widget>[];
     for (final sec in sections) {
+      if (_promotedSections.contains(sec)) continue; // shown inline by _riskHistorySection
       final fields = _mcpFields
           .where((f) =>
               f.section == sec &&
@@ -789,6 +982,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       children.addAll(fields.map(_mcpFieldWidget));
     }
     if (children.isEmpty) return const SizedBox.shrink();
+    final p = _mcpProgress();
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: Theme(
@@ -797,7 +991,28 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           tilePadding: EdgeInsets.zero,
           childrenPadding: const EdgeInsets.only(bottom: 8),
           leading: const Icon(Icons.assignment_outlined, color: AppColors.primary),
-          title: Text('বিস্তারিত তথ্য (MCP কার্ড)', style: AppTextStyles.label),
+          // Title carries a filled-count badge so completeness is visible
+          // without forcing every field on-screen (progressive disclosure).
+          // Kept in the title (not `trailing`) so the expand chevron remains.
+          title: Row(
+            children: [
+              Flexible(child: Text('বিস্তারিত তথ্য (MCP কার্ড)', style: AppTextStyles.label)),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: (p.filled == 0 ? AppColors.textSecondary : AppColors.primary)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('${p.filled}/${p.total}',
+                    style: AppTextStyles.label.copyWith(
+                        color: p.filled == 0 ? AppColors.textSecondary : AppColors.primary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11)),
+              ),
+            ],
+          ),
           subtitle: Text('ঐচ্ছিক — পরিবার, যোজনা, প্রতিষ্ঠানের তথ্য',
               style: AppTextStyles.label
                   .copyWith(color: AppColors.textSecondary, fontSize: 11)),
@@ -883,6 +1098,9 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       m['highRiskReason'] = hr.reason;
     }
     if (_photoB64 != null && _photoB64!.isNotEmpty) m['photo'] = _photoB64;
+    if (_motherPersonId != null && _motherPersonId!.isNotEmpty) {
+      m['motherPersonId'] = _motherPersonId;
+    }
     return m;
   }
 
@@ -1714,6 +1932,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                           ],
                         ),
                         _mchSection(),
+                        _riskHistorySection(),
                         _mcpSection(),
                         const SizedBox(height: 32),
                         Column(
