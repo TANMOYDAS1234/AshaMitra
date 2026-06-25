@@ -19,6 +19,7 @@ import '../../data/models/patient_model.dart';
 import '../../data/patient_matcher.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../shared/widgets/patient_photo.dart';
+import '../../../schedule/services/checkup_launcher.dart';
 import 'aadhaar_scanner_screen.dart';
 
 class AddPatientScreen extends StatefulWidget {
@@ -1667,41 +1668,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         duration: const Duration(seconds: 4),
       );
     }
-    // The worker already chose the case type on this form, so jump straight
-    // into that module's triage — carrying the patient so triage uses their
-    // age/history (adaptive band) and can answer name/age questions. 'Other'
-    // is ambiguous, so fall back to the case picker.
-    final caseId = _caseIdForType(_caseType);
-    if (caseId == null) {
-      Get.toNamed(AppRoutes.selectCase, arguments: {
-        'patientId': patient.id,
-        'patientName': patient.name,
-      });
-    } else {
-      Get.toNamed(AppRoutes.voiceTriage, arguments: {
-        'caseId': caseId,
-        'caseTitle': _caseTitleForId(caseId),
-        'patientId': patient.id,
-        'patientName': patient.name,
-      });
-    }
+    // Checkup = the structured MCP-card visit form for the just-registered
+    // patient — their next due visit, generated from the LMP/DOB just entered.
+    await CheckupLauncher.start(
+        patientId: patient.id, patientName: patient.name);
   }
-
-  // Registration case-type chip → triage case id. null for 'Other' (ambiguous)
-  // so the worker picks the case manually.
-  static String? _caseIdForType(String caseType) => switch (caseType) {
-        'Pregnancy' => 'pregnancy',
-        'Newborn' => 'newborn',
-        'Child' => 'child',
-        _ => null,
-      };
-
-  static String _caseTitleForId(String caseId) => switch (caseId) {
-        'pregnancy' => '🤰 গর্ভবতী মায়ের চেকআপ',
-        'newborn' => '👶 নবজাতক চেকআপ (০-২৮ দিন)',
-        'child' => '🧒 শিশু স্বাস্থ্য যাচাই (১-৫ বছর)',
-        _ => 'স্বাস্থ্য যাচাই',
-      };
 
   // Localized display labels for the English-valued gender / case options.
   // ── Field validators ───────────────────────────────────────────────────────

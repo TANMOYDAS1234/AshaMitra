@@ -8,6 +8,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/patient_photo.dart';
 import '../../../patients/controller/patient_controller.dart';
 import '../../../patients/data/models/patient_model.dart';
+import '../../../schedule/services/checkup_launcher.dart';
 
 /// Bottom sheet shown when an ASHA taps a case card on Home.
 ///
@@ -53,16 +54,6 @@ class PatientContextSheet extends StatelessWidget {
     );
   }
 
-  void _navigateToTriage({String? patientId, String? patientName}) {
-    Get.back(); // close sheet
-    Get.toNamed(AppRoutes.voiceTriage, arguments: {
-      'caseId': caseId,
-      'caseTitle': caseTitle,
-      if (patientId   != null) 'patientId':   patientId,
-      if (patientName != null) 'patientName': patientName,
-    });
-  }
-
   void _pickExistingPatient(BuildContext context) {
     final ctrl = Get.find<PatientController>();
     Get.back(); // close this sheet first
@@ -82,12 +73,8 @@ class PatientContextSheet extends StatelessWidget {
         caseTitle: caseTitle,
         onPick: (p) {
           Get.back();
-          Get.toNamed(AppRoutes.voiceTriage, arguments: {
-            'caseId':      caseId,
-            'caseTitle':   caseTitle,
-            'patientId':   p.id,
-            'patientName': p.name,
-          });
+          // Checkup = structured MCP-card visit form (next due visit).
+          CheckupLauncher.start(patientId: p.id, patientName: p.name);
         },
       ),
     );
@@ -210,16 +197,6 @@ class PatientContextSheet extends StatelessWidget {
               color: AppColors.accent,
               onTap: _addNewPatient,
               recommended: true,
-            ),
-            const SizedBox(height: 10),
-
-            // ── Option 3: anonymous ────────────────────────────────────
-            _ContextOption(
-              icon: Icons.flash_on_rounded,
-              title: 'anonymous_triage'.tr,
-              subtitle: 'anonymous_triage_sub'.tr,
-              color: AppColors.textSecondary,
-              onTap: () => _navigateToTriage(),
             ),
             const SizedBox(height: 8),
           ],

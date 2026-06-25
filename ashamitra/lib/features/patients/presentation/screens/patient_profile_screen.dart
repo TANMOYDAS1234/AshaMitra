@@ -14,6 +14,7 @@ import '../../controller/patient_controller.dart';
 import '../../data/models/patient_model.dart';
 import '../../services/mcp_report_pdf.dart';
 import '../../../../core/services/local_storage_service.dart';
+import '../../../schedule/services/checkup_launcher.dart';
 import 'pregnancy_timeline_screen.dart';
 
 class PatientProfileScreen extends StatelessWidget {
@@ -30,32 +31,6 @@ class PatientProfileScreen extends StatelessWidget {
     if (t.contains('immun') || type.contains('টিকা')) return '💉';
     if (t.contains('emergency') || type.contains('জরুরি')) return '🚑';
     return '🏥';
-  }
-
-  /// Map the patient's stored type string ('Pregnancy'/'Newborn'/'Child'
-  /// /'Other', plus Bengali variants from triage-created patients) to
-  /// the (caseId, caseTitle) tuple used by the triage engine (see
-  /// assets/data/triage_cases.json — same wording as the case picker).
-  /// Returns null when no engine case matches — caller should fall back
-  /// to the case picker.
-  ///
-  /// Titles are hardcoded here intentionally: the patient profile is
-  /// touched on every Voice Checkup tap and reading assets/data/
-  /// triage_cases.json just to look up a 3-string mapping would add a
-  /// noticeable disk-read latency. The titles must stay in sync with
-  /// the JSON if you ever rename them.
-  (String id, String title)? _caseFor(String type) {
-    final t = type.toLowerCase();
-    if (t.contains('pregnan') || type.contains('গর্ভ')) {
-      return ('pregnancy', '🤰 গর্ভবতী মায়ের চেকআপ');
-    }
-    if (t.contains('newborn') || type.contains('নবজাতক')) {
-      return ('newborn', '👶 নবজাতক চেকআপ (০-২৮ দিন)');
-    }
-    if (t.contains('child') || type.contains('শিশু')) {
-      return ('child', '🧒 শিশু স্বাস্থ্য যাচাই (১-৫ বছর)');
-    }
-    return null;
   }
 
   @override
@@ -287,42 +262,12 @@ class PatientProfileScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 20),
                       AppButton(
-                        label: 'Start Voice Checkup',
-                        // We already know the patient and their case type
-                        // from the profile, so skip the case-picker step.
-                        // Route straight to voiceTriage with caseId derived
-                        // from the patient's stored type. Only the 'Other'
-                        // bucket (no engine case) falls back to selectCase.
-                        onPressed: () {
-                          final c = _caseFor(type);
-                          if (c != null) {
-                            Get.toNamed(
-                              AppRoutes.voiceTriage,
-                              arguments: {
-                                'caseId': c.$1,
-                                // Without caseTitle the screen defaults to
-                                // pregnancy's title, which made every case
-                                // look like a pregnancy checkup even when
-                                // caseId was correct. Pass the matching
-                                // title so the UI header reads right.
-                                'caseTitle': c.$2,
-                                if (patientId.isNotEmpty)
-                                  'patientId': patientId,
-                                'patientName': name,
-                              },
-                            );
-                          } else {
-                            Get.toNamed(
-                              AppRoutes.selectCase,
-                              arguments: {
-                                if (patientId.isNotEmpty)
-                                  'patientId': patientId,
-                                'patientName': name,
-                              },
-                            );
-                          }
-                        },
-                        icon: Icons.mic_rounded,
+                        // The checkup IS the structured MCP-card visit form
+                        // (next due visit, dynamic per case) — not voice triage.
+                        label: 'চেকআপ শুরু করুন',
+                        onPressed: () => CheckupLauncher.start(
+                            patientId: patientId, patientName: name),
+                        icon: Icons.assignment_turned_in_outlined,
                         width: double.infinity,
                       ),
                       const SizedBox(height: 10),

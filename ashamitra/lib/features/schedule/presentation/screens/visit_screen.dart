@@ -8,7 +8,6 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_input.dart';
-import '../../../../app/routes.dart';
 
 /// Unified "conduct visit" screen — one UI shell for every scheduled visit
 /// type (ANC, immunization, HBNC newborn home visit). The body adapts to the
@@ -165,37 +164,6 @@ class _VisitScreenState extends State<VisitScreen> {
 
   bool get _hasDanger => _flags.isNotEmpty;
 
-  // ── Complication → full triage hand-off ─────────────────────────────────
-  // A complication at a scheduled visit routes the worker into the matching
-  // clinical triage case (the deterministic engine), carrying the SAME patient
-  // — so they get a graded RED/YELLOW band, suspected condition, exact facility
-  // and a saved Report, instead of just a "refer" note.
-  String? _caseIdForKind(String kind) => switch (kind) {
-        'anc' => 'pregnancy',
-        'hbnc' => 'newborn',
-        'vaccine' => 'child',
-        'hbyc' => 'child',
-        _ => null,
-      };
-
-  String _caseTitle(String caseId) => switch (caseId) {
-        'pregnancy' => '🤰 গর্ভবতী মায়ের চেকআপ',
-        'newborn' => '👶 নবজাতক চেকআপ (০-২৮ দিন)',
-        'child' => '🧒 শিশু স্বাস্থ্য যাচাই',
-        _ => 'স্বাস্থ্য যাচাই',
-      };
-
-  void _openTriage() {
-    final caseId = _caseIdForKind(_kind);
-    if (caseId == null) return;
-    Get.toNamed(AppRoutes.voiceTriage, arguments: {
-      'caseId': caseId,
-      'caseTitle': _caseTitle(caseId),
-      'patientId': _e['patientId']?.toString(),
-      'patientName': _e['patientName']?.toString(),
-    });
-  }
-
   Future<void> _complete() async {
     if (_id.isEmpty) {
       Get.back();
@@ -277,19 +245,6 @@ class _VisitScreenState extends State<VisitScreen> {
                       if (_hasDanger) ...[
                         const SizedBox(height: 16),
                         _dangerBanner(),
-                      ],
-                      if (_caseIdForKind(_kind) != null) ...[
-                        const SizedBox(height: 14),
-                        AppButton(
-                          label: _hasDanger
-                              ? 'জটিলতা — সম্পূর্ণ ট্রায়াজ করুন'
-                              : 'সম্পূর্ণ স্বাস্থ্য যাচাই (ট্রায়াজ)',
-                          onPressed: _openTriage,
-                          // Emphasised (filled) when a danger sign is present.
-                          outlined: !_hasDanger,
-                          width: double.infinity,
-                          icon: Icons.medical_services_outlined,
-                        ),
                       ],
                       const SizedBox(height: 28),
                       AppButton(
