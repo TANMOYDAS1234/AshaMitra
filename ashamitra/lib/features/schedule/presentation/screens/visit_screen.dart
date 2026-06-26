@@ -502,89 +502,61 @@ class _VisitScreenState extends State<VisitScreen> {
 
   // ANC capture — mirrors the MCP card "গর্ভকালীন যত্ন ও পরিষেবা" page, in the
   // card's exact section + row order so the worker ticks the screen like the card.
+  // ANC capture — full MCP-card field set (in the card's section + row order),
+  // in the clean full-width "পরিমাপ লিখুন" style: each field a labelled,
+  // icon-prefixed input with generous spacing.
   List<Widget> _ancBody() {
     return [
-      // ── গর্ভকালীন পরীক্ষা (per-visit measurements) ──
+      // ── গর্ভকালীন পরীক্ষা ──
       _sectionTitle('গর্ভকালীন পরীক্ষা', Icons.pregnant_woman_rounded),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(child: AppInput(hint: 'সপ্তাহ', label: 'গর্ভের বয়স', controller: _weeks, keyboardType: TextInputType.number)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: 'কেজি', label: 'ওজন', controller: _weight, keyboardType: TextInputType.number)),
-      ]),
       const SizedBox(height: 14),
-      Row(children: [
-        Expanded(child: AppInput(hint: '/মিনিট', label: 'নাড়ির গতি', controller: _pulse, keyboardType: TextInputType.number)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: 'যেমন 120/80', label: 'রক্তচাপ (BP)', controller: _bp)),
-      ]),
-      const SizedBox(height: 16),
+      _field(_weeks, 'গর্ভের বয়স', 'সপ্তাহ', Icons.date_range_outlined, number: true),
+      _field(_weight, 'ওজন', 'কেজি', Icons.monitor_weight_outlined, number: true),
+      _field(_pulse, 'নাড়ির গতি', '/মিনিট', Icons.monitor_heart_outlined, number: true),
+      _field(_bp, 'রক্তচাপ (BP)', 'যেমন 120/80', Icons.favorite_outline),
       ..._flagBody('পরীক্ষায় যা পাওয়া গেছে', _examFindings,
           target: _exam, color: AppColors.warningYellow),
       const SizedBox(height: 14),
-      AppInput(hint: 'থাকলে লিখুন', label: 'অন্যান্য সমস্যা', controller: _other),
-      const SizedBox(height: 20),
+      _field(_other, 'অন্যান্য সমস্যা', 'থাকলে লিখুন', Icons.note_alt_outlined),
+      const SizedBox(height: 22),
 
-      // ── তলপেট পরীক্ষা (abdominal) ──
+      // ── তলপেট পরীক্ষা ──
       _sectionTitle('তলপেট পরীক্ষা', Icons.child_friendly_rounded),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(child: AppInput(hint: 'সেমি', label: 'জরায়ুর উচ্চতা', controller: _fundal, keyboardType: TextInputType.number)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: '/মিনিট', label: 'ভ্রূণের হৃদস্পন্দন (FHR)', controller: _fhr, keyboardType: TextInputType.number)),
-      ]),
       const SizedBox(height: 14),
-      AppInput(hint: 'Lie / Presentation', label: 'ভ্রূণের অবস্থান', controller: _lie),
-      const SizedBox(height: 14),
+      _field(_fundal, 'জরায়ুর উচ্চতা', 'সেমি', Icons.straighten_outlined, number: true),
+      _field(_fhr, 'ভ্রূণের হৃদস্পন্দন (FHR)', '/মিনিট', Icons.monitor_heart_outlined, number: true),
+      _field(_lie, 'ভ্রূণের অবস্থান (Lie / Presentation)', 'যেমন cephalic', Icons.rotate_right_outlined),
       _choiceRow('ভ্রূণের নড়াচড়া', _fetalMoveOpts, _fetalMove,
           (v) => setState(() => _fetalMove = _fetalMove == v ? '' : v)),
       const SizedBox(height: 12),
       _toggleChip('যোনিপথ (P/V) পরীক্ষা করা হয়েছে', _pvDone,
           (v) => setState(() => _pvDone = v)),
-      const SizedBox(height: 20),
+      const SizedBox(height: 22),
 
-      // ── আবশ্যিক পরীক্ষা (mandatory tests) ──
+      // ── আবশ্যিক পরীক্ষা ──
       _sectionTitle('আবশ্যিক পরীক্ষা', Icons.science_outlined),
-      const SizedBox(height: 10),
-      AppInput(hint: 'g/dL', label: 'হিমোগ্লোবিন (Hb)', controller: _hb,
-          keyboardType: TextInputType.number,
-          prefixIcon: const Icon(Icons.bloodtype_outlined, color: AppColors.primary, size: 20)),
       const SizedBox(height: 14),
-      Row(children: [
-        Expanded(child: AppInput(hint: 'nil/+/++', label: 'মূত্রে অ্যালবুমিন', controller: _urineAlb)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: 'nil/+/++', label: 'মূত্রে শর্করা', controller: _urineSugar)),
-      ]),
-      const SizedBox(height: 14),
-      AppInput(hint: 'mg/dL', label: 'রক্তে শর্করা (GDM স্ক্রিন)', controller: _bsugar,
-          keyboardType: TextInputType.number,
-          prefixIcon: const Icon(Icons.water_drop_outlined, color: AppColors.primary, size: 20)),
-      const SizedBox(height: 14),
-      Row(children: [
-        Expanded(child: AppInput(hint: 'নেগেটিভ/পজিটিভ', label: 'HIV', controller: _hiv)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: 'নেগেটিভ/পজিটিভ', label: 'সিফিলিস', controller: _syphilis)),
-      ]),
-      const SizedBox(height: 14),
-      AppInput(hint: 'ফল (থাকলে)', label: 'গর্ভকালীন ডায়াবিটিস (GDM)', controller: _gdm),
-      const SizedBox(height: 12),
+      _field(_hb, 'হিমোগ্লোবিন (Hb)', 'g/dL', Icons.bloodtype_outlined, number: true),
+      _field(_urineAlb, 'মূত্রে অ্যালবুমিন', 'nil / + / ++', Icons.science_outlined),
+      _field(_urineSugar, 'মূত্রে শর্করা', 'nil / + / ++', Icons.science_outlined),
+      _field(_bsugar, 'রক্তে শর্করা (GDM স্ক্রিন)', 'mg/dL', Icons.water_drop_outlined, number: true),
+      _field(_hiv, 'HIV', 'নেগেটিভ / পজিটিভ', Icons.coronavirus_outlined),
+      _field(_syphilis, 'সিফিলিস', 'নেগেটিভ / পজিটিভ', Icons.biotech_outlined),
+      _field(_gdm, 'গর্ভকালীন ডায়াবিটিস (GDM)', 'ফল (থাকলে)', Icons.bloodtype_outlined),
       _toggleChip('আল্ট্রাসোনোগ্রাফি (USG) করা হয়েছে', _usgDone,
           (v) => setState(() => _usgDone = v)),
-      const SizedBox(height: 20),
+      const SizedBox(height: 22),
 
       // ── অন্যান্য পরীক্ষা ──
       _sectionTitle('অন্যান্য পরীক্ষা', Icons.assignment_outlined),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(child: AppInput(hint: 'মান', label: 'TSH', controller: _tsh)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: 'নেগেটিভ/পজিটিভ', label: 'HBsAg', controller: _hbsag)),
-      ]),
-      const SizedBox(height: 20),
+      const SizedBox(height: 14),
+      _field(_tsh, 'TSH', 'মান', Icons.medical_information_outlined),
+      _field(_hbsag, 'HBsAg', 'নেগেটিভ / পজিটিভ', Icons.biotech_outlined),
+      const SizedBox(height: 22),
 
-      // ── এই ভিজিটে যা দেওয়া হয়েছে (supplements/injection) ──
+      // ── এই ভিজিটে যা দেওয়া হয়েছে ──
       _sectionTitle('এই ভিজিটে যা দেওয়া হয়েছে', Icons.medication_outlined),
-      const SizedBox(height: 8),
+      const SizedBox(height: 10),
       Wrap(
         spacing: 8,
         runSpacing: 8,
@@ -604,7 +576,7 @@ class _VisitScreenState extends State<VisitScreen> {
           );
         }).toList(),
       ),
-      const SizedBox(height: 20),
+      const SizedBox(height: 22),
 
       // ── যক্ষ্মা (TB) + বিপদচিহ্ন ──
       ..._flagBody('যক্ষ্মা (TB) লক্ষণ যাচাই', _ancTbSigns,
@@ -617,6 +589,21 @@ class _VisitScreenState extends State<VisitScreen> {
       ..._flagBody('বিপদচিহ্ন যাচাই করুন', _ancDangerSigns),
     ];
   }
+
+  // Clean full-width labelled input with a prefix icon + spacing — the polished
+  // "পরিমাপ লিখুন" look, applied to every MCP field.
+  Widget _field(TextEditingController c, String label, String hint, IconData icon,
+          {bool number = false}) =>
+      Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: AppInput(
+          label: label,
+          hint: hint,
+          controller: c,
+          keyboardType: number ? TextInputType.number : TextInputType.text,
+          prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+        ),
+      );
 
   // Section header — a small icon + bold primary title, like the card's bands.
   Widget _sectionTitle(String t, IconData icon) => Row(
