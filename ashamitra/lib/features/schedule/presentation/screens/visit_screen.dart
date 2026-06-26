@@ -8,8 +8,6 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_input.dart';
-import '../../../../shared/widgets/patient_photo.dart';
-import '../../../patients/controller/patient_controller.dart';
 import '../../../../app/routes.dart';
 
 /// Unified "conduct visit" screen — one UI shell for every scheduled visit
@@ -39,24 +37,6 @@ class _VisitScreenState extends State<VisitScreen> {
   final _urineAlb = TextEditingController();
   final _urineSugar = TextEditingController();
   final _fundal = TextEditingController();
-  // MCP-card ANC examination — full field set, in the card's row order.
-  final _weeks = TextEditingController();    // গর্ভের ক্রমের বয়স (সপ্তাহ)
-  final _pulse = TextEditingController();    // নাড়ির গতি
-  final _fhr = TextEditingController();       // ভ্রূণের হৃদস্পন্দন /মিনিট
-  final _lie = TextEditingController();       // ভ্রূণের অবস্থান Lie/Presentation
-  final _other = TextEditingController();     // অন্যান্য সমস্যা
-  final _hiv = TextEditingController();       // HIV ফল
-  final _syphilis = TextEditingController();  // সিফিলিস ফল
-  final _gdm = TextEditingController();       // GDM ফল
-  final _tsh = TextEditingController();       // TSH
-  final _hbsag = TextEditingController();     // HBsAg
-  // Clinical findings present (chips) + single-choice / yes-no items.
-  final Set<String> _exam = {};              // ফ্যাকাসে/ফুলে/জন্ডিস/শরীরে ফোলা
-  String _fetalMove = '';                     // স্বাভাবিক / কম / নেই
-  bool _pvDone = false;                       // যোনিপথ (P/V) করা হয়েছে
-  bool _usgDone = false;                      // আল্ট্রাসোনোগ্রাফি করা হয়েছে
-  static const _examFindings = ['ফ্যাকাসে ভাব', 'ফুলে যাওয়া', 'জন্ডিস', 'শরীরে কোথাও ফোলা'];
-  static const _fetalMoveOpts = ['স্বাভাবিক', 'কম', 'নেই'];
   // Supplements / injections given this ANC visit.
   final Set<String> _ancGiven = {};
   static const _ancSupplements = ['IFA', 'ক্যালসিয়াম', 'অ্যালবেন্ডাজল', 'TD টিকা'];
@@ -119,15 +99,9 @@ class _VisitScreenState extends State<VisitScreen> {
         'ancGiven': _ancGiven.toList(),
         'flags': _flags.toList(),
         'tb': _tb.toList(),
-        'exam': _exam.toList(),
-        'fetalMove': _fetalMove, 'pvDone': _pvDone, 'usgDone': _usgDone,
         'bp': _bp.text, 'weight': _weight.text, 'hb': _hb.text,
         'bsugar': _bsugar.text, 'urineAlb': _urineAlb.text,
         'urineSugar': _urineSugar.text, 'fundal': _fundal.text,
-        'weeks': _weeks.text, 'pulse': _pulse.text, 'fhr': _fhr.text,
-        'lie': _lie.text, 'other': _other.text, 'hiv': _hiv.text,
-        'syphilis': _syphilis.text, 'gdm': _gdm.text, 'tsh': _tsh.text,
-        'hbsag': _hbsag.text,
       };
 
   void _applyDraft(Map<String, dynamic> d) {
@@ -138,13 +112,6 @@ class _VisitScreenState extends State<VisitScreen> {
     fill(_bp, 'bp'); fill(_weight, 'weight'); fill(_hb, 'hb');
     fill(_bsugar, 'bsugar'); fill(_urineAlb, 'urineAlb');
     fill(_urineSugar, 'urineSugar'); fill(_fundal, 'fundal');
-    fill(_weeks, 'weeks'); fill(_pulse, 'pulse'); fill(_fhr, 'fhr');
-    fill(_lie, 'lie'); fill(_other, 'other'); fill(_hiv, 'hiv');
-    fill(_syphilis, 'syphilis'); fill(_gdm, 'gdm'); fill(_tsh, 'tsh');
-    fill(_hbsag, 'hbsag');
-    _fetalMove = d['fetalMove']?.toString() ?? '';
-    _pvDone = d['pvDone'] == true;
-    _usgDone = d['usgDone'] == true;
     void addAll(Set<String> s, String k) {
       final v = d[k];
       if (v is List) s.addAll(v.map((e) => e.toString()));
@@ -153,7 +120,6 @@ class _VisitScreenState extends State<VisitScreen> {
     addAll(_ancGiven, 'ancGiven');
     addAll(_flags, 'flags');
     addAll(_tb, 'tb');
-    addAll(_exam, 'exam');
   }
 
   void _loadDraft() {
@@ -183,16 +149,6 @@ class _VisitScreenState extends State<VisitScreen> {
     _urineAlb.dispose();
     _urineSugar.dispose();
     _fundal.dispose();
-    _weeks.dispose();
-    _pulse.dispose();
-    _fhr.dispose();
-    _lie.dispose();
-    _other.dispose();
-    _hiv.dispose();
-    _syphilis.dispose();
-    _gdm.dispose();
-    _tsh.dispose();
-    _hbsag.dispose();
     super.dispose();
   }
 
@@ -208,19 +164,6 @@ class _VisitScreenState extends State<VisitScreen> {
   }
 
   bool get _hasDanger => _flags.isNotEmpty;
-
-  /// The linked patient's photo (base64 JPEG in mcpDetails['photo']), looked up
-  /// by id from the PatientController — so the ANC/visit screen shows the real
-  /// person, not a generic icon. Null when no patient/photo.
-  String? get _patientPhotoB64 {
-    final pid = _e['patientId']?.toString();
-    if (pid == null || pid.isEmpty) return null;
-    if (!Get.isRegistered<PatientController>()) return null;
-    for (final p in Get.find<PatientController>().patients) {
-      if (p.id == pid) return p.mcpDetails['photo']?.toString();
-    }
-    return null;
-  }
 
   // ── Complication → full triage hand-off ─────────────────────────────────
   // A complication at a scheduled visit routes the worker into the matching
@@ -265,30 +208,13 @@ class _VisitScreenState extends State<VisitScreen> {
         'allGiven': _given.length == _vaccines.length,
       },
       if (_kind == 'anc') ...{
-        // MCP card "গর্ভকালীন পরীক্ষা" — per-visit, in card order.
-        'gestWeeks': _weeks.text.trim(),
-        'weight': _weight.text.trim(),
-        'pulse': _pulse.text.trim(),
         'bp': _bp.text.trim(),
-        'examFindings': _exam.toList(), // ফ্যাকাসে/ফুলে/জন্ডিস/শরীরে ফোলা
-        'otherProblems': _other.text.trim(),
-        // তলপেট পরীক্ষা
-        'fundalHeight': _fundal.text.trim(),
-        'liePresentation': _lie.text.trim(),
-        'fetalMovement': _fetalMove,
-        'fhr': _fhr.text.trim(),
-        'pvDone': _pvDone,
-        // আবশ্যিক + অন্যান্য পরীক্ষা
+        'weight': _weight.text.trim(),
         'hb': _hb.text.trim(),
+        'bloodSugar': _bsugar.text.trim(),
         'urineAlbumin': _urineAlb.text.trim(),
         'urineSugar': _urineSugar.text.trim(),
-        'bloodSugar': _bsugar.text.trim(),
-        'hiv': _hiv.text.trim(),
-        'syphilis': _syphilis.text.trim(),
-        'usgDone': _usgDone,
-        'gdm': _gdm.text.trim(),
-        'tsh': _tsh.text.trim(),
-        'hbsag': _hbsag.text.trim(),
+        'fundalHeight': _fundal.text.trim(),
         'supplementsGiven': _ancGiven.toList(),
         if (_tb.isNotEmpty) ...{
           'tbSymptoms': _tb.toList(),
@@ -431,19 +357,11 @@ class _VisitScreenState extends State<VisitScreen> {
               color: Colors.white.withValues(alpha: 0.6),
               shape: BoxShape.circle,
             ),
-            child: Builder(builder: (_) {
-              // Show the patient's own photo (captured at registration, stored in
-              // mcpDetails['photo']). Falls back to a kind illustration, then icon.
-              final photo = patientPhotoProvider(_patientPhotoB64);
-              if (photo != null) {
-                return Image(image: photo, fit: BoxFit.cover, width: 58, height: 58);
-              }
-              return Image.asset(
-                'assets/illustrations/$_kind.png',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(icon, color: color, size: 30),
-              );
-            }),
+            child: Image.asset(
+              'assets/illustrations/$_kind.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Icon(icon, color: color, size: 30),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -500,90 +418,71 @@ class _VisitScreenState extends State<VisitScreen> {
     ];
   }
 
-  // ANC capture — mirrors the MCP card "গর্ভকালীন যত্ন ও পরিষেবা" page, in the
-  // card's exact section + row order so the worker ticks the screen like the card.
   List<Widget> _ancBody() {
     return [
-      // ── গর্ভকালীন পরীক্ষা (per-visit measurements) ──
-      _sectionTitle('গর্ভকালীন পরীক্ষা', Icons.pregnant_woman_rounded),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(child: AppInput(hint: 'সপ্তাহ', label: 'গর্ভের বয়স', controller: _weeks, keyboardType: TextInputType.number)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: 'কেজি', label: 'ওজন', controller: _weight, keyboardType: TextInputType.number)),
-      ]),
+      Text('পরিমাপ লিখুন', style: AppTextStyles.label),
+      const SizedBox(height: 8),
+      AppInput(
+        hint: 'যেমন 120/80',
+        label: 'রক্তচাপ (BP)',
+        controller: _bp,
+        prefixIcon: const Icon(Icons.favorite_outline, color: AppColors.primary, size: 20),
+      ),
       const SizedBox(height: 14),
-      Row(children: [
-        Expanded(child: AppInput(hint: '/মিনিট', label: 'নাড়ির গতি', controller: _pulse, keyboardType: TextInputType.number)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: 'যেমন 120/80', label: 'রক্তচাপ (BP)', controller: _bp)),
-      ]),
+      AppInput(
+        hint: 'কেজি',
+        label: 'ওজন',
+        controller: _weight,
+        keyboardType: TextInputType.number,
+        prefixIcon: const Icon(Icons.monitor_weight_outlined, color: AppColors.primary, size: 20),
+      ),
+      const SizedBox(height: 14),
+      AppInput(
+        hint: 'g/dL',
+        label: 'হিমোগ্লোবিন (Hb)',
+        controller: _hb,
+        keyboardType: TextInputType.number,
+        prefixIcon: const Icon(Icons.bloodtype_outlined, color: AppColors.primary, size: 20),
+      ),
+      const SizedBox(height: 14),
+      AppInput(
+        hint: 'mg/dL',
+        label: 'রক্তে শর্করা (Blood sugar)',
+        controller: _bsugar,
+        keyboardType: TextInputType.number,
+        prefixIcon: const Icon(Icons.water_drop_outlined, color: AppColors.primary, size: 20),
+      ),
+      const SizedBox(height: 14),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: AppInput(
+              hint: 'nil/+/++',
+              label: 'মূত্রে অ্যালবুমিন',
+              controller: _urineAlb,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AppInput(
+              hint: 'nil/+/++',
+              label: 'মূত্রে শর্করা',
+              controller: _urineSugar,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 14),
+      AppInput(
+        hint: 'সেমি',
+        label: 'জরায়ুর উচ্চতা (Fundal height)',
+        controller: _fundal,
+        keyboardType: TextInputType.number,
+        prefixIcon: const Icon(Icons.straighten_outlined, color: AppColors.primary, size: 20),
+      ),
       const SizedBox(height: 16),
-      ..._flagBody('পরীক্ষায় যা পাওয়া গেছে', _examFindings,
-          target: _exam, color: AppColors.warningYellow),
-      const SizedBox(height: 14),
-      AppInput(hint: 'থাকলে লিখুন', label: 'অন্যান্য সমস্যা', controller: _other),
-      const SizedBox(height: 20),
-
-      // ── তলপেট পরীক্ষা (abdominal) ──
-      _sectionTitle('তলপেট পরীক্ষা', Icons.child_friendly_rounded),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(child: AppInput(hint: 'সেমি', label: 'জরায়ুর উচ্চতা', controller: _fundal, keyboardType: TextInputType.number)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: '/মিনিট', label: 'ভ্রূণের হৃদস্পন্দন (FHR)', controller: _fhr, keyboardType: TextInputType.number)),
-      ]),
-      const SizedBox(height: 14),
-      AppInput(hint: 'Lie / Presentation', label: 'ভ্রূণের অবস্থান', controller: _lie),
-      const SizedBox(height: 14),
-      _choiceRow('ভ্রূণের নড়াচড়া', _fetalMoveOpts, _fetalMove,
-          (v) => setState(() => _fetalMove = _fetalMove == v ? '' : v)),
-      const SizedBox(height: 12),
-      _toggleChip('যোনিপথ (P/V) পরীক্ষা করা হয়েছে', _pvDone,
-          (v) => setState(() => _pvDone = v)),
-      const SizedBox(height: 20),
-
-      // ── আবশ্যিক পরীক্ষা (mandatory tests) ──
-      _sectionTitle('আবশ্যিক পরীক্ষা', Icons.science_outlined),
-      const SizedBox(height: 10),
-      AppInput(hint: 'g/dL', label: 'হিমোগ্লোবিন (Hb)', controller: _hb,
-          keyboardType: TextInputType.number,
-          prefixIcon: const Icon(Icons.bloodtype_outlined, color: AppColors.primary, size: 20)),
-      const SizedBox(height: 14),
-      Row(children: [
-        Expanded(child: AppInput(hint: 'nil/+/++', label: 'মূত্রে অ্যালবুমিন', controller: _urineAlb)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: 'nil/+/++', label: 'মূত্রে শর্করা', controller: _urineSugar)),
-      ]),
-      const SizedBox(height: 14),
-      AppInput(hint: 'mg/dL', label: 'রক্তে শর্করা (GDM স্ক্রিন)', controller: _bsugar,
-          keyboardType: TextInputType.number,
-          prefixIcon: const Icon(Icons.water_drop_outlined, color: AppColors.primary, size: 20)),
-      const SizedBox(height: 14),
-      Row(children: [
-        Expanded(child: AppInput(hint: 'নেগেটিভ/পজিটিভ', label: 'HIV', controller: _hiv)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: 'নেগেটিভ/পজিটিভ', label: 'সিফিলিস', controller: _syphilis)),
-      ]),
-      const SizedBox(height: 14),
-      AppInput(hint: 'ফল (থাকলে)', label: 'গর্ভকালীন ডায়াবিটিস (GDM)', controller: _gdm),
-      const SizedBox(height: 12),
-      _toggleChip('আল্ট্রাসোনোগ্রাফি (USG) করা হয়েছে', _usgDone,
-          (v) => setState(() => _usgDone = v)),
-      const SizedBox(height: 20),
-
-      // ── অন্যান্য পরীক্ষা ──
-      _sectionTitle('অন্যান্য পরীক্ষা', Icons.assignment_outlined),
-      const SizedBox(height: 10),
-      Row(children: [
-        Expanded(child: AppInput(hint: 'মান', label: 'TSH', controller: _tsh)),
-        const SizedBox(width: 12),
-        Expanded(child: AppInput(hint: 'নেগেটিভ/পজিটিভ', label: 'HBsAg', controller: _hbsag)),
-      ]),
-      const SizedBox(height: 20),
-
-      // ── এই ভিজিটে যা দেওয়া হয়েছে (supplements/injection) ──
-      _sectionTitle('এই ভিজিটে যা দেওয়া হয়েছে', Icons.medication_outlined),
+      Text('এই ভিজিটে যা দেওয়া হয়েছে', style: AppTextStyles.label),
       const SizedBox(height: 8),
       Wrap(
         spacing: 8,
@@ -604,70 +503,16 @@ class _VisitScreenState extends State<VisitScreen> {
           );
         }).toList(),
       ),
-      const SizedBox(height: 20),
-
-      // ── যক্ষ্মা (TB) + বিপদচিহ্ন ──
+      const SizedBox(height: 18),
+      ..._flagBody('বিপদচিহ্ন যাচাই করুন', _ancDangerSigns),
+      const SizedBox(height: 18),
       ..._flagBody('যক্ষ্মা (TB) লক্ষণ যাচাই', _ancTbSigns,
           target: _tb, color: AppColors.warningYellow),
       if (_tb.isNotEmpty) ...[
         const SizedBox(height: 10),
         _naatBanner(),
       ],
-      const SizedBox(height: 18),
-      ..._flagBody('বিপদচিহ্ন যাচাই করুন', _ancDangerSigns),
     ];
-  }
-
-  // Section header — a small icon + bold primary title, like the card's bands.
-  Widget _sectionTitle(String t, IconData icon) => Row(
-        children: [
-          Icon(icon, size: 18, color: AppColors.primary),
-          const SizedBox(width: 8),
-          Text(t,
-              style: AppTextStyles.label.copyWith(
-                  color: AppColors.primary, fontWeight: FontWeight.w800)),
-        ],
-      );
-
-  // Single-select row (e.g. ভ্রূণের নড়াচড়া: স্বাভাবিক/কম/নেই).
-  Widget _choiceRow(String label, List<String> opts, String selected,
-      void Function(String) onTap) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AppTextStyles.label),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: opts.map((o) {
-            final sel = selected == o;
-            return ChoiceChip(
-              label: Text(o),
-              selected: sel,
-              selectedColor: AppColors.primary,
-              backgroundColor: AppColors.surface,
-              labelStyle: AppTextStyles.label.copyWith(
-                  color: sel ? Colors.white : AppColors.textSecondary),
-              onSelected: (_) => onTap(o),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  // Yes/no toggle chip (e.g. P/V done, USG done).
-  Widget _toggleChip(String label, bool value, void Function(bool) onChanged) {
-    return FilterChip(
-      label: Text(label),
-      selected: value,
-      showCheckmark: true,
-      selectedColor: AppColors.safeGreen,
-      backgroundColor: AppColors.surface,
-      labelStyle: AppTextStyles.label
-          .copyWith(color: value ? Colors.white : AppColors.textSecondary),
-      onSelected: onChanged,
-    );
   }
 
   List<Widget> _flagBody(String title, List<String> signs,
