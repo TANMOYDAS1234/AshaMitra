@@ -114,16 +114,38 @@ class McpReportPdf {
       }
       if (status != 'done') continue;
       if (kind == 'anc') {
-        final flags = <String>[
-          ...((rec['dangerFlags'] as List?)?.map((e) => e.toString()) ?? const []),
-          ...((rec['tbSymptoms'] as List?)?.map((e) => e.toString()) ?? const []),
+        // Compact lab-test summary — only the tests actually recorded.
+        final tests = <String>[];
+        void t(String k, String lbl) {
+          final v = r(k);
+          if (v.isNotEmpty && v != '—') tests.add('$lbl:$v');
+        }
+        t('hiv', 'HIV'); t('syphilis', 'সিফ'); t('gdm', 'GDM');
+        t('tsh', 'TSH'); t('hbsag', 'HBsAg');
+        if (rec['usgDone'] == true) tests.add('USG✓');
+        // Observations — exam findings, fetal status, P/V, other, supplements, danger/TB.
+        final obs = <String>[
+          ...((rec['examFindings'] as List?)?.map((e) => e.toString()) ?? const []),
         ];
+        final move = r('fetalMovement');
+        if (move.isNotEmpty) obs.add('নড়াচড়া:$move');
+        final lie = r('liePresentation');
+        if (lie.isNotEmpty) obs.add(lie);
+        if (rec['pvDone'] == true) obs.add('P/V✓');
+        final other = r('otherProblems');
+        if (other.isNotEmpty) obs.add(other);
+        final supp = (rec['supplementsGiven'] as List?)?.join(', ') ?? '';
+        if (supp.isNotEmpty) obs.add('দেওয়া: $supp');
+        obs.addAll((rec['dangerFlags'] as List?)?.map((e) => e.toString()) ?? const []);
+        obs.addAll((rec['tbSymptoms'] as List?)?.map((e) => e.toString()) ?? const []);
         anc.add([
-          label, date, r('weight'), r('bp'), r('hb'),
-          '${r('urineAlbumin')}/${r('urineSugar')}',
-          r('fundalHeight'),
-          ((rec['supplementsGiven'] as List?)?.join(', ') ?? ''),
-          flags.isEmpty ? '—' : flags.join(', '),
+          label, date, r('gestWeeks'),
+          '${r('weight')}/${r('pulse')}',
+          r('bp'),
+          '${r('hb')} · ${r('urineAlbumin')}/${r('urineSugar')}',
+          '${r('fundalHeight')}/${r('fhr')}',
+          tests.isEmpty ? '—' : tests.join(' '),
+          obs.isEmpty ? '—' : obs.join(', '),
         ]);
       } else if (kind == 'vaccine') {
         vac.add([
@@ -293,7 +315,7 @@ Future<List<int>> buildMcpReportPdf(
         // ANC visits
         if (anc.isNotEmpty) ...[
           sectionTitle('ANC ভিজিট (পরিমাপ)'),
-          table(const ['ভিজিট', 'তারিখ', 'ওজন', 'BP', 'Hb', 'মূত্র(A/S)', 'জরায়ু', 'দেওয়া হয়েছে', 'বিপদ/TB'], rows(anc)),
+          table(const ['ভিজিট', 'তারিখ', 'সপ্তাহ', 'ওজন/নাড়ি', 'BP', 'Hb · মূত্র', 'জরায়ু/FHR', 'পরীক্ষা', 'পর্যবেক্ষণ'], rows(anc)),
         ],
 
         // Immunization
