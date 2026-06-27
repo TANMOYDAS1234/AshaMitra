@@ -583,11 +583,12 @@ class _VisitScreenState extends State<VisitScreen> {
         borderRadius: BorderRadius.circular(16),
         child: Image.asset(
           'assets/illustrations/$_kind.png',
-          height: 150,
+          height: 168,
           width: double.infinity,
           fit: BoxFit.cover,
+          alignment: Alignment.topCenter, // keep the face/head fully visible
           // No PNG dropped in → show the code-drawn illustration for this module.
-          errorBuilder: (_, __, ___) => ModuleArt(kind: _kind),
+          errorBuilder: (_, __, ___) => ModuleArt(kind: _kind, height: 168),
         ),
       );
 
@@ -648,10 +649,19 @@ class _VisitScreenState extends State<VisitScreen> {
               children: [
                 Text(_e['patientName']?.toString() ?? 'রোগী',
                     style: AppTextStyles.h3),
-                const SizedBox(height: 2),
-                Text(_label,
-                    style: AppTextStyles.label
-                        .copyWith(color: color, fontWeight: FontWeight.w700)),
+                // The visit name is already in the screen header — show the
+                // phone here instead (or nothing) to avoid the duplicate label.
+                if ((_e['patientMobile']?.toString() ?? '').isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Icon(Icons.phone_outlined, size: 13, color: color),
+                      const SizedBox(width: 4),
+                      Text(_e['patientMobile'].toString(),
+                          style: AppTextStyles.label.copyWith(color: color)),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

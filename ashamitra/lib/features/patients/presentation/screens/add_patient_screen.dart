@@ -1790,11 +1790,12 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                           borderRadius: BorderRadius.circular(16),
                           child: Image.asset(
                             'assets/illustrations/${ModuleArt.kindKey(_caseType)}.png',
-                            height: 110,
+                            height: 120,
                             width: double.infinity,
                             fit: BoxFit.cover,
+                            alignment: Alignment.topCenter,
                             errorBuilder: (_, __, ___) =>
-                                ModuleArt(kind: _caseType, height: 110),
+                                ModuleArt(kind: _caseType, height: 120),
                           ),
                         ),
                         const SizedBox(height: 16),
