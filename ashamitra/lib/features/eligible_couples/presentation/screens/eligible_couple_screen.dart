@@ -9,6 +9,8 @@ import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../controller/eligible_couple_controller.dart';
+import '../../../patients/controller/patient_controller.dart';
+import '../../../patients/data/models/patient_model.dart';
 
 // Family-planning methods, in the order the eligible-couple register lists them.
 const _fpMethods = <String, String>{
@@ -35,6 +37,36 @@ EligibleCoupleController _coupleCtrl() => Get.isRegistered<EligibleCoupleControl
     ? Get.find<EligibleCoupleController>()
     : Get.put(EligibleCoupleController(), permanent: true);
 
+PatientController _patientCtrl() => Get.isRegistered<PatientController>()
+    ? Get.find<PatientController>()
+    : Get.put(PatientController(), permanent: true);
+
+/// Couples the registry already implies but the worker hasn't logged: women of
+/// reproductive age (15–49) and any pregnancy. Pre-fills name/village/mobile/age
+/// + spouse; the worker only adds the FP method + next follow-up, then it saves.
+List<Map<String, dynamic>> _coupleCandidates(List<PatientModel> patients) {
+  final out = <Map<String, dynamic>>[];
+  for (final p in patients) {
+    final t = p.type.toLowerCase();
+    final isWoman = p.gender == 'Female' || t.contains('pregn');
+    if (!isWoman) continue;
+    final years = p.ageUnit == 'years' ? int.tryParse(p.age) : null;
+    final reproductive = t.contains('pregn') || (years != null && years >= 15 && years <= 49);
+    if (!reproductive) continue;
+    out.add({
+      'wifeName': p.name,
+      'husbandName': (p.mcpDetails['fatherName'] ?? '').toString(),
+      'wifeAge': p.ageUnit == 'years' ? p.age : '',
+      'village': p.village,
+      'mobile': p.mobile,
+      'fpMethod': 'none',
+      'status': 'active',
+      'patientId': p.id,
+    });
+  }
+  return out;
+}
+
 /// The eligible-couple (family-planning) register: every married couple with the
 /// wife in the reproductive age band, the current FP method and the next
 /// follow-up. Answers "who still needs counselling / a follow-up?".
@@ -44,6 +76,7 @@ class EligibleCoupleListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ctrl = _coupleCtrl();
+    final pc = _patientCtrl();
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
@@ -70,13 +103,36 @@ class EligibleCoupleListScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Expanded(
                 child: Obx(() {
-                  final items = ctrl.items.toList();
-                  if (items.isEmpty) return _empty(ctrl);
+                  final saved = ctrl.items.toList();
+                  final savedPids = saved
+                      .map((e) => (e['patientId'] ?? '').toString())
+                      .where((s) => s.isNotEmpty)
+                      .toSet();
+                  final suggestions = _coupleCandidates(pc.patients.toList())
+                      .where((c) => !savedPids.contains(c['patientId']))
+                      .toList()
+                    ..sort((a, b) => (a['wifeName'] ?? '')
+                        .toString()
+                        .compareTo((b['wifeName'] ?? '').toString()));
+                  if (saved.isEmpty && suggestions.isEmpty) return _empty(ctrl);
                   return RefreshIndicator(
                     onRefresh: ctrl.syncFromServer,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-                      children: items.map((c) => _CoupleCard(data: c)).toList(),
+                      children: [
+                        ...saved.map((c) => _CoupleCard(data: c)),
+                        if (suggestions.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8, left: 4),
+                            child: Text(
+                                'প্রস্তাবিত (রেজিস্টার থেকে — ${suggestions.length} জন)',
+                                style: AppTextStyles.label.copyWith(
+                                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+                          ),
+                          ...suggestions.map((c) => _CoupleCard(data: c, suggested: true)),
+                        ],
+                      ],
                     ),
                   );
                 }),
@@ -111,8 +167,9 @@ class EligibleCoupleListScreen extends StatelessWidget {
 }
 
 class _CoupleCard extends StatelessWidget {
-  const _CoupleCard({required this.data});
+  const _CoupleCard({required this.data, this.suggested = false});
   final Map<String, dynamic> data;
+  final bool suggested;
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +217,8 @@ class _CoupleCard extends StatelessWidget {
                         color: color.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Text(closed ? 'বন্ধ' : _fpLabel(method),
+                      child: Text(
+                          suggested ? 'প্রস্তাবিত' : (closed ? 'বন্ধ' : _fpLabel(method)),
                           style: AppTextStyles.caption
                               .copyWith(color: color, fontWeight: FontWeight.w700)),
                     ),

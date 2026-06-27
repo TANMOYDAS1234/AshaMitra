@@ -9,6 +9,8 @@ import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../controller/vital_event_controller.dart';
+import '../../../patients/controller/patient_controller.dart';
+import '../../../patients/data/models/patient_model.dart';
 import '../../../eligible_couples/presentation/screens/eligible_couple_screen.dart'
     show DatePickField;
 
@@ -43,6 +45,46 @@ VitalEventController _vitalCtrl() => Get.isRegistered<VitalEventController>()
     ? Get.find<VitalEventController>()
     : Get.put(VitalEventController(), permanent: true);
 
+PatientController _patientCtrl() => Get.isRegistered<PatientController>()
+    ? Get.find<PatientController>()
+    : Get.put(PatientController(), permanent: true);
+
+/// Birth events the worker hasn't logged yet but the registry already implies:
+/// every Newborn registration (DOB) and every pregnancy with a recorded
+/// delivery date. Tapping one opens the form pre-filled — the worker only adds
+/// the CRS registration number, then it becomes a real saved record.
+List<Map<String, dynamic>> _birthCandidates(List<PatientModel> patients) {
+  final out = <Map<String, dynamic>>[];
+  for (final p in patients) {
+    final t = p.type.toLowerCase();
+    if (t.contains('newborn') && p.dob != null) {
+      out.add({
+        'eventType': 'birth',
+        'personName': p.name,
+        'sex': p.gender,
+        'eventDate': p.dob!.toIso8601String(),
+        'birthWeight': (p.mcpDetails['birthWeight'] ?? '').toString(),
+        'motherName': p.guardianName,
+        'village': p.village,
+        'mobile': p.mobile,
+        'patientId': p.id,
+      });
+    } else if (t.contains('pregn') && p.deliveryDate != null) {
+      out.add({
+        'eventType': 'birth',
+        'personName': '',
+        'sex': '',
+        'eventDate': p.deliveryDate!.toIso8601String(),
+        'motherName': p.name,
+        'village': p.village,
+        'mobile': p.mobile,
+        'patientId': p.id,
+      });
+    }
+  }
+  return out;
+}
+
 /// The birth & death (CRS) register — the vital events an ASHA reports to the
 /// ANM/sub-centre each month. Tracks whether each event is registered yet.
 class VitalEventListScreen extends StatelessWidget {
@@ -51,6 +93,7 @@ class VitalEventListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ctrl = _vitalCtrl();
+    final pc = _patientCtrl();
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
@@ -77,8 +120,18 @@ class VitalEventListScreen extends StatelessWidget {
               const SizedBox(height: 8),
               Expanded(
                 child: Obx(() {
-                  final items = ctrl.items.toList();
-                  if (items.isEmpty) return _empty(ctrl);
+                  final saved = ctrl.items.toList();
+                  final savedPids = saved
+                      .map((e) => (e['patientId'] ?? '').toString())
+                      .where((s) => s.isNotEmpty)
+                      .toSet();
+                  final suggestions = _birthCandidates(pc.patients.toList())
+                      .where((c) => !savedPids.contains(c['patientId']))
+                      .toList()
+                    ..sort((a, b) => (b['eventDate'] ?? '')
+                        .toString()
+                        .compareTo((a['eventDate'] ?? '').toString()));
+                  if (saved.isEmpty && suggestions.isEmpty) return _empty(ctrl);
                   final pending = ctrl.unregisteredCount;
                   return RefreshIndicator(
                     onRefresh: ctrl.syncFromServer,
@@ -92,7 +145,18 @@ class VitalEventListScreen extends StatelessWidget {
                                 style: AppTextStyles.label
                                     .copyWith(color: AppColors.accent)),
                           ),
-                        ...items.map((e) => _VitalCard(data: e)),
+                        ...saved.map((e) => _VitalCard(data: e)),
+                        if (suggestions.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8, left: 4),
+                            child: Text(
+                                'প্রস্তাবিত (রেজিস্টার থেকে — ${suggestions.length} টি জন্ম)',
+                                style: AppTextStyles.label.copyWith(
+                                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+                          ),
+                          ...suggestions.map((e) => _VitalCard(data: e, suggested: true)),
+                        ],
                       ],
                     ),
                   );
@@ -128,8 +192,9 @@ class VitalEventListScreen extends StatelessWidget {
 }
 
 class _VitalCard extends StatelessWidget {
-  const _VitalCard({required this.data});
+  const _VitalCard({required this.data, this.suggested = false});
   final Map<String, dynamic> data;
+  final bool suggested;
 
   @override
   Widget build(BuildContext context) {
@@ -168,18 +233,22 @@ class _VitalCard extends StatelessWidget {
                         maxLines: 1, overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: (registered ? AppColors.safeGreen : AppColors.accent)
-                            .withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(registered ? 'নথিভুক্ত' : 'বাকি',
-                          style: AppTextStyles.caption.copyWith(
-                              color: registered ? AppColors.safeGreen : AppColors.accent,
-                              fontWeight: FontWeight.w700)),
-                    ),
+                    Builder(builder: (_) {
+                      final (label, chipColor) = suggested
+                          ? ('প্রস্তাবিত', AppColors.primary)
+                          : (registered ? 'নথিভুক্ত' : 'বাকি',
+                              registered ? AppColors.safeGreen : AppColors.accent);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: chipColor.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(label,
+                            style: AppTextStyles.caption.copyWith(
+                                color: chipColor, fontWeight: FontWeight.w700)),
+                      );
+                    }),
                   ],
                 ),
                 const SizedBox(height: 6),
