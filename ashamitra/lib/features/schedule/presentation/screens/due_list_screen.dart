@@ -236,29 +236,6 @@ class _DueListScreenState extends State<DueListScreen> {
     );
   }
 
-  Future<void> _markDone(Map<String, dynamic> e) async {
-    final id = e['id']?.toString() ?? '';
-    if (id.isEmpty) return;
-    // Optimistic: remove immediately for a snappy feel.
-    setState(() => _events.removeWhere((x) => x['id'] == id));
-    final ok = await ApiService.markScheduleEvent(id, 'done');
-    if (!mounted) return;
-    if (ok == null) {
-      // Failed — put it back and tell the worker.
-      setState(() => _events.add(e));
-      Get.snackbar('সংযোগ সমস্যা', 'এখন সম্পন্ন চিহ্নিত করা গেল না, আবার চেষ্টা করুন।',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.warningYellow, colorText: Colors.white,
-          margin: const EdgeInsets.all(16), borderRadius: 12);
-    } else {
-      Get.snackbar('সম্পন্ন ✓', '${e['patientName'] ?? ''} — ${e['label'] ?? ''} সম্পন্ন চিহ্নিত হয়েছে।',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: AppColors.safeGreen, colorText: Colors.white,
-          margin: const EdgeInsets.all(16), borderRadius: 12,
-          duration: const Duration(seconds: 2));
-    }
-  }
-
   // ── Display helpers ───────────────────────────────────────────────────────
   String _dueText(Map<String, dynamic> e) {
     final overdue = e['overdue'] == true;
@@ -574,13 +551,11 @@ class _DueListScreenState extends State<DueListScreen> {
             ),
           ),
           const SizedBox(width: 8),
-          // One-tap "done".
-          IconButton(
-            tooltip: 'সম্পন্ন',
-            onPressed: () => _markDone(e),
-            icon: const Icon(Icons.check_circle_outline_rounded,
-                color: AppColors.safeGreen, size: 28),
-          ),
+          // Tap the card to open the structured checkup form. No value-less
+          // one-tap "done" — every completion goes through the form so the
+          // visit record (BP/Hb/weight/flags) is always captured.
+          const Icon(Icons.chevron_right_rounded,
+              color: AppColors.textSecondary, size: 26),
         ],
       ),
     ));
