@@ -94,6 +94,30 @@ class _VisitScreenState extends State<VisitScreen> {
     'ঘরে ORS / আয়রন সিরাপ নেই',
   ];
 
+  // ── HBNC: newborn measurements + mother PNC (MCP card pg 7) ──────────────
+  final _hbWeight = TextEditingController(); // নবজাতকের ওজন (কেজি)
+  final _hbTemp = TextEditingController();   // নবজাতকের তাপমাত্রা (°F)
+  final _pncBp = TextEditingController();    // মায়ের রক্তচাপ
+  final _pncTemp = TextEditingController();  // মায়ের তাপমাত্রা (°F)
+  final Set<String> _pncFlags = {};
+  static const _pncDangerSigns = [
+    'অতিরিক্ত রক্তস্রাব',
+    'দুর্গন্ধযুক্ত স্রাব (লোকিয়া)',
+    'স্তন ফোলা / ব্যথা',
+    'তীব্র জ্বর',
+    'খিঁচুনি',
+    'সেলাইয়ে সংক্রমণ',
+    'বিষণ্নতা / মানসিক সমস্যা',
+  ];
+
+  // ── HBYC: growth (weight + MUAC → SAM/MAM) + services given ──────────────
+  final _ycWeight = TextEditingController(); // ওজন (কেজি)
+  final _ycMuac = TextEditingController();   // MUAC বাহুর মাপ (মিমি)
+  final Set<String> _hbycGiven = {};
+  static const _hbycGivenItems = [
+    'ভিটামিন এ', 'ORS প্যাকেট', 'আয়রন সিরাপ', 'কৃমিনাশক', 'পুষ্টি পরামর্শ',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -117,6 +141,11 @@ class _VisitScreenState extends State<VisitScreen> {
         'ga': _ga.text, 'pulse': _pulse.text, 'fhr': _fhr.text,
         'lie': _lie.text, 'hiv': _hiv.text, 'syphilis': _syphilis.text,
         'usg': _usg.text, 'notes': _notes.text,
+        'hbWeight': _hbWeight.text, 'hbTemp': _hbTemp.text,
+        'pncBp': _pncBp.text, 'pncTemp': _pncTemp.text,
+        'pncFlags': _pncFlags.toList(),
+        'ycWeight': _ycWeight.text, 'ycMuac': _ycMuac.text,
+        'hbycGiven': _hbycGiven.toList(),
       };
 
   void _applyDraft(Map<String, dynamic> d) {
@@ -130,6 +159,9 @@ class _VisitScreenState extends State<VisitScreen> {
     fill(_ga, 'ga'); fill(_pulse, 'pulse'); fill(_fhr, 'fhr');
     fill(_lie, 'lie'); fill(_hiv, 'hiv'); fill(_syphilis, 'syphilis');
     fill(_usg, 'usg'); fill(_notes, 'notes');
+    fill(_hbWeight, 'hbWeight'); fill(_hbTemp, 'hbTemp');
+    fill(_pncBp, 'pncBp'); fill(_pncTemp, 'pncTemp');
+    fill(_ycWeight, 'ycWeight'); fill(_ycMuac, 'ycMuac');
     void addAll(Set<String> s, String k) {
       final v = d[k];
       if (v is List) s.addAll(v.map((e) => e.toString()));
@@ -138,6 +170,8 @@ class _VisitScreenState extends State<VisitScreen> {
     addAll(_ancGiven, 'ancGiven');
     addAll(_flags, 'flags');
     addAll(_tb, 'tb');
+    addAll(_pncFlags, 'pncFlags');
+    addAll(_hbycGiven, 'hbycGiven');
   }
 
   void _loadDraft() {
@@ -175,6 +209,12 @@ class _VisitScreenState extends State<VisitScreen> {
     _syphilis.dispose();
     _usg.dispose();
     _notes.dispose();
+    _hbWeight.dispose();
+    _hbTemp.dispose();
+    _pncBp.dispose();
+    _pncTemp.dispose();
+    _ycWeight.dispose();
+    _ycMuac.dispose();
     super.dispose();
   }
 
@@ -189,7 +229,25 @@ class _VisitScreenState extends State<VisitScreen> {
     return [];
   }
 
-  bool get _hasDanger => _flags.isNotEmpty;
+  bool get _hasDanger =>
+      _flags.isNotEmpty || _pncFlags.isNotEmpty || _muacStatus == 'SAM';
+
+  /// MUAC normalised to millimetres (accepts "11.5" cm or "115" mm).
+  int? get _muacMm {
+    final raw = _ycMuac.text.trim().replaceAll(RegExp(r'[^0-9.]'), '');
+    final v = double.tryParse(raw);
+    if (v == null || v <= 0) return null;
+    return (v < 40 ? v * 10 : v).round(); // <40 → entered in cm
+  }
+
+  /// SAM (<115 mm) · MAM (115–124) · normal (≥125). Empty when no MUAC.
+  String get _muacStatus {
+    final mm = _muacMm;
+    if (mm == null) return '';
+    if (mm < 115) return 'SAM';
+    if (mm < 125) return 'MAM';
+    return 'normal';
+  }
 
   Future<void> _complete() async {
     if (_id.isEmpty) {
@@ -223,6 +281,21 @@ class _VisitScreenState extends State<VisitScreen> {
           'tbSymptoms': _tb.toList(),
           'naatNeeded': true,
         },
+      },
+      if (_kind == 'hbnc') ...{
+        'babyWeight': _hbWeight.text.trim(),
+        'babyTemp': _hbTemp.text.trim(),
+        'motherPnc': {
+          'bp': _pncBp.text.trim(),
+          'temp': _pncTemp.text.trim(),
+          if (_pncFlags.isNotEmpty) 'dangerFlags': _pncFlags.toList(),
+        },
+      },
+      if (_kind == 'hbyc') ...{
+        'weight': _ycWeight.text.trim(),
+        'muac': _ycMuac.text.trim(),
+        if (_muacStatus.isNotEmpty) 'muacStatus': _muacStatus,
+        'servicesGiven': _hbycGiven.toList(),
       },
       if (_flags.isNotEmpty) 'dangerFlags': _flags.toList(),
       'completedAt': DateTime.now().toIso8601String(),
@@ -400,9 +473,9 @@ class _VisitScreenState extends State<VisitScreen> {
       case 'anc':
         return _ancBody();
       case 'hbnc':
-        return _flagBody('নবজাতকের বিপদচিহ্ন যাচাই করুন', _newbornDangerSigns);
+        return _hbncBody();
       case 'hbyc':
-        return _flagBody('শিশুর যত্ন ও বিপদচিহ্ন যাচাই করুন', _hbycSigns);
+        return _hbycBody();
       default:
         return [Text('এই ভিজিটটি সম্পন্ন হিসেবে চিহ্নিত করুন।',
             style: AppTextStyles.body)];
@@ -595,6 +668,134 @@ class _VisitScreenState extends State<VisitScreen> {
         _naatBanner(),
       ],
     ];
+  }
+
+  // ── HBNC: postnatal home visit — mother PNC + newborn (MCP card pg 7) ─────
+  List<Widget> _hbncBody() {
+    Widget num2(String l1, TextEditingController c1, String h1, String l2,
+            TextEditingController c2, String h2) =>
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: AppInput(hint: h1, label: l1, controller: c1)),
+            const SizedBox(width: 12),
+            Expanded(
+                child: AppInput(
+                    hint: h2,
+                    label: l2,
+                    controller: c2,
+                    keyboardType: TextInputType.number)),
+          ],
+        );
+    return [
+      Text('মায়ের প্রসব-পরবর্তী অবস্থা (PNC)', style: AppTextStyles.label),
+      const SizedBox(height: 8),
+      num2('রক্তচাপ (BP)', _pncBp, 'যেমন 110/70', 'তাপমাত্রা (°F)', _pncTemp, '°F'),
+      const SizedBox(height: 14),
+      ..._flagBody('মায়ের বিপদচিহ্ন', _pncDangerSigns, target: _pncFlags),
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: Divider(height: 1),
+      ),
+      Text('নবজাতকের অবস্থা', style: AppTextStyles.label),
+      const SizedBox(height: 8),
+      num2('ওজন (কেজি)', _hbWeight, 'কেজি', 'তাপমাত্রা (°F)', _hbTemp, '°F'),
+      const SizedBox(height: 14),
+      ..._flagBody('নবজাতকের বিপদচিহ্ন যাচাই করুন', _newbornDangerSigns),
+    ];
+  }
+
+  // ── HBYC: growth (weight + MUAC → SAM/MAM) + services + care (pg 8) ───────
+  List<Widget> _hbycBody() {
+    final status = _muacStatus;
+    return [
+      Text('বৃদ্ধি পর্যবেক্ষণ', style: AppTextStyles.label),
+      const SizedBox(height: 8),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: AppInput(
+                hint: 'কেজি',
+                label: 'ওজন',
+                controller: _ycWeight,
+                keyboardType: TextInputType.number),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AppInput(
+                hint: 'মিমি (যেমন 125)',
+                label: 'MUAC (বাহুর মাপ)',
+                controller: _ycMuac,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {})),
+          ),
+        ],
+      ),
+      if (status.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        _muacBanner(status),
+      ],
+      const SizedBox(height: 16),
+      Text('এই ভিজিটে দেওয়া হয়েছে', style: AppTextStyles.label),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: _hbycGivenItems.map((s) {
+          final sel = _hbycGiven.contains(s);
+          return FilterChip(
+            label: Text(s),
+            selected: sel,
+            showCheckmark: true,
+            selectedColor: AppColors.safeGreen,
+            backgroundColor: AppColors.surface,
+            labelStyle: AppTextStyles.label.copyWith(
+              color: sel ? Colors.white : AppColors.textSecondary,
+            ),
+            onSelected: (on) =>
+                setState(() => on ? _hbycGiven.add(s) : _hbycGiven.remove(s)),
+          );
+        }).toList(),
+      ),
+      const SizedBox(height: 18),
+      ..._flagBody('শিশুর যত্ন ও বিপদচিহ্ন যাচাই করুন', _hbycSigns),
+    ];
+  }
+
+  /// MUAC → nutrition status banner (SAM red / MAM amber / normal green).
+  Widget _muacBanner(String status) {
+    final (color, text) = switch (status) {
+      'SAM' => (
+          AppColors.emergencyRed,
+          'তীব্র অপুষ্টি (SAM) — এখনই NRC/পুষ্টি পুনর্বাসন কেন্দ্রে রেফার করুন।'
+        ),
+      'MAM' => (
+          AppColors.warningYellow,
+          'মাঝারি অপুষ্টি (MAM) — পুষ্টি পরামর্শ ও ঘন ঘন ফলো-আপ দিন।'
+        ),
+      _ => (AppColors.safeGreen, 'বাহুর মাপ স্বাভাবিক।'),
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 1),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.straighten_rounded, color: color, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(text,
+                style: AppTextStyles.label
+                    .copyWith(color: color, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
   List<Widget> _flagBody(String title, List<String> signs,

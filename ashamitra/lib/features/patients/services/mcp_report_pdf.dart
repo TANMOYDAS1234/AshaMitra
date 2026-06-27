@@ -131,12 +131,32 @@ class McpReportPdf {
           ((rec['givenVaccines'] as List?)?.join(', ') ?? ''),
           rec['allGiven'] == true ? 'সম্পূর্ণ' : 'আংশিক',
         ]);
-      } else if (kind == 'hbnc' || kind == 'hbyc') {
-        final flags =
-            (rec['dangerFlags'] as List?)?.map((e) => e.toString()).toList() ??
-                const [];
-        (kind == 'hbnc' ? hbnc : hbyc).add(
-            [label, date, flags.isEmpty ? 'কোনো বিপদচিহ্ন নেই' : flags.join(', ')]);
+      } else if (kind == 'hbnc') {
+        final parts = <String>[];
+        final w = rec['babyWeight']?.toString() ?? '';
+        if (w.isNotEmpty) parts.add('ওজন $w কেজি');
+        final t = rec['babyTemp']?.toString() ?? '';
+        if (t.isNotEmpty) parts.add('তাপ $t°F');
+        final bf = (rec['dangerFlags'] as List?)?.map((e) => e.toString()).toList() ?? const [];
+        if (bf.isNotEmpty) parts.add('শিশু: ${bf.join(", ")}');
+        final mp = rec['motherPnc'];
+        if (mp is Map) {
+          final mbp = mp['bp']?.toString() ?? '';
+          if (mbp.isNotEmpty) parts.add('মা BP $mbp');
+          final mf = (mp['dangerFlags'] as List?)?.map((e) => e.toString()).toList() ?? const [];
+          if (mf.isNotEmpty) parts.add('মা: ${mf.join(", ")}');
+        }
+        hbnc.add([label, date, parts.isEmpty ? 'ঠিক আছে' : parts.join(' · ')]);
+      } else if (kind == 'hbyc') {
+        final parts = <String>[];
+        final w = rec['weight']?.toString() ?? '';
+        if (w.isNotEmpty) parts.add('ওজন $w কেজি');
+        final muac = rec['muac']?.toString() ?? '';
+        final ms = rec['muacStatus']?.toString() ?? '';
+        if (muac.isNotEmpty) parts.add('MUAC $muac${ms.isNotEmpty ? " ($ms)" : ""}');
+        final f = (rec['dangerFlags'] as List?)?.map((e) => e.toString()).toList() ?? const [];
+        if (f.isNotEmpty) parts.add(f.join(', '));
+        hbyc.add([label, date, parts.isEmpty ? 'ঠিক আছে' : parts.join(' · ')]);
       }
     }
 
