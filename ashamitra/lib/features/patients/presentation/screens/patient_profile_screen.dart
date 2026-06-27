@@ -738,12 +738,10 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
         _ => Icons.event_note_rounded,
       };
 
-  DateTime _date(Map<String, dynamic> e) {
-    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
-    return DateTime.tryParse(
-            (rec['completedAt'] ?? e['dueDate'] ?? '').toString()) ??
-        DateTime(2100);
-  }
+  // Order + show every event on its SCHEDULED date (the guideline due date),
+  // whether done or pending.
+  DateTime _date(Map<String, dynamic> e) =>
+      DateTime.tryParse((e['dueDate'] ?? '').toString()) ?? DateTime(2100);
 
   // What was recorded at a completed visit — short summary line.
   String _summary(Map<String, dynamic> e) {
@@ -848,8 +846,8 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
     final color = done
         ? AppColors.safeGreen
         : (overdue ? AppColors.emergencyRed : AppColors.warningYellow);
-    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
-    final date = _fmt(rec['completedAt'] ?? e['dueDate']);
+    // Always the scheduled date.
+    final date = _fmt(e['dueDate']);
     final sub = done
         ? _summary(e)
         : (overdue ? 'বকেয়া হয়ে গেছে' : 'আসন্ন');

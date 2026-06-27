@@ -107,7 +107,7 @@ class McpReportPdf {
           ? (e['record'] as Map).cast<String, dynamic>()
           : const <String, dynamic>{};
       String r(String k) => (rec[k] ?? '').toString().trim();
-      final date = _fmt(rec['completedAt'] ?? e['dueDate']);
+      final date = _fmt(e['dueDate']); // show each visit on its scheduled date
       final label = (e['label'] ?? '').toString();
 
       if (status == 'pending') {

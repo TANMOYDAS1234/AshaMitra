@@ -168,8 +168,9 @@ class _VisitScreenState extends State<VisitScreen> {
     final rec = Map<String, dynamic>.from(done.first['record'] as Map);
     setState(() {
       _prevAnc = rec;
-      final d = DateTime.tryParse(
-          rec['completedAt']?.toString() ?? done.first['dueDate']?.toString() ?? '');
+      // Show the previous ANC on its SCHEDULED date (consistent with the
+      // timeline/report), not the day it was tapped done.
+      final d = DateTime.tryParse(done.first['dueDate']?.toString() ?? '');
       _prevAncDate = d == null
           ? ''
           : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
