@@ -41,21 +41,34 @@ PatientController _patientCtrl() => Get.isRegistered<PatientController>()
     ? Get.find<PatientController>()
     : Get.put(PatientController(), permanent: true);
 
-/// Couples the registry already implies but the worker hasn't logged: women of
-/// reproductive age (15–49) and any pregnancy. Pre-fills name/village/mobile/age
-/// + spouse; the worker only adds the FP method + next follow-up, then it saves.
+/// Couples the registry already implies but the worker hasn't logged. An
+/// "eligible couple" is a *currently-married* woman of reproductive age (15–49).
+/// We don't capture marital status, so we only auto-suggest when there's a real
+/// couple/marriage signal — a pregnancy, a recorded husband/spouse name, or at
+/// least one living child — to avoid listing unmarried adolescents. The worker
+/// can still add anyone manually. Pre-fills name/village/mobile/age + spouse.
 List<Map<String, dynamic>> _coupleCandidates(List<PatientModel> patients) {
   final out = <Map<String, dynamic>>[];
   for (final p in patients) {
     final t = p.type.toLowerCase();
+    // A child/newborn record is never an eligible-couple woman, whatever the
+    // gender/age on it (guards against a minor registered as Child slipping in).
+    if (t.contains('child') || t.contains('newborn')) continue;
     final isWoman = p.gender == 'Female' || t.contains('pregn');
     if (!isWoman) continue;
     final years = p.ageUnit == 'years' ? int.tryParse(p.age) : null;
-    final reproductive = t.contains('pregn') || (years != null && years >= 15 && years <= 49);
-    if (!reproductive) continue;
+    final inAgeBand = t.contains('pregn') || (years != null && years >= 15 && years <= 49);
+    if (!inAgeBand) continue;
+    // Marriage / couple signal (we have no explicit marital-status field).
+    final spouse = (p.mcpDetails['fatherName'] ?? '').toString().trim();
+    int n(String k) => int.tryParse((p.mcpDetails[k] ?? '').toString().trim()) ?? 0;
+    final hasChildren = n('prevLiveBirths') > 0 || n('para') > 0;
+    final coupleSignal = t.contains('pregn') || spouse.isNotEmpty || hasChildren;
+    if (!coupleSignal) continue;
     out.add({
       'wifeName': p.name,
-      'husbandName': (p.mcpDetails['fatherName'] ?? '').toString(),
+      'husbandName': spouse,
+      'wifeAadhaar': (p.mcpDetails['motherAadhaar'] ?? '').toString(),
       'wifeAge': p.ageUnit == 'years' ? p.age : '',
       'village': p.village,
       'mobile': p.mobile,
@@ -261,6 +274,8 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _wife = TextEditingController();
   final _husband = TextEditingController();
+  final _wifeAadhaar = TextEditingController();
+  final _husbandAadhaar = TextEditingController();
   final _wifeAge = TextEditingController();
   final _husbandAge = TextEditingController();
   final _village = TextEditingController();
@@ -286,6 +301,8 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
       _patientId = (a['patientId'] ?? '').toString();
       _wife.text = (a['wifeName'] ?? '').toString();
       _husband.text = (a['husbandName'] ?? '').toString();
+      _wifeAadhaar.text = (a['wifeAadhaar'] ?? '').toString();
+      _husbandAadhaar.text = (a['husbandAadhaar'] ?? '').toString();
       _wifeAge.text = (a['wifeAge'] ?? '').toString();
       _husbandAge.text = (a['husbandAge'] ?? '').toString();
       _village.text = (a['village'] ?? '').toString();
@@ -304,12 +321,19 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
   @override
   void dispose() {
     for (final c in [
-      _wife, _husband, _wifeAge, _husbandAge, _village,
-      _mobile, _sons, _daughters, _youngest, _notes,
+      _wife, _husband, _wifeAadhaar, _husbandAadhaar, _wifeAge, _husbandAge,
+      _village, _mobile, _sons, _daughters, _youngest, _notes,
     ]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  // Aadhaar is optional, but if entered it must be exactly 12 digits.
+  String? _aadhaar(String? v) {
+    final s = (v ?? '').trim();
+    if (s.isEmpty) return null;
+    return RegExp(r'^\d{12}$').hasMatch(s) ? null : '১২ সংখ্যার আধার দিন';
   }
 
   Future<void> _pickFollowUp() async {
@@ -331,6 +355,8 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
       'patientId': _patientId,
       'wifeName': _wife.text.trim(),
       'husbandName': _husband.text.trim(),
+      'wifeAadhaar': _wifeAadhaar.text.trim(),
+      'husbandAadhaar': _husbandAadhaar.text.trim(),
       'wifeAge': _wifeAge.text.trim(),
       'husbandAge': _husbandAge.text.trim(),
       'village': _village.text.trim(),
@@ -389,6 +415,28 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                           controller: _husband,
                           prefixIcon: const Icon(Icons.person_outline_rounded,
                               color: AppColors.primary, size: 20),
+                        ),
+                        const SizedBox(height: 14),
+                        AppInput(
+                          hint: '১২ সংখ্যার আধার নম্বর',
+                          label: 'স্ত্রীর আধার নম্বর',
+                          controller: _wifeAadhaar,
+                          keyboardType: TextInputType.number,
+                          maxLength: 12,
+                          prefixIcon: const Icon(Icons.badge_outlined,
+                              color: AppColors.primary, size: 20),
+                          validator: _aadhaar,
+                        ),
+                        const SizedBox(height: 14),
+                        AppInput(
+                          hint: '১২ সংখ্যার আধার নম্বর (ঐচ্ছিক)',
+                          label: 'স্বামীর আধার নম্বর',
+                          controller: _husbandAadhaar,
+                          keyboardType: TextInputType.number,
+                          maxLength: 12,
+                          prefixIcon: const Icon(Icons.badge_outlined,
+                              color: AppColors.primary, size: 20),
+                          validator: _aadhaar,
                         ),
                         const SizedBox(height: 14),
                         Row(children: [

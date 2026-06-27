@@ -453,6 +453,7 @@ class DueRegisterService {
         '${i + 1}',
         g('wifeName'),
         g('husbandName'),
+        g('wifeAadhaar'),
         _village0(g('village')),
         g('wifeAge'),
         g('sons'),
@@ -466,7 +467,7 @@ class DueRegisterService {
     return {
       'title': 'যোগ্য দম্পতি রেজিস্টার — সক্রিয় (${active.length})',
       'columns': const [
-        '#', 'স্ত্রী', 'স্বামী', 'গ্রাম', 'স্ত্রীর বয়স', 'ছেলে', 'মেয়ে',
+        '#', 'স্ত্রী', 'স্বামী', 'আধার', 'গ্রাম', 'স্ত্রীর বয়স', 'ছেলে', 'মেয়ে',
         'বর্তমান পদ্ধতি', 'ফলো-আপ', 'ঝুঁকি', 'মোবাইল',
       ],
       'rows': rows,
