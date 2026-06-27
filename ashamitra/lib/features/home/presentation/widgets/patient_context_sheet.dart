@@ -10,6 +10,7 @@ import '../../../../shared/widgets/patient_photo.dart';
 import '../../../patients/controller/patient_controller.dart';
 import '../../../patients/data/models/patient_model.dart';
 import '../../../schedule/services/checkup_launcher.dart';
+import '../../../schedule/services/reminder_service.dart';
 
 /// Bottom sheet shown when an ASHA taps a case card on Home.
 ///
@@ -349,13 +350,16 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
     }
   }
 
-  /// One-line due-status chip for a patient row.
+  /// Due-status line + a "মনে করান" (remind) action for a patient row.
   Widget _dueHint(PatientModel p) {
     if (!_dueLoaded) return const SizedBox.shrink();
     final e = _due[p.id];
     if (e == null) {
-      return Text('কোনো বকেয়া চেকআপ নেই',
-          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary));
+      return Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Text('কোনো বকেয়া চেকআপ নেই',
+            style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+      );
     }
     final dd = DateTime.tryParse((e['dueDate'] ?? '').toString());
     if (dd == null) return const SizedBox.shrink();
@@ -371,22 +375,80 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
             ? ('আজ বকেয়া', AppColors.accent)
             : ('পরবর্তী: ${two(dd.day)}/${two(dd.month)} ($days দিন বাকি)',
                 AppColors.primary);
-    return Padding(
-      padding: const EdgeInsets.only(top: 3),
-      child: Row(
-        children: [
-          Icon(Icons.event_rounded, size: 13, color: color),
-          const SizedBox(width: 4),
-          Expanded(
-            child: Text(
-              label.isEmpty ? text : '$label · $text',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.caption
-                  .copyWith(color: color, fontWeight: FontWeight.w600),
+    final reminded = ReminderService.lastRemindedText(e);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 3),
+          child: Row(
+            children: [
+              Icon(Icons.event_rounded, size: 13, color: color),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  label.isEmpty ? text : '$label · $text',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption
+                      .copyWith(color: color, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _remindPill(p, e),
+            ],
+          ),
+        ),
+        if (reminded != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, size: 12, color: AppColors.safeGreen),
+                const SizedBox(width: 4),
+                Text(reminded,
+                    style: AppTextStyles.caption.copyWith(
+                        color: AppColors.safeGreen, fontSize: 11)),
+              ],
             ),
           ),
-        ],
+      ],
+    );
+  }
+
+  Widget _remindPill(PatientModel p, Map<String, dynamic> e) {
+    return GestureDetector(
+      onTap: () async {
+        // Enrich with the patient's own name/mobile in case the event lacks them.
+        final ev = {...e, 'patientName': p.name, 'patientMobile': p.mobile};
+        final updated = await ReminderService.remind(context, ev);
+        if (updated != null && mounted) {
+          setState(() {
+            _due[p.id] = {
+              ...e,
+              'lastRemindedAt': updated['lastRemindedAt'],
+              'lastReminderChannel': updated['lastReminderChannel'],
+            };
+          });
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.notifications_active_outlined,
+                size: 14, color: AppColors.primary),
+            const SizedBox(width: 4),
+            Text('মনে করান',
+                style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+          ],
+        ),
       ),
     );
   }
