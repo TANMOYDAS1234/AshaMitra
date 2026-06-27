@@ -7,6 +7,8 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../patients/controller/patient_controller.dart';
+import '../../../eligible_couples/controller/eligible_couple_controller.dart';
+import '../../../vital_events/controller/vital_event_controller.dart';
 import '../../services/due_register_service.dart';
 
 /// P0 — Register / report auto-generator. Turns the schedule the app already
@@ -93,10 +95,19 @@ class _RegistersScreenState extends State<RegistersScreen> {
       'maternal' => ps.where((p) => p.type == 'Pregnancy' || p.lmp != null).length,
       'immunization' =>
         ps.where((p) => (p.type == 'Newborn' || p.type == 'Child') && p.dob != null).length,
+      'eligible' => _couples().activeCount,
+      'vital' => _vitals().items.length,
       'diary' => ps.length,
       _ => 0,
     };
   }
+
+  EligibleCoupleController _couples() => Get.isRegistered<EligibleCoupleController>()
+      ? Get.find<EligibleCoupleController>()
+      : Get.put(EligibleCoupleController(), permanent: true);
+  VitalEventController _vitals() => Get.isRegistered<VitalEventController>()
+      ? Get.find<VitalEventController>()
+      : Get.put(VitalEventController(), permanent: true);
 
   Future<void> _generate({required bool csv}) async {
     if (_mode == 'due' && _kinds.isEmpty) {
@@ -129,10 +140,15 @@ class _RegistersScreenState extends State<RegistersScreen> {
       } else {
         final r = await DueRegisterService.fetchAll();
         if (mounted) setState(() => _fromCache = r.fromCache);
+        // Family-planning + birth/death registers come from their own stores.
+        await _couples().syncFromServer();
+        await _vitals().syncFromServer();
         data = DueRegisterService.assembleFull(
           events: r.events,
           patients: _ctrl.patients.toList(),
           registers: _registers.toList(),
+          couples: _couples().items.toList(),
+          vitals: _vitals().items.toList(),
           header: _header(),
         );
       }

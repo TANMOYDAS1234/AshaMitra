@@ -29,7 +29,7 @@ class DueRegisterService {
   static const kindsAll = ['anc', 'vaccine', 'hbnc', 'hbyc'];
 
   /// The cumulative full-register types (the actual paper notebooks).
-  static const kindsFull = ['maternal', 'immunization', 'diary'];
+  static const kindsFull = ['maternal', 'immunization', 'eligible', 'vital', 'diary'];
 
   static String kindLabel(String k) => switch (k) {
         'anc' => 'ANC (গর্ভকালীন)',
@@ -42,9 +42,28 @@ class DueRegisterService {
   static String fullLabel(String k) => switch (k) {
         'maternal' => 'মাতৃ রেজিস্টার',
         'immunization' => 'শিশু টিকা রেজিস্টার',
+        'eligible' => 'যোগ্য দম্পতি রেজিস্টার',
+        'vital' => 'জন্ম ও মৃত্যু রেজিস্টার',
         'diary' => 'আশা ডায়েরি',
         _ => k,
       };
+
+  static const _fpMethodBn = {
+    'none': 'নেই',
+    'condom': 'কন্ডোম',
+    'ocp': 'বড়ি',
+    'iucd': 'IUCD',
+    'injectable': 'অন্তরা',
+    'female_sterilization': 'মহিলা বন্ধ্যাকরণ',
+    'male_sterilization': 'NSV',
+    'other': 'অন্যান্য',
+  };
+  static const _placeBn = {
+    'home': 'বাড়ি',
+    'institution': 'প্রতিষ্ঠান',
+    'transit': 'পথে',
+    'other': 'অন্যান্য',
+  };
 
   // ── Fetch (cache-first fallback for offline) ──────────────────────────────
   static Future<DueFetch> fetchDue({int withinDays = 45}) async {
@@ -254,6 +273,8 @@ class DueRegisterService {
     required List<Map<String, dynamic>> events,
     required List<PatientModel> patients,
     required List<String> registers,
+    List<Map<String, dynamic>> couples = const [],
+    List<Map<String, dynamic>> vitals = const [],
     Map<String, String> header = const {},
   }) {
     final byPatient = <String, List<Map<String, dynamic>>>{};
@@ -265,6 +286,8 @@ class DueRegisterService {
     final sections = <Map<String, dynamic>>[];
     if (registers.contains('maternal')) sections.add(_maternalSection(patients, byPatient));
     if (registers.contains('immunization')) sections.add(_immunizationSection(patients, byPatient));
+    if (registers.contains('eligible')) sections.add(_eligibleSection(couples));
+    if (registers.contains('vital')) sections.add(_vitalSection(vitals));
     if (registers.contains('diary')) sections.add(_diarySection(patients, events));
     return {
       'title': 'পূর্ণ রেজিস্টার (নোটবুকের বিকল্প)',
@@ -415,6 +438,98 @@ class DueRegisterService {
       'note': '',
     };
   }
+
+  // ── Eligible-couple (family-planning) register ────────────────────────────
+  static Map<String, dynamic> _eligibleSection(List<Map<String, dynamic>> couples) {
+    final active = couples
+        .where((c) => (c['status'] ?? 'active').toString() != 'closed')
+        .toList()
+      ..sort((a, b) => (a['wifeName'] ?? '').toString().compareTo((b['wifeName'] ?? '').toString()));
+    final rows = <List<String>>[];
+    for (var i = 0; i < active.length; i++) {
+      final c = active[i];
+      String g(String k) => (c[k] ?? '').toString().trim();
+      rows.add([
+        '${i + 1}',
+        g('wifeName'),
+        g('husbandName'),
+        _village0(g('village')),
+        g('wifeAge'),
+        g('sons'),
+        g('daughters'),
+        _fpMethodBn[g('fpMethod')] ?? 'নেই',
+        _diso(c['followUpDate']),
+        c['highRisk'] == true ? 'উচ্চ' : '',
+        g('mobile'),
+      ]);
+    }
+    return {
+      'title': 'যোগ্য দম্পতি রেজিস্টার — সক্রিয় (${active.length})',
+      'columns': const [
+        '#', 'স্ত্রী', 'স্বামী', 'গ্রাম', 'স্ত্রীর বয়স', 'ছেলে', 'মেয়ে',
+        'বর্তমান পদ্ধতি', 'ফলো-আপ', 'ঝুঁকি', 'মোবাইল',
+      ],
+      'rows': rows,
+      'note': 'প্রজনন বয়সের (১৫–৪৯) দম্পতি। পদ্ধতি ও পরবর্তী ফলো-আপ তারিখ সহ।',
+    };
+  }
+
+  // ── Birth & death (CRS) register ──────────────────────────────────────────
+  static Map<String, dynamic> _vitalSection(List<Map<String, dynamic>> vitals) {
+    final list = [...vitals]..sort((a, b) =>
+        (b['eventDate'] ?? '').toString().compareTo((a['eventDate'] ?? '').toString()));
+    final rows = <List<String>>[];
+    var births = 0, deaths = 0, pending = 0;
+    for (var i = 0; i < list.length; i++) {
+      final e = list[i];
+      String g(String k) => (e[k] ?? '').toString().trim();
+      final isBirth = (e['eventType'] ?? 'birth').toString() == 'birth';
+      if (isBirth) {
+        births++;
+      } else {
+        deaths++;
+      }
+      if (e['registered'] != true) pending++;
+      final detail = isBirth
+          ? [
+              if (g('birthWeight').isNotEmpty) 'ওজন ${g('birthWeight')}',
+              if (g('motherName').isNotEmpty) 'মা ${g('motherName')}',
+            ].join(' · ')
+          : [
+              if (g('ageAtDeath').isNotEmpty) g('ageAtDeath'),
+              if (g('causeOfDeath').isNotEmpty) g('causeOfDeath'),
+              if (e['maternalDeath'] == true) 'মাতৃমৃত্যু',
+              if (e['infantDeath'] == true) 'শিশুমৃত্যু',
+            ].where((s) => s.isNotEmpty).join(' · ');
+      rows.add([
+        '${i + 1}',
+        isBirth ? 'জন্ম' : 'মৃত্যু',
+        g('personName'),
+        _genderShort0(g('sex')),
+        _diso(e['eventDate']),
+        _placeBn[g('place')] ?? '',
+        _village0(g('village')),
+        detail,
+        e['registered'] == true ? (g('registrationNo').isNotEmpty ? g('registrationNo') : 'হ্যাঁ') : 'বাকি',
+      ]);
+    }
+    return {
+      'title': 'জন্ম ও মৃত্যু রেজিস্টার (জন্ম $births · মৃত্যু $deaths)',
+      'columns': const [
+        '#', 'ধরন', 'নাম', 'লিঙ্গ', 'তারিখ', 'স্থান', 'গ্রাম', 'বিবরণ', 'নথিভুক্তি',
+      ],
+      'rows': rows,
+      'note': pending > 0 ? '$pending টি নথিভুক্তি বাকি (CRS-এ জমা দিন)।' : '',
+    };
+  }
+
+  static String _village0(String v) => (v == 'Unknown' || v == '—') ? '' : v;
+  static String _genderShort0(String s) => switch (s) {
+        'Female' => 'মে',
+        'Male' => 'পু',
+        _ => '',
+      };
+  static String _diso(dynamic iso) => _d(DateTime.tryParse((iso ?? '').toString()));
 
   static int? _offsetWeeks(DateTime? dob, dynamic dueIso) {
     if (dob == null) return null;

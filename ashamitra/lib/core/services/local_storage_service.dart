@@ -150,4 +150,19 @@ class LocalStorageService {
           .toList();
     } catch (_) { return []; }
   }
+
+  // ── Generic keyed JSON-list storage ──────────────────────────────────────
+  // Used by the eligible-couple + vital-event offline-first stores (each owns
+  // its own key), so we don't repeat the encode/decode boilerplate per module.
+  static Future<void> saveJsonList(String key, List<Map<String, dynamic>> list) =>
+      _prefs.setString(key, jsonEncode(list));
+  static List<Map<String, dynamic>> loadJsonList(String key) {
+    final raw = _prefs.getString(key);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+    } catch (_) { return []; }
+  }
 }

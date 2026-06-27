@@ -16,6 +16,10 @@ import '../../services/mcp_report_pdf.dart';
 import '../../../../core/services/local_storage_service.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../schedule/services/checkup_launcher.dart';
+import '../../../referrals/controller/referral_controller.dart';
+import '../../../referrals/data/models/referral_model.dart';
+import '../../../referrals/presentation/screens/referral_detail_screen.dart';
+import '../../../referrals/presentation/screens/referral_form_screen.dart';
 import 'pregnancy_timeline_screen.dart';
 
 class PatientProfileScreen extends StatelessWidget {
@@ -329,6 +333,13 @@ class PatientProfileScreen extends StatelessWidget {
                         const _SectionTitle('চেকআপ টাইমলাইন'),
                         const SizedBox(height: 12),
                         _CheckupTimeline(patientId: patientId),
+                        const SizedBox(height: 24),
+                      ],
+                      // ── Referrals for this patient (Form 3 + outcome) ──
+                      if (patientId.isNotEmpty) ...[
+                        const _SectionTitle('রেফারেল'),
+                        const SizedBox(height: 12),
+                        _ProfileReferrals(patientId: patientId),
                         const SizedBox(height: 24),
                       ],
                       // ── Last assessment — real triage data ───────────
@@ -738,14 +749,9 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
         _ => Icons.event_note_rounded,
       };
 
-  // Done → the REAL date it was done; pending → its scheduled due date.
-  DateTime _date(Map<String, dynamic> e) {
-    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
-    final s = (e['status'] ?? '') == 'done'
-        ? (e['doneDate'] ?? rec['completedAt'] ?? e['dueDate'])
-        : e['dueDate'];
-    return DateTime.tryParse((s ?? '').toString()) ?? DateTime(2100);
-  }
+  // Order by the SCHEDULED (guideline) date — the headline date for every visit.
+  DateTime _date(Map<String, dynamic> e) =>
+      DateTime.tryParse((e['dueDate'] ?? '').toString()) ?? DateTime(2100);
 
   // What was recorded at a completed visit — short summary line.
   String _summary(Map<String, dynamic> e) {
@@ -851,12 +857,15 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
         ? AppColors.safeGreen
         : (overdue ? AppColors.emergencyRed : AppColors.warningYellow);
     final rec = e['record'] is Map ? (e['record'] as Map) : const {};
-    // Done → real done-date; upcoming → scheduled due date.
-    final date = _fmt(done
-        ? (e['doneDate'] ?? rec['completedAt'] ?? e['dueDate'])
-        : e['dueDate']);
+    // Headline date = the scheduled (guideline) date for every visit.
+    final date = _fmt(e['dueDate']);
+    // For completed visits also show the day it was actually recorded.
+    final recorded = done ? _fmt(e['doneDate'] ?? rec['completedAt']) : '';
+    final summary = _summary(e);
     final sub = done
-        ? _summary(e)
+        ? (recorded.isNotEmpty
+            ? 'সম্পন্ন $recorded · $summary'
+            : summary)
         : (overdue ? 'বকেয়া হয়ে গেছে' : 'আসন্ন');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -942,6 +951,140 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
           colorText: Colors.white,
           margin: const EdgeInsets.all(16), borderRadius: 12);
     }
+  }
+}
+
+// ── Referrals for this patient (Form 3 + outcome tracking) ──────────────────
+// Lists every referral linked to this patient (status pending→reached→completed)
+// and lets the worker open the outcome screen or start a new referral pre-filled
+// from the patient. Reactive to the shared ReferralController.
+class _ProfileReferrals extends StatelessWidget {
+  final String patientId;
+  const _ProfileReferrals({required this.patientId});
+
+  ReferralController get _ctrl => Get.isRegistered<ReferralController>()
+      ? Get.find<ReferralController>()
+      : Get.put(ReferralController(), permanent: true);
+
+  static (String, Color) _statusBn(String s) => switch (s) {
+        'reached' => ('কেন্দ্রে পৌঁছেছেন', AppColors.primary),
+        'completed' => ('সম্পন্ন', AppColors.safeGreen),
+        'cancelled' => ('বাতিল', AppColors.textSecondary),
+        _ => ('অপেক্ষমাণ', AppColors.warningYellow),
+      };
+
+  void _newReferral() {
+    final pc = Get.find<PatientController>();
+    final i = pc.patients.indexWhere((p) => p.id == patientId);
+    final args = <String, dynamic>{'patientId': patientId};
+    if (i != -1) {
+      final p = pc.patients[i];
+      final t = p.type.toLowerCase();
+      args.addAll({
+        'patientName': p.name,
+        'age': p.age.toString(),
+        'guardianName': p.guardianName,
+        'village': p.village,
+        'mobile': p.mobile,
+        'gender': p.gender,
+        'caseType': t.contains('pregn')
+            ? 'pregnancy'
+            : (t.contains('newborn') ? 'newborn' : (t.contains('child') ? 'child' : 'other')),
+      });
+    }
+    Get.to(() => const ReferralFormScreen(), arguments: args);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final list = _ctrl.referrals.where((r) => r.patientId == patientId).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE0E7FF)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (list.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Text('এই রোগীর কোনো রেফারেল নেই',
+                    style: AppTextStyles.caption
+                        .copyWith(color: AppColors.textSecondary)),
+              )
+            else
+              ...list.map(_referralRow),
+            const SizedBox(height: 10),
+            AppButton(
+              label: 'নতুন রেফারেল',
+              outlined: true,
+              icon: Icons.add_circle_outline_rounded,
+              width: double.infinity,
+              onPressed: _newReferral,
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _referralRow(ReferralModel r) {
+    final (statusLabel, statusColor) = _statusBn(r.status);
+    final bandColor = r.band == 'YELLOW' ? AppColors.warningYellow : AppColors.emergencyRed;
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => Get.to(() => ReferralDetailScreen(referralId: r.id)),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        child: Row(
+          children: [
+            Container(
+              width: 30, height: 30,
+              decoration: BoxDecoration(
+                  color: bandColor.withValues(alpha: 0.14), shape: BoxShape.circle),
+              child: Icon(Icons.local_hospital_rounded, size: 17, color: bandColor),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    r.referredTo.isNotEmpty ? r.referredTo : 'রেফারেল',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  if (r.reason.isNotEmpty || r.symptoms.isNotEmpty)
+                    Text(
+                      r.reason.isNotEmpty ? r.reason : r.symptoms,
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(20)),
+              child: Text(statusLabel,
+                  style: AppTextStyles.caption
+                      .copyWith(color: statusColor, fontWeight: FontWeight.w700)),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppColors.textSecondary, size: 22),
+          ],
+        ),
+      ),
+    );
   }
 }
 

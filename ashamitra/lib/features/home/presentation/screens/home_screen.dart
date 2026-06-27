@@ -258,6 +258,66 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Compact navigation banner (used by the family-planning + birth/death
+  /// register entries). Same card language as the other home banners.
+  Widget _navBanner({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String sub,
+    required String route,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => Get.toNamed(route),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: AppShadows.low,
+              border: Border.all(color: color.withValues(alpha: 0.18)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.10),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: color, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 2),
+                        Text(sub,
+                            style: AppTextStyles.bodySm
+                                .copyWith(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: color, size: 24),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Emergency goes straight through — urgency overrides patient context.
   /// Every other case opens the [PatientContextSheet] which nudges the
   /// worker to pick / add a patient first (or proceed anonymously).
@@ -321,6 +381,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       _dueBanner(),
                       _registersBanner(),
                       _referralsBanner(),
+                      _navBanner(
+                        icon: Icons.favorite_rounded,
+                        color: AppColors.purple,
+                        title: 'যোগ্য দম্পতি (পরিবার পরিকল্পনা)',
+                        sub: 'দম্পতি ও গর্ভনিরোধ ফলো-আপ',
+                        route: AppRoutes.eligibleCouples,
+                      ),
+                      _navBanner(
+                        icon: Icons.menu_book_rounded,
+                        color: AppColors.sky,
+                        title: 'জন্ম ও মৃত্যু নথি',
+                        sub: 'CRS রিপোর্টিং — জন্ম/মৃত্যু লিপিবদ্ধ',
+                        route: AppRoutes.vitalEvents,
+                      ),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Row(

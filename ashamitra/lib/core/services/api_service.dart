@@ -304,6 +304,88 @@ class ApiService {
     }
   }
 
+  // ── Generic synced collections (eligible-couples, vital-events) ────────────
+  // These mirror the referral offline-first contract exactly (clientId de-dup on
+  // create, optimistic `version` on update), so one set of helpers serves both.
+
+  static Future<List<dynamic>> _listSynced(String path) async {
+    final res = await http
+        .get(Uri.parse('$baseUrl/$path'), headers: _headers)
+        .timeout(const Duration(seconds: 45));
+    _guard(res.statusCode);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return body['data'] as List? ?? [];
+  }
+
+  static Future<Map<String, dynamic>?> _createSynced(
+      String path, Map<String, dynamic> doc) async {
+    try {
+      final res = await http
+          .post(Uri.parse('$baseUrl/$path'), headers: _headers, body: jsonEncode(doc))
+          .timeout(const Duration(seconds: 45));
+      _guard(res.statusCode);
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (body['success'] != true) return null;
+      final data = body['data'];
+      return data is Map<String, dynamic> ? data : null;
+    } catch (e) {
+      AppLogger.e('create $path', e);
+      return null;
+    }
+  }
+
+  static Future<Map<String, dynamic>> _updateSynced(
+      String path, String id, Map<String, dynamic> doc) async {
+    try {
+      final res = await http
+          .put(Uri.parse('$baseUrl/$path/$id'), headers: _headers, body: jsonEncode(doc))
+          .timeout(const Duration(seconds: 45));
+      if (res.statusCode == 401) {
+        onUnauthorized?.call();
+        throw UnauthorizedException();
+      }
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode == 200 && body['success'] == true) {
+        return {'status': 'success', 'data': body['data']};
+      }
+      if (res.statusCode == 409) return {'status': 'conflict', 'data': body['current']};
+      return {'status': 'failure', 'data': null};
+    } catch (_) {
+      return {'status': 'failure', 'data': null};
+    }
+  }
+
+  static Future<bool> _deleteSynced(String path, String id) async {
+    try {
+      final res = await http
+          .delete(Uri.parse('$baseUrl/$path/$id'), headers: _headers)
+          .timeout(const Duration(seconds: 45));
+      _guard(res.statusCode);
+      if (res.statusCode != 200 && res.statusCode != 204) return false;
+      if (res.body.isEmpty) return true;
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      return body['success'] == true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Eligible couples (family-planning register)
+  static Future<List<dynamic>> getEligibleCouples() => _listSynced('eligible-couples');
+  static Future<Map<String, dynamic>?> createEligibleCouple(Map<String, dynamic> d) =>
+      _createSynced('eligible-couples', d);
+  static Future<Map<String, dynamic>> updateEligibleCouple(String id, Map<String, dynamic> d) =>
+      _updateSynced('eligible-couples', id, d);
+  static Future<bool> deleteEligibleCouple(String id) => _deleteSynced('eligible-couples', id);
+
+  // Vital events (birth & death register)
+  static Future<List<dynamic>> getVitalEvents() => _listSynced('vital-events');
+  static Future<Map<String, dynamic>?> createVitalEvent(Map<String, dynamic> d) =>
+      _createSynced('vital-events', d);
+  static Future<Map<String, dynamic>> updateVitalEvent(String id, Map<String, dynamic> d) =>
+      _updateSynced('vital-events', id, d);
+  static Future<bool> deleteVitalEvent(String id) => _deleteSynced('vital-events', id);
+
   // ── Reports ────────────────────────────────────────────────────────────────
 
   /// Returns the server-created report doc (with the real Mongo `_id` mapped
