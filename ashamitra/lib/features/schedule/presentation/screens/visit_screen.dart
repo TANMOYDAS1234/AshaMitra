@@ -168,15 +168,20 @@ class _VisitScreenState extends State<VisitScreen> {
     final rec = Map<String, dynamic>.from(done.first['record'] as Map);
     setState(() {
       _prevAnc = rec;
-      // Show the previous ANC on the REAL date it was done (fall back to the
-      // record's completedAt, then the scheduled date).
-      final d = DateTime.tryParse(
-          (done.first['doneDate'] ?? rec['completedAt'] ?? done.first['dueDate'])
-                  ?.toString() ??
-              '');
-      _prevAncDate = d == null
-          ? ''
-          : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+      // Show BOTH the scheduled (guideline) date and the day it was actually
+      // recorded, e.g. "09/09/2026 · সম্পন্ন 27/06/2026".
+      String f(dynamic v) {
+        final dt = DateTime.tryParse((v ?? '').toString());
+        if (dt == null) return '';
+        String p(int n) => n.toString().padLeft(2, '0');
+        return '${p(dt.day)}/${p(dt.month)}/${dt.year}';
+      }
+
+      final sched = f(done.first['dueDate']);
+      final recd = f(done.first['doneDate'] ?? rec['completedAt']);
+      _prevAncDate = (recd.isNotEmpty && recd != sched)
+          ? '$sched · সম্পন্ন $recd'
+          : (recd.isNotEmpty ? recd : sched);
       // Carry forward once-per-pregnancy results when this visit hasn't set them.
       if (_hiv.text.trim().isEmpty && (rec['hiv']?.toString() ?? '').isNotEmpty) {
         _hiv.text = rec['hiv'].toString();

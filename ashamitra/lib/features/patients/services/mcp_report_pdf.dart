@@ -138,10 +138,13 @@ class McpReportPdf {
           ? (e['record'] as Map).cast<String, dynamic>()
           : const <String, dynamic>{};
       String r(String k) => (rec[k] ?? '').toString().trim();
-      // Done → real done-date; pending → scheduled due date.
-      final date = _fmt(status == 'done'
-          ? (rec['completedAt'] ?? e['doneDate'] ?? e['dueDate'])
-          : e['dueDate']);
+      // Headline = scheduled date; for completed visits also show the day it
+      // was actually recorded ("নির্ধারিত / সম্পন্ন").
+      final sched = _fmt(e['dueDate']);
+      final recd = status == 'done' ? _fmt(rec['completedAt'] ?? e['doneDate']) : '';
+      final date = (status == 'done' && recd.isNotEmpty && recd != sched)
+          ? '$sched\nসম্পন্ন $recd'
+          : (status == 'done' && recd.isNotEmpty ? recd : sched);
       final label = (e['label'] ?? '').toString();
 
       if (status == 'pending') {
