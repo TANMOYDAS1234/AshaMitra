@@ -33,6 +33,37 @@ class McpReportPdf {
         .timeout(const Duration(seconds: 15));
   }
 
+  /// Generates a focused report for a **single completed checkup** (any module —
+  /// ANC / PNC / vaccine / HBNC / HBYC). Reuses the same builder so identity +
+  /// the one visit's measurements are rendered consistently. Works dynamically:
+  /// whichever kind the event is, only that section appears.
+  static Future<void> generateForEvent(
+    PatientModel p,
+    Map<String, dynamic> event, {
+    Map<String, String> header = const {},
+  }) async {
+    final data = _data(p, [event], header);
+    final kind = (event['kind'] ?? '').toString();
+    final label = (event['label'] ?? '').toString();
+    data['title'] = '${_kindBn(kind)} রিপোর্ট${label.isNotEmpty ? ' — $label' : ''}';
+    final dd = (event['dueDate'] ?? '').toString();
+    final datePart = dd.length >= 10 ? dd.substring(0, 10).replaceAll('-', '') : '';
+    data['fileName'] =
+        'checkup_${kind.isEmpty ? 'visit' : kind}${datePart.isNotEmpty ? '_$datePart' : ''}.pdf';
+    final regular = await PdfHelper.loadFontBytes(bold: false);
+    final bold = await PdfHelper.loadFontBytes(bold: true);
+    List<int> bytes;
+    try {
+      bytes = await Isolate.run(() => buildMcpReportPdf((regular, bold, data)))
+          .timeout(const Duration(seconds: 60));
+    } catch (_) {
+      bytes = await buildMcpReportPdf((regular, bold, data))
+          .timeout(const Duration(seconds: 45));
+    }
+    await PdfHelper.saveAndOpen(bytes, data['fileName']!.toString())
+        .timeout(const Duration(seconds: 15));
+  }
+
   static String _fmt(dynamic iso) {
     final s = (iso ?? '').toString().trim();
     if (s.isEmpty) return '';
@@ -107,7 +138,10 @@ class McpReportPdf {
           ? (e['record'] as Map).cast<String, dynamic>()
           : const <String, dynamic>{};
       String r(String k) => (rec[k] ?? '').toString().trim();
-      final date = _fmt(e['dueDate']); // show each visit on its scheduled date
+      // Done → real done-date; pending → scheduled due date.
+      final date = _fmt(status == 'done'
+          ? (rec['completedAt'] ?? e['doneDate'] ?? e['dueDate'])
+          : e['dueDate']);
       final label = (e['label'] ?? '').toString();
 
       if (status == 'pending') {

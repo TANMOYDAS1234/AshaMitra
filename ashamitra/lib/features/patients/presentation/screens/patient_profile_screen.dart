@@ -738,10 +738,14 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
         _ => Icons.event_note_rounded,
       };
 
-  // Order + show every event on its SCHEDULED date (the guideline due date),
-  // whether done or pending.
-  DateTime _date(Map<String, dynamic> e) =>
-      DateTime.tryParse((e['dueDate'] ?? '').toString()) ?? DateTime(2100);
+  // Done → the REAL date it was done; pending → its scheduled due date.
+  DateTime _date(Map<String, dynamic> e) {
+    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
+    final s = (e['status'] ?? '') == 'done'
+        ? (e['doneDate'] ?? rec['completedAt'] ?? e['dueDate'])
+        : e['dueDate'];
+    return DateTime.tryParse((s ?? '').toString()) ?? DateTime(2100);
+  }
 
   // What was recorded at a completed visit — short summary line.
   String _summary(Map<String, dynamic> e) {
@@ -846,8 +850,11 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
     final color = done
         ? AppColors.safeGreen
         : (overdue ? AppColors.emergencyRed : AppColors.warningYellow);
-    // Always the scheduled date.
-    final date = _fmt(e['dueDate']);
+    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
+    // Done → real done-date; upcoming → scheduled due date.
+    final date = _fmt(done
+        ? (e['doneDate'] ?? rec['completedAt'] ?? e['dueDate'])
+        : e['dueDate']);
     final sub = done
         ? _summary(e)
         : (overdue ? 'বকেয়া হয়ে গেছে' : 'আসন্ন');
@@ -885,9 +892,56 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
               ],
             ),
           ),
+          // Per-checkup report download (any completed module — ANC/PNC/vaccine/HBNC/HBYC).
+          if (done)
+            IconButton(
+              tooltip: 'এই চেকআপের রিপোর্ট',
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+              onPressed: () => _downloadEvent(e),
+              icon: const Icon(Icons.download_rounded, size: 20, color: AppColors.primary),
+            ),
         ],
       ),
     );
+  }
+
+  /// Builds + opens a focused PDF for a single completed checkup. Resolves the
+  /// live PatientModel from the controller and reuses the ASHA header.
+  Future<void> _downloadEvent(Map<String, dynamic> e) async {
+    try {
+      final ctrl = Get.find<PatientController>();
+      final i = ctrl.patients.indexWhere((p) => p.id == widget.patientId);
+      if (i == -1) {
+        Get.snackbar('রিপোর্ট', 'রোগীর তথ্য পাওয়া গেল না।',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.warningYellow,
+            colorText: Colors.white,
+            margin: const EdgeInsets.all(16), borderRadius: 12);
+        return;
+      }
+      final u = LocalStorageService.loadUser() ?? const {};
+      String s(List<String> keys) {
+        for (final k in keys) {
+          final v = (u[k] ?? '').toString().trim();
+          if (v.isNotEmpty) return v;
+        }
+        return '';
+      }
+      await McpReportPdf.generateForEvent(ctrl.patients[i], e, header: {
+        'asha': s(['name', 'fullName']),
+        'block': s(['block']),
+        'district': s(['district']),
+        'facility': s(['subCentre', 'subcentre', 'facilityName', 'facility']),
+      });
+    } catch (_) {
+      Get.snackbar('রিপোর্ট', 'রিপোর্ট তৈরি করা গেল না।',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.emergencyRed,
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12);
+    }
   }
 }
 
