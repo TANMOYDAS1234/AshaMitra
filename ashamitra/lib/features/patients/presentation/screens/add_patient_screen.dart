@@ -19,6 +19,7 @@ import '../../data/models/patient_model.dart';
 import '../../data/patient_matcher.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../shared/widgets/patient_photo.dart';
+import '../../../../shared/widgets/module_art.dart';
 import '../../../schedule/services/checkup_launcher.dart';
 import 'aadhaar_scanner_screen.dart';
 
@@ -1783,6 +1784,9 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     child: Column(
                       children: [
                         _photoAvatar(),
+                        // Friendly per-case illustration (updates with the chips).
+                        ModuleArt(kind: _caseType, height: 110),
+                        const SizedBox(height: 16),
                         _aadhaarScanButton(),
                         AppInput(
                           hint: 'full_name'.tr,

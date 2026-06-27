@@ -11,6 +11,7 @@ import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/patient_photo.dart';
+import '../../../../shared/widgets/module_art.dart';
 import '../../../patients/controller/patient_controller.dart';
 
 /// Unified "conduct visit" screen — one UI shell for every scheduled visit
@@ -585,7 +586,8 @@ class _VisitScreenState extends State<VisitScreen> {
           height: 150,
           width: double.infinity,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          // No PNG dropped in → show the code-drawn illustration for this module.
+          errorBuilder: (_, __, ___) => ModuleArt(kind: _kind),
         ),
       );
 
