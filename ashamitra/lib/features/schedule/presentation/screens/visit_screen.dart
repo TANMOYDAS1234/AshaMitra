@@ -8,6 +8,8 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_input.dart';
+import '../../../../shared/widgets/patient_photo.dart';
+import '../../../patients/controller/patient_controller.dart';
 
 /// Unified "conduct visit" screen — one UI shell for every scheduled visit
 /// type (ANC, immunization, HBNC newborn home visit). The body adapts to the
@@ -36,6 +38,15 @@ class _VisitScreenState extends State<VisitScreen> {
   final _urineAlb = TextEditingController();
   final _urineSugar = TextEditingController();
   final _fundal = TextEditingController();
+  // Extra MCP-card ANC fields (exam + mandatory tests + notes).
+  final _ga = TextEditingController();        // গর্ভকাল (সপ্তাহ)
+  final _pulse = TextEditingController();      // নাড়ির গতি
+  final _fhr = TextEditingController();        // গর্ভস্থ শিশুর হৃদস্পন্দন /মিনিট
+  final _lie = TextEditingController();        // Lie / Presentation
+  final _hiv = TextEditingController();        // HIV (R/NR)
+  final _syphilis = TextEditingController();   // সিফিলিস (R/NR)
+  final _usg = TextEditingController();        // আল্ট্রাসোনোগ্রাফি (হ্যাঁ/না)
+  final _notes = TextEditingController();      // অন্যান্য সমস্যা / মন্তব্য
   // Supplements / injections given this ANC visit.
   final Set<String> _ancGiven = {};
   static const _ancSupplements = ['IFA', 'ক্যালসিয়াম', 'অ্যালবেন্ডাজল', 'TD টিকা'];
@@ -57,6 +68,8 @@ class _VisitScreenState extends State<VisitScreen> {
     'খিঁচুনি',
     'গর্ভস্থ শিশুর নড়াচড়া কম',
     'তীব্র জ্বর',
+    'ফ্যাকাসে ভাব (রক্তাল্পতা)',
+    'জন্ডিস',
   ];
 
   static const _newbornDangerSigns = [
@@ -101,6 +114,9 @@ class _VisitScreenState extends State<VisitScreen> {
         'bp': _bp.text, 'weight': _weight.text, 'hb': _hb.text,
         'bsugar': _bsugar.text, 'urineAlb': _urineAlb.text,
         'urineSugar': _urineSugar.text, 'fundal': _fundal.text,
+        'ga': _ga.text, 'pulse': _pulse.text, 'fhr': _fhr.text,
+        'lie': _lie.text, 'hiv': _hiv.text, 'syphilis': _syphilis.text,
+        'usg': _usg.text, 'notes': _notes.text,
       };
 
   void _applyDraft(Map<String, dynamic> d) {
@@ -111,6 +127,9 @@ class _VisitScreenState extends State<VisitScreen> {
     fill(_bp, 'bp'); fill(_weight, 'weight'); fill(_hb, 'hb');
     fill(_bsugar, 'bsugar'); fill(_urineAlb, 'urineAlb');
     fill(_urineSugar, 'urineSugar'); fill(_fundal, 'fundal');
+    fill(_ga, 'ga'); fill(_pulse, 'pulse'); fill(_fhr, 'fhr');
+    fill(_lie, 'lie'); fill(_hiv, 'hiv'); fill(_syphilis, 'syphilis');
+    fill(_usg, 'usg'); fill(_notes, 'notes');
     void addAll(Set<String> s, String k) {
       final v = d[k];
       if (v is List) s.addAll(v.map((e) => e.toString()));
@@ -148,6 +167,14 @@ class _VisitScreenState extends State<VisitScreen> {
     _urineAlb.dispose();
     _urineSugar.dispose();
     _fundal.dispose();
+    _ga.dispose();
+    _pulse.dispose();
+    _fhr.dispose();
+    _lie.dispose();
+    _hiv.dispose();
+    _syphilis.dispose();
+    _usg.dispose();
+    _notes.dispose();
     super.dispose();
   }
 
@@ -176,13 +203,21 @@ class _VisitScreenState extends State<VisitScreen> {
         'allGiven': _given.length == _vaccines.length,
       },
       if (_kind == 'anc') ...{
+        'gaWeeks': _ga.text.trim(),
         'bp': _bp.text.trim(),
+        'pulse': _pulse.text.trim(),
         'weight': _weight.text.trim(),
         'hb': _hb.text.trim(),
         'bloodSugar': _bsugar.text.trim(),
         'urineAlbumin': _urineAlb.text.trim(),
         'urineSugar': _urineSugar.text.trim(),
         'fundalHeight': _fundal.text.trim(),
+        'fhr': _fhr.text.trim(),
+        'lie': _lie.text.trim(),
+        'hiv': _hiv.text.trim(),
+        'syphilis': _syphilis.text.trim(),
+        'usg': _usg.text.trim(),
+        'notes': _notes.text.trim(),
         'supplementsGiven': _ancGiven.toList(),
         if (_tb.isNotEmpty) ...{
           'tbSymptoms': _tb.toList(),
@@ -273,6 +308,18 @@ class _VisitScreenState extends State<VisitScreen> {
     );
   }
 
+  /// The patient's registration photo (if any), looked up from the cached
+  /// patient list by the event's patientId. Null → header falls back to the
+  /// illustration/icon.
+  ImageProvider? _patientPhoto() {
+    final pid = _e['patientId']?.toString() ?? '';
+    if (pid.isEmpty || !Get.isRegistered<PatientController>()) return null;
+    final list = Get.find<PatientController>().patients;
+    final i = list.indexWhere((p) => p.id == pid);
+    if (i == -1) return null;
+    return patientPhotoProvider(list[i].mcpDetails['photo']?.toString());
+  }
+
   Widget _patientCard() {
     final color = switch (_kind) {
       'vaccine' => const Color(0xFF6366F1),
@@ -288,6 +335,9 @@ class _VisitScreenState extends State<VisitScreen> {
       'hbyc' => Icons.child_friendly_rounded,
       _ => Icons.event_note_rounded,
     };
+    // The patient's own photo (from registration) takes priority over the
+    // generic illustration — resolve it from the cached patient list by id.
+    final photo = _patientPhoto();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -311,12 +361,18 @@ class _VisitScreenState extends State<VisitScreen> {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.6),
               shape: BoxShape.circle,
+              image: photo != null
+                  ? DecorationImage(image: photo, fit: BoxFit.cover)
+                  : null,
             ),
-            child: Image.asset(
-              'assets/illustrations/$_kind.png',
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Icon(icon, color: color, size: 30),
-            ),
+            // Priority: patient photo → illustration PNG → Material icon.
+            child: photo != null
+                ? null
+                : Image.asset(
+                    'assets/illustrations/$_kind.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Icon(icon, color: color, size: 30),
+                  ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -377,6 +433,29 @@ class _VisitScreenState extends State<VisitScreen> {
     return [
       Text('পরিমাপ লিখুন', style: AppTextStyles.label),
       const SizedBox(height: 8),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: AppInput(
+              hint: 'সপ্তাহ',
+              label: 'গর্ভকাল (সপ্তাহ)',
+              controller: _ga,
+              keyboardType: TextInputType.number,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AppInput(
+              hint: '/মিনিট',
+              label: 'নাড়ির গতি',
+              controller: _pulse,
+              keyboardType: TextInputType.number,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 14),
       AppInput(
         hint: 'যেমন 120/80',
         label: 'রক্তচাপ (BP)',
@@ -435,6 +514,54 @@ class _VisitScreenState extends State<VisitScreen> {
         controller: _fundal,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.straighten_outlined, color: AppColors.primary, size: 20),
+      ),
+      const SizedBox(height: 14),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: AppInput(
+              hint: '/মিনিট',
+              label: 'শিশুর হৃদস্পন্দন (FHR)',
+              controller: _fhr,
+              keyboardType: TextInputType.number,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AppInput(
+              hint: 'Lie / Presentation',
+              label: 'গর্ভস্থ অবস্থান',
+              controller: _lie,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      Text('আবশ্যিক পরীক্ষা', style: AppTextStyles.label),
+      const SizedBox(height: 8),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: AppInput(hint: 'R / NR', label: 'HIV', controller: _hiv),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AppInput(hint: 'R / NR', label: 'সিফিলিস', controller: _syphilis),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AppInput(hint: 'হ্যাঁ/না', label: 'USG', controller: _usg),
+          ),
+        ],
+      ),
+      const SizedBox(height: 14),
+      AppInput(
+        hint: 'অন্যান্য সমস্যা / মন্তব্য',
+        label: 'মন্তব্য',
+        controller: _notes,
+        maxLines: 2,
       ),
       const SizedBox(height: 16),
       Text('এই ভিজিটে যা দেওয়া হয়েছে', style: AppTextStyles.label),
