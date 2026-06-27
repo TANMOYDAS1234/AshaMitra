@@ -30,11 +30,20 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadDueCount();
   }
 
-  /// Lightweight count of due/overdue ANC + immunization items for the banner.
-  /// Best-effort: returns [] (count 0) when offline or logged out.
+  /// Count of UNIQUE patients with a due/overdue item (within 14 days) — the
+  /// banner reads "X জন রোগীর", so it must count patients, not events (one
+  /// patient with ANC + 2 vaccines due is one person, not three).
+  /// Best-effort: 0 when offline or logged out.
   Future<void> _loadDueCount() async {
     final due = await ApiService.getScheduleDue(withinDays: 14);
-    if (mounted) setState(() => _dueCount = due.length);
+    final patients = due
+        .whereType<Map>()
+        .map((e) => (e['patientId'] ?? '').toString())
+        .where((s) => s.isNotEmpty)
+        .toSet();
+    if (mounted) {
+      setState(() => _dueCount = patients.isNotEmpty ? patients.length : due.length);
+    }
   }
 
   /// Polished "due reminders" banner — soft gradient card, circular glassy
