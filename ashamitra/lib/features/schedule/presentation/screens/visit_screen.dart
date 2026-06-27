@@ -27,6 +27,9 @@ class VisitScreen extends StatefulWidget {
 class _VisitScreenState extends State<VisitScreen> {
   late final Map<String, dynamic> _e;
   bool _saving = false;
+  // Previous completed ANC for this patient → reference + trend comparison.
+  Map<String, dynamic>? _prevAnc;
+  String _prevAncDate = '';
 
   // Vaccine: which of the milestone's vaccines were given (default: all).
   final Set<String> _given = {};
@@ -126,6 +129,57 @@ class _VisitScreenState extends State<VisitScreen> {
     // Pre-tick all vaccines for this visit (worker unticks any not given).
     if (_kind == 'vaccine') _given.addAll(_vaccines);
     _loadDraft(); // resume a half-filled visit, if any
+    if (_kind == 'anc') _loadPrevAnc(); // last ANC → reference + trends
+  }
+
+  /// Loads the patient's most recent *completed* ANC record so this visit can
+  /// show "গত বার" reference values, flag trends (Hb↓ / no weight gain / high
+  /// BP), and carry forward the one-time tests (HIV/syphilis). Best-effort.
+  Future<void> _loadPrevAnc() async {
+    final pid = _e['patientId']?.toString() ?? '';
+    if (pid.isEmpty) return;
+    List<dynamic> evs;
+    try {
+      evs = await ApiService.getScheduleForPatient(pid);
+    } catch (_) {
+      return;
+    }
+    final done = evs
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((e) =>
+            (e['kind']?.toString() == 'anc') &&
+            (e['status']?.toString() == 'done') &&
+            e['id']?.toString() != _id &&
+            e['record'] is Map)
+        .toList()
+      // latest-dated previous ANC first
+      ..sort((a, b) => (b['dueDate']?.toString() ?? '')
+          .compareTo(a['dueDate']?.toString() ?? ''));
+    if (done.isEmpty || !mounted) return;
+    final rec = Map<String, dynamic>.from(done.first['record'] as Map);
+    setState(() {
+      _prevAnc = rec;
+      final d = DateTime.tryParse(
+          rec['completedAt']?.toString() ?? done.first['dueDate']?.toString() ?? '');
+      _prevAncDate = d == null
+          ? ''
+          : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+      // Carry forward once-per-pregnancy results when this visit hasn't set them.
+      if (_hiv.text.trim().isEmpty && (rec['hiv']?.toString() ?? '').isNotEmpty) {
+        _hiv.text = rec['hiv'].toString();
+      }
+      if (_syphilis.text.trim().isEmpty && (rec['syphilis']?.toString() ?? '').isNotEmpty) {
+        _syphilis.text = rec['syphilis'].toString();
+      }
+    });
+  }
+
+  /// Leading number from a free-text value ("10.4 g/dL" → 10.4, "120/80" → 120).
+  double? _leadNum(String? s) {
+    if (s == null) return null;
+    final m = RegExp(r'[\d.]+').firstMatch(s);
+    return m == null ? null : double.tryParse(m.group(0)!);
   }
 
   // ── Draft (resume later) ────────────────────────────────────────────────
@@ -502,8 +556,98 @@ class _VisitScreenState extends State<VisitScreen> {
     ];
   }
 
+  /// "গত বার" reference card — last ANC's key values for at-a-glance comparison.
+  Widget _prevAncCard() {
+    final p = _prevAnc!;
+    String v(String k) => (p[k]?.toString() ?? '').trim();
+    final bits = <String>[
+      if (v('bp').isNotEmpty) 'BP ${v('bp')}',
+      if (v('weight').isNotEmpty) 'ওজন ${v('weight')} কেজি',
+      if (v('hb').isNotEmpty) 'Hb ${v('hb')}',
+      if (v('bloodSugar').isNotEmpty) 'সুগার ${v('bloodSugar')}',
+    ];
+    if (bits.isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.history_rounded, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text('গত বার${_prevAncDate.isNotEmpty ? ' ($_prevAncDate)' : ''}',
+                  style: AppTextStyles.label.copyWith(
+                      color: AppColors.primary, fontWeight: FontWeight.w700)),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(bits.join('  ·  '),
+              style: AppTextStyles.label.copyWith(color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+
+  /// Small inline trend hint under a vital (color-coded). Empty when no signal.
+  Widget _trendChip(String text, Color color) => Padding(
+        padding: const EdgeInsets.only(top: 4, left: 2),
+        child: Row(
+          children: [
+            Icon(Icons.trending_flat_rounded, size: 14, color: color),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(text,
+                  style: AppTextStyles.label
+                      .copyWith(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
+
+  Widget _hbTrend() {
+    final cur = _leadNum(_hb.text);
+    final prev = _leadNum(_prevAnc?['hb']?.toString());
+    if (cur != null && cur < 7) {
+      return _trendChip('⚠ তীব্র রক্তাল্পতা (Hb < ৭) — রেফার করুন', AppColors.emergencyRed);
+    }
+    if (cur == null || prev == null) return const SizedBox.shrink();
+    if (cur < prev) return _trendChip('↓ Hb কমেছে (গত বার $prev)', AppColors.emergencyRed);
+    return _trendChip('✓ গত বার $prev', AppColors.safeGreen);
+  }
+
+  Widget _weightTrend() {
+    final cur = _leadNum(_weight.text);
+    final prev = _leadNum(_prevAnc?['weight']?.toString());
+    if (cur == null || prev == null) return const SizedBox.shrink();
+    if (cur <= prev) {
+      return _trendChip('ওজন বাড়েনি (গত বার $prev কেজি)', AppColors.warningYellow);
+    }
+    return _trendChip('✓ +${(cur - prev).toStringAsFixed(1)} কেজি', AppColors.safeGreen);
+  }
+
+  Widget _bpTrend() {
+    final parts = _bp.text.split('/');
+    final sys = _leadNum(parts.isNotEmpty ? parts[0] : '');
+    final dia = _leadNum(parts.length > 1 ? parts[1] : '');
+    if ((sys != null && sys >= 140) || (dia != null && dia >= 90)) {
+      return _trendChip('⚠ উচ্চ রক্তচাপ (≥140/90) — মনোযোগ দিন', AppColors.emergencyRed);
+    }
+    return const SizedBox.shrink();
+  }
+
   List<Widget> _ancBody() {
     return [
+      if (_prevAnc != null) ...[
+        _prevAncCard(),
+        const SizedBox(height: 14),
+      ],
       Text('পরিমাপ লিখুন', style: AppTextStyles.label),
       const SizedBox(height: 8),
       Row(
@@ -534,7 +678,9 @@ class _VisitScreenState extends State<VisitScreen> {
         label: 'রক্তচাপ (BP)',
         controller: _bp,
         prefixIcon: const Icon(Icons.favorite_outline, color: AppColors.primary, size: 20),
+        onChanged: (_) => setState(() {}),
       ),
+      _bpTrend(),
       const SizedBox(height: 14),
       AppInput(
         hint: 'কেজি',
@@ -542,7 +688,9 @@ class _VisitScreenState extends State<VisitScreen> {
         controller: _weight,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.monitor_weight_outlined, color: AppColors.primary, size: 20),
+        onChanged: (_) => setState(() {}),
       ),
+      _weightTrend(),
       const SizedBox(height: 14),
       AppInput(
         hint: 'g/dL',
@@ -550,7 +698,9 @@ class _VisitScreenState extends State<VisitScreen> {
         controller: _hb,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.bloodtype_outlined, color: AppColors.primary, size: 20),
+        onChanged: (_) => setState(() {}),
       ),
+      _hbTrend(),
       const SizedBox(height: 14),
       AppInput(
         hint: 'mg/dL',
