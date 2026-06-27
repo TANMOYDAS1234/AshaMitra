@@ -1,15 +1,20 @@
-AshaMitra — visit-capture illustrations
-=======================================
+AshaMitra — module illustrations
+=================================
 
-Drop friendly PNG illustrations here and they appear automatically as the
-"hero" image at the top of the visit-capture screen (graceful fallback to a
-Material icon when a file is absent — so missing files never break the build).
+Drop friendly, MCP-card-style illustration images here and they appear
+AUTOMATICALLY as a big banner at the top of the matching visit module —
+no code change needed. Missing files just show nothing (no error), so you
+can add them one at a time.
 
-Expected file names (match the schedule event `kind`):
-  anc.png      → pregnant-mother ANC checkup
-  hbnc.png     → newborn home visit
-  hbyc.png     → young-child home visit
-  vaccine.png  → immunization
+Use these EXACT file names (lowercase, .png):
 
-Recommended: ~512x512 PNG, transparent background, simple/warm style so a
-low-literacy ASHA worker instantly recognises the visit type.
+  anc.png       -> ANC (pregnancy) visit         (a pregnant mother)
+  pnc.png       -> PNC (postnatal mother) visit   (mother + newborn)
+  hbnc.png      -> newborn home visit (HBNC)      (newborn care)
+  hbyc.png      -> young-child home visit (HBYC)  (toddler / growth)
+  vaccine.png   -> immunization visit            (vaccine / syringe)
+
+Recommended: ~1000 x 600 px landscape PNG, < 200 KB each, simple/warm
+style so a low-literacy ASHA worker instantly recognises the visit type.
+Source: crop the MCP-card / NHM / UNICEF maternal-child illustrations, or
+any royalty-free equivalent.

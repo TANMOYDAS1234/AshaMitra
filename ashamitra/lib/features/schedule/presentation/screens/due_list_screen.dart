@@ -271,6 +271,7 @@ class _DueListScreenState extends State<DueListScreen> {
   IconData _kindIcon(String kind) => switch (kind) {
         'vaccine' => Icons.vaccines_rounded,
         'anc'     => Icons.pregnant_woman_rounded,
+        'pnc'     => Icons.volunteer_activism_rounded,
         'hbnc'    => Icons.child_care_rounded,
         'hbyc'    => Icons.child_friendly_rounded,
         _         => Icons.event_note_rounded,
@@ -374,6 +375,7 @@ class _DueListScreenState extends State<DueListScreen> {
       ('all', 'সব'),
       ('vaccine', 'টিকা'),
       ('anc', 'ANC'),
+      ('pnc', 'PNC'),
       ('hbnc', 'নবজাতক'),
       ('hbyc', 'শিশু যত্ন'),
     ];

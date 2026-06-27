@@ -52,6 +52,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   String? _motherPersonId; // stable mother identity (groups her pregnancies)
   DateTime? _dob;   // child / newborn date of birth
   DateTime? _lmp;   // last menstrual period (pregnancy)
+  DateTime? _deliveryDate; // mother's actual delivery date → drives PNC schedule
   bool _isTwin = false;
   int _birthOrder = 1; // which of a twin pair (1 or 2)
   bool _scanning = false; // Aadhaar OCR in progress
@@ -184,6 +185,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       _ageUnit  = args.ageUnit.isNotEmpty ? args.ageUnit : _defaultAgeUnit(args.type);
       _dob          = args.dob;
       _lmp          = args.lmp;
+      _deliveryDate = args.deliveryDate;
       _guardianCtrl.text = args.guardianName;
       _motherId     = args.motherId;
       _isTwin       = args.isTwin;
@@ -284,6 +286,18 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       helpText: 'শেষ মাসিকের তারিখ (LMP)',
     );
     if (picked != null && mounted) setState(() => _lmp = picked);
+  }
+
+  Future<void> _pickDeliveryDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _deliveryDate ?? now,
+      firstDate: now.subtract(const Duration(days: 365)), // within the last year
+      lastDate: now,
+      helpText: 'প্রসবের তারিখ (delivery date)',
+    );
+    if (picked != null && mounted) setState(() => _deliveryDate = picked);
   }
 
   Future<void> _pickDob() async {
@@ -439,6 +453,14 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
             value: _dob,
             onTap: _pickDob,
             icon: Icons.cake_outlined,
+          ),
+          const SizedBox(height: 16),
+          // Set ONLY after she delivers → generates the PNC (postnatal) schedule.
+          _dateField(
+            label: 'প্রসবের তারিখ — প্রসব হলে দিন (PNC সূচি তৈরি হবে)',
+            value: _deliveryDate,
+            onTap: _pickDeliveryDate,
+            icon: Icons.child_friendly_outlined,
           ),
         ],
       );
@@ -1557,6 +1579,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         dob:          _dob,
         lmp:          _caseType == 'Pregnancy' ? _lmp : null,
         edd:          _caseType == 'Pregnancy' ? _edd : null,
+        deliveryDate: _caseType == 'Pregnancy' ? _deliveryDate : null,
         guardianName: _guardianCtrl.text.trim(),
         motherId:     _motherId,
         isTwin:       _isTwin,

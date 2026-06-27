@@ -44,6 +44,7 @@ class McpReportPdf {
 
   static String _kindBn(String k) => switch (k) {
         'anc' => 'ANC',
+        'pnc' => 'PNC',
         'vaccine' => 'টিকা',
         'hbnc' => 'নবজাতক',
         'hbyc' => 'শিশু',
@@ -96,6 +97,7 @@ class McpReportPdf {
     final vac = <List<String>>[];
     final hbnc = <List<String>>[];
     final hbyc = <List<String>>[];
+    final pnc = <List<String>>[];
     final due = <List<String>>[];
     for (final e in events) {
       if (e is! Map) continue;
@@ -109,7 +111,9 @@ class McpReportPdf {
       final label = (e['label'] ?? '').toString();
 
       if (status == 'pending') {
-        due.add([label, _kindBn(kind), _fmt(e['dueDate'])]);
+        final dd = DateTime.tryParse((e['dueDate'] ?? '').toString());
+        final overdue = dd != null && dd.isBefore(DateTime.now());
+        due.add([label, _kindBn(kind), _fmt(e['dueDate']), overdue ? 'বকেয়া' : 'আসন্ন']);
         continue;
       }
       if (status != 'done') continue;
@@ -157,8 +161,23 @@ class McpReportPdf {
         final f = (rec['dangerFlags'] as List?)?.map((e) => e.toString()).toList() ?? const [];
         if (f.isNotEmpty) parts.add(f.join(', '));
         hbyc.add([label, date, parts.isEmpty ? 'ঠিক আছে' : parts.join(' · ')]);
+      } else if (kind == 'pnc') {
+        final parts = <String>[];
+        final bp = rec['bp']?.toString() ?? '';
+        if (bp.isNotEmpty) parts.add('BP $bp');
+        final tp = rec['temp']?.toString() ?? '';
+        if (tp.isNotEmpty) parts.add('তাপ $tp°F');
+        final pf = (rec['pncFlags'] as List?)?.map((e) => e.toString()).toList() ?? const [];
+        if (pf.isNotEmpty) parts.add(pf.join(', '));
+        pnc.add([label, date, parts.isEmpty ? 'ঠিক আছে' : parts.join(' · ')]);
       }
     }
+
+    // Weight-gain across ANC visits (target 9–11 kg over pregnancy).
+    final ws = anc.map((r) => double.tryParse(r[2])).whereType<double>().toList();
+    final weightGain = ws.length >= 2
+        ? 'মোট ওজন বৃদ্ধি: ${(ws.last - ws.first).toStringAsFixed(1)} কেজি (লক্ষ্য ৯–১১ কেজি)'
+        : '';
 
     return {
       'fileName': 'mcp_report_${p.name.replaceAll(RegExp(r"\s+"), "_")}.pdf',
@@ -174,6 +193,8 @@ class McpReportPdf {
       'highRiskReason': (md['highRiskReason'] ?? '').toString(),
       'idRows': idRows,
       'anc': anc,
+      'weightGain': weightGain,
+      'pnc': pnc,
       'vac': vac,
       'hbnc': hbnc,
       'hbyc': hbyc,
@@ -202,6 +223,7 @@ Future<List<int>> buildMcpReportPdf(
   final vac = (data['vac'] as List?) ?? const [];
   final hbnc = (data['hbnc'] as List?) ?? const [];
   final hbyc = (data['hbyc'] as List?) ?? const [];
+  final pnc = (data['pnc'] as List?) ?? const [];
   final due = (data['due'] as List?) ?? const [];
 
   List<List<String>> rows(List src) =>
@@ -314,6 +336,21 @@ Future<List<int>> buildMcpReportPdf(
         if (anc.isNotEmpty) ...[
           sectionTitle('ANC ভিজিট (পরিমাপ)'),
           table(const ['ভিজিট', 'তারিখ', 'ওজন', 'BP', 'Hb', 'মূত্র(A/S)', 'জরায়ু', 'দেওয়া হয়েছে', 'বিপদ/TB'], rows(anc)),
+          if ((data['weightGain'] ?? '').toString().isNotEmpty)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(top: 4),
+              child: pw.Text(data['weightGain'].toString(),
+                  style: pw.TextStyle(
+                      fontSize: 9,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.blueGrey700)),
+            ),
+        ],
+
+        // PNC (mother postnatal)
+        if (pnc.isNotEmpty) ...[
+          sectionTitle('প্রসব-পরবর্তী পরিচর্যা (PNC)'),
+          table(const ['ভিজিট', 'তারিখ', 'পর্যবেক্ষণ'], rows(pnc)),
         ],
 
         // Immunization
@@ -336,11 +373,11 @@ Future<List<int>> buildMcpReportPdf(
 
         // Upcoming
         if (due.isNotEmpty) ...[
-          sectionTitle('আসন্ন / বকেয়া'),
-          table(const ['কাজ', 'ধরন', 'তারিখ'], rows(due)),
+          sectionTitle('আসন্ন / বকেয়া (টিকা ও পরীক্ষা)'),
+          table(const ['কাজ', 'ধরন', 'তারিখ', 'অবস্থা'], rows(due)),
         ],
 
-        if (anc.isEmpty && vac.isEmpty && hbnc.isEmpty && hbyc.isEmpty && due.isEmpty)
+        if (anc.isEmpty && pnc.isEmpty && vac.isEmpty && hbnc.isEmpty && hbyc.isEmpty && due.isEmpty)
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(vertical: 10),
             child: pw.Text('— এখনও কোনো ভিজিট/সূচি নেই —',

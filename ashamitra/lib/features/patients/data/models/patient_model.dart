@@ -40,6 +40,8 @@ class PatientModel {
   /// Expected delivery date. Auto-computed server-side as lmp + 280 days when
   /// not supplied.
   final DateTime? edd;
+  /// Actual delivery date (mother). Drives the PNC postnatal schedule.
+  final DateTime? deliveryDate;
   /// Mother's name when this patient is a child.
   final String guardianName;
   /// Masked Aadhaar only (e.g. "XXXX-XXXX-1234"). The raw 12-digit number is
@@ -78,6 +80,7 @@ class PatientModel {
     this.dob,
     this.lmp,
     this.edd,
+    this.deliveryDate,
     this.guardianName = '',
     this.aadhaarMasked = '',
     this.motherId,
@@ -133,6 +136,7 @@ class PatientModel {
         if (dob != null) 'dob': dob!.toIso8601String(),
         if (lmp != null) 'lmp': lmp!.toIso8601String(),
         if (edd != null) 'edd': edd!.toIso8601String(),
+        if (deliveryDate != null) 'deliveryDate': deliveryDate!.toIso8601String(),
         if (guardianName.isNotEmpty) 'guardianName': guardianName,
         if (aadhaarMasked.isNotEmpty) 'aadhaarMasked': aadhaarMasked,
         if (motherId != null) 'motherId': motherId,
@@ -175,6 +179,7 @@ class PatientModel {
         dob: _parseDate(json['dob']),
         lmp: _parseDate(json['lmp']),
         edd: _parseDate(json['edd']),
+        deliveryDate: _parseDate(json['deliveryDate']),
         guardianName: json['guardianName'] as String? ?? '',
         aadhaarMasked: json['aadhaarMasked'] as String? ?? '',
         motherId: json['motherId'] as String?,
@@ -214,6 +219,7 @@ class PatientModel {
     DateTime? dob,
     DateTime? lmp,
     DateTime? edd,
+    DateTime? deliveryDate,
     String? guardianName,
     String? aadhaarMasked,
     String? motherId,
@@ -243,6 +249,7 @@ class PatientModel {
         dob: dob ?? this.dob,
         lmp: lmp ?? this.lmp,
         edd: edd ?? this.edd,
+        deliveryDate: deliveryDate ?? this.deliveryDate,
         guardianName: guardianName ?? this.guardianName,
         aadhaarMasked: aadhaarMasked ?? this.aadhaarMasked,
         motherId: motherId ?? this.motherId,

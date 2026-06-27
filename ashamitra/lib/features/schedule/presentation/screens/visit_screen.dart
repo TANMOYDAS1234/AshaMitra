@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import '../../../../core/utils/permissions.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../core/services/local_storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -27,6 +29,11 @@ class VisitScreen extends StatefulWidget {
 class _VisitScreenState extends State<VisitScreen> {
   late final Map<String, dynamic> _e;
   bool _saving = false;
+  final _formKey = GlobalKey<FormState>();
+  // Voice dictation (same as Add Patient) for the free-text fields.
+  final _stt = SpeechToText();
+  bool _sttReady = false;
+  String? _dictating;
   // Previous completed ANC for this patient → reference + trend comparison.
   Map<String, dynamic>? _prevAnc;
   String _prevAncDate = '';
@@ -248,6 +255,7 @@ class _VisitScreenState extends State<VisitScreen> {
 
   @override
   void dispose() {
+    try { _stt.stop(); } catch (_) {}
     _bp.dispose();
     _weight.dispose();
     _hb.dispose();
@@ -303,7 +311,117 @@ class _VisitScreenState extends State<VisitScreen> {
     return 'normal';
   }
 
+  // ── Voice dictation (free-text fields) ──────────────────────────────────
+  Future<void> _initStt() async {
+    final ok = await AppPermissions.requestMicrophone();
+    if (!ok) {
+      if (mounted) setState(() => _sttReady = false);
+      return;
+    }
+    _sttReady = await _stt.initialize(
+      onError: (_) {
+        if (mounted) setState(() => _dictating = null);
+      },
+      onStatus: (s) {
+        if ((s == SpeechToText.doneStatus || s == SpeechToText.notListeningStatus) &&
+            mounted) {
+          setState(() => _dictating = null);
+        }
+      },
+    );
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _dictate(String field, TextEditingController ctrl) async {
+    if (_dictating == field) {
+      try { await _stt.stop(); } catch (_) {}
+      if (mounted) setState(() => _dictating = null);
+      return;
+    }
+    if (!_sttReady) {
+      await _initStt();
+      if (!_sttReady) {
+        Get.snackbar('app_name'.tr, 'mic_permission_denied'.tr,
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: AppColors.warningYellow, colorText: Colors.white,
+            margin: const EdgeInsets.all(16), borderRadius: 12);
+        return;
+      }
+    }
+    try { await _stt.stop(); } catch (_) {}
+    if (mounted) setState(() => _dictating = field);
+    await _stt.listen(
+      listenOptions: SpeechListenOptions(
+        localeId: 'bn_IN',
+        listenMode: ListenMode.dictation,
+        partialResults: true,
+        cancelOnError: true,
+      ),
+      onResult: (r) {
+        if (!mounted) return;
+        ctrl.text = r.recognizedWords;
+        ctrl.selection = TextSelection.collapsed(offset: ctrl.text.length);
+        if (r.finalResult && mounted) setState(() => _dictating = null);
+      },
+    );
+  }
+
+  Widget _micSuffix(String field, TextEditingController ctrl) {
+    final active = _dictating == field;
+    return IconButton(
+      tooltip: 'speak'.tr,
+      icon: Icon(active ? Icons.mic_rounded : Icons.mic_none_rounded,
+          color: active ? AppColors.emergencyRed : AppColors.primary, size: 20),
+      onPressed: () => _dictate(field, ctrl),
+    );
+  }
+
+  // ── Validators (all optional — empty is allowed; flag implausible values) ──
+  String? _vBp(String? v) {
+    final s = (v ?? '').trim();
+    if (s.isEmpty) return null;
+    final m = RegExp(r'^(\d{2,3})\s*/\s*(\d{2,3})$').firstMatch(s);
+    if (m == null) return 'যেমন 120/80';
+    final sys = int.parse(m.group(1)!), dia = int.parse(m.group(2)!);
+    if (sys < 70 || sys > 260 || dia < 40 || dia > 160) return 'BP যাচাই করুন';
+    return null;
+  }
+
+  String? Function(String?) _range(double min, double max, {String unit = ''}) =>
+      (v) {
+        final s = (v ?? '').trim();
+        if (s.isEmpty) return null;
+        final n = double.tryParse(s);
+        if (n == null) return 'সংখ্যায় লিখুন';
+        if (n < min || n > max) return 'মান $min–$max${unit.isNotEmpty ? ' $unit' : ''}';
+        return null;
+      };
+
+  String? _vUrine(String? v) {
+    final s = (v ?? '').trim().toLowerCase();
+    if (s.isEmpty) return null;
+    if (RegExp(r'^(nil|trace|\+{1,3})$').hasMatch(s)) return null;
+    return 'nil / + / ++ / +++';
+  }
+
+  String? _vMuac(String? v) {
+    final s = (v ?? '').trim();
+    if (s.isEmpty) return null;
+    final n = double.tryParse(s.replaceAll(RegExp(r'[^0-9.]'), ''));
+    if (n == null) return 'সংখ্যায় লিখুন';
+    final mm = n < 40 ? n * 10 : n; // accept cm or mm
+    if (mm < 70 || mm > 250) return 'MUAC যাচাই করুন';
+    return null;
+  }
+
   Future<void> _complete() async {
+    if (!(_formKey.currentState?.validate() ?? true)) {
+      Get.snackbar('তথ্য যাচাই করুন', 'লাল চিহ্নিত ঘরগুলো ঠিক করুন।',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.warningYellow, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12);
+      return;
+    }
     if (_id.isEmpty) {
       Get.back();
       return;
@@ -351,6 +469,11 @@ class _VisitScreenState extends State<VisitScreen> {
         if (_muacStatus.isNotEmpty) 'muacStatus': _muacStatus,
         'servicesGiven': _hbycGiven.toList(),
       },
+      if (_kind == 'pnc') ...{
+        'bp': _pncBp.text.trim(),
+        'temp': _pncTemp.text.trim(),
+        if (_pncFlags.isNotEmpty) 'pncFlags': _pncFlags.toList(),
+      },
       if (_flags.isNotEmpty) 'dangerFlags': _flags.toList(),
       'completedAt': DateTime.now().toIso8601String(),
     };
@@ -389,19 +512,23 @@ class _VisitScreenState extends State<VisitScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _patientCard(),
+                      _moduleIllustration(),
                       const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.08)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: _body(),
+                      Form(
+                        key: _formKey,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.08)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: _body(),
+                          ),
                         ),
                       ),
                       if (_hasDanger) ...[
@@ -447,12 +574,28 @@ class _VisitScreenState extends State<VisitScreen> {
     return patientPhotoProvider(list[i].mcpDetails['photo']?.toString());
   }
 
+  /// Big, MCP-card-style illustration banner per module — makes the visit feel
+  /// friendly + easy. Drop an image at `assets/illustrations/<kind>.png`
+  /// (anc / pnc / hbnc / hbyc / vaccine) and it shows here automatically;
+  /// absent → nothing (zero-height, no gap).
+  Widget _moduleIllustration() => ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.asset(
+          'assets/illustrations/$_kind.png',
+          height: 150,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+        ),
+      );
+
   Widget _patientCard() {
     final color = switch (_kind) {
       'vaccine' => const Color(0xFF6366F1),
       'anc' => AppColors.primary,
       'hbnc' => AppColors.sky,
       'hbyc' => const Color(0xFF10B981),
+      'pnc' => const Color(0xFFEC4899),
       _ => AppColors.primary,
     };
     final icon = switch (_kind) {
@@ -460,6 +603,7 @@ class _VisitScreenState extends State<VisitScreen> {
       'anc' => Icons.pregnant_woman_rounded,
       'hbnc' => Icons.child_care_rounded,
       'hbyc' => Icons.child_friendly_rounded,
+      'pnc' => Icons.volunteer_activism_rounded,
       _ => Icons.event_note_rounded,
     };
     // The patient's own photo (from registration) takes priority over the
@@ -493,13 +637,7 @@ class _VisitScreenState extends State<VisitScreen> {
                   : null,
             ),
             // Priority: patient photo → illustration PNG → Material icon.
-            child: photo != null
-                ? null
-                : Image.asset(
-                    'assets/illustrations/$_kind.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Icon(icon, color: color, size: 30),
-                  ),
+            child: photo != null ? null : Icon(icon, color: color, size: 30),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -530,6 +668,8 @@ class _VisitScreenState extends State<VisitScreen> {
         return _hbncBody();
       case 'hbyc':
         return _hbycBody();
+      case 'pnc':
+        return _pncBody();
       default:
         return [Text('এই ভিজিটটি সম্পন্ন হিসেবে চিহ্নিত করুন।',
             style: AppTextStyles.body)];
@@ -659,6 +799,7 @@ class _VisitScreenState extends State<VisitScreen> {
               label: 'গর্ভকাল (সপ্তাহ)',
               controller: _ga,
               keyboardType: TextInputType.number,
+              validator: _range(1, 45, unit: 'সপ্তাহ'),
             ),
           ),
           const SizedBox(width: 12),
@@ -668,6 +809,7 @@ class _VisitScreenState extends State<VisitScreen> {
               label: 'নাড়ির গতি',
               controller: _pulse,
               keyboardType: TextInputType.number,
+              validator: _range(30, 200),
             ),
           ),
         ],
@@ -678,6 +820,8 @@ class _VisitScreenState extends State<VisitScreen> {
         label: 'রক্তচাপ (BP)',
         controller: _bp,
         prefixIcon: const Icon(Icons.favorite_outline, color: AppColors.primary, size: 20),
+        suffixIcon: _micSuffix('bp', _bp),
+        validator: _vBp,
         onChanged: (_) => setState(() {}),
       ),
       _bpTrend(),
@@ -688,6 +832,7 @@ class _VisitScreenState extends State<VisitScreen> {
         controller: _weight,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.monitor_weight_outlined, color: AppColors.primary, size: 20),
+        validator: _range(25, 200, unit: 'কেজি'),
         onChanged: (_) => setState(() {}),
       ),
       _weightTrend(),
@@ -698,6 +843,7 @@ class _VisitScreenState extends State<VisitScreen> {
         controller: _hb,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.bloodtype_outlined, color: AppColors.primary, size: 20),
+        validator: _range(2, 20),
         onChanged: (_) => setState(() {}),
       ),
       _hbTrend(),
@@ -708,6 +854,7 @@ class _VisitScreenState extends State<VisitScreen> {
         controller: _bsugar,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.water_drop_outlined, color: AppColors.primary, size: 20),
+        validator: _range(30, 500),
       ),
       const SizedBox(height: 14),
       Row(
@@ -718,6 +865,7 @@ class _VisitScreenState extends State<VisitScreen> {
               hint: 'nil/+/++',
               label: 'মূত্রে অ্যালবুমিন',
               controller: _urineAlb,
+              validator: _vUrine,
             ),
           ),
           const SizedBox(width: 12),
@@ -726,6 +874,7 @@ class _VisitScreenState extends State<VisitScreen> {
               hint: 'nil/+/++',
               label: 'মূত্রে শর্করা',
               controller: _urineSugar,
+              validator: _vUrine,
             ),
           ),
         ],
@@ -737,6 +886,7 @@ class _VisitScreenState extends State<VisitScreen> {
         controller: _fundal,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.straighten_outlined, color: AppColors.primary, size: 20),
+        validator: _range(10, 45),
       ),
       const SizedBox(height: 14),
       Row(
@@ -748,6 +898,7 @@ class _VisitScreenState extends State<VisitScreen> {
               label: 'শিশুর হৃদস্পন্দন (FHR)',
               controller: _fhr,
               keyboardType: TextInputType.number,
+              validator: _range(60, 220),
             ),
           ),
           const SizedBox(width: 12),
@@ -756,6 +907,7 @@ class _VisitScreenState extends State<VisitScreen> {
               hint: 'Lie / Presentation',
               label: 'গর্ভস্থ অবস্থান',
               controller: _lie,
+              suffixIcon: _micSuffix('lie', _lie),
             ),
           ),
         ],
@@ -785,6 +937,7 @@ class _VisitScreenState extends State<VisitScreen> {
         label: 'মন্তব্য',
         controller: _notes,
         maxLines: 2,
+        suffixIcon: _micSuffix('notes', _notes),
       ),
       const SizedBox(height: 16),
       Text('এই ভিজিটে যা দেওয়া হয়েছে', style: AppTextStyles.label),
@@ -820,27 +973,70 @@ class _VisitScreenState extends State<VisitScreen> {
     ];
   }
 
+  // ── PNC: mother's postnatal visit (own schedule, from delivery date) ──────
+  List<Widget> _pncBody() {
+    return [
+      Text('মায়ের প্রসব-পরবর্তী অবস্থা (PNC)', style: AppTextStyles.label),
+      const SizedBox(height: 8),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: AppInput(
+                hint: 'যেমন 110/70',
+                label: 'রক্তচাপ (BP)',
+                controller: _pncBp,
+                suffixIcon: _micSuffix('pncBp', _pncBp),
+                validator: _vBp),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AppInput(
+                hint: '°F',
+                label: 'তাপমাত্রা',
+                controller: _pncTemp,
+                keyboardType: TextInputType.number,
+                validator: _range(90, 110)),
+          ),
+        ],
+      ),
+      const SizedBox(height: 14),
+      ..._flagBody('মায়ের বিপদচিহ্ন যাচাই করুন', _pncDangerSigns, target: _pncFlags),
+    ];
+  }
+
   // ── HBNC: postnatal home visit — mother PNC + newborn (MCP card pg 7) ─────
   List<Widget> _hbncBody() {
     Widget num2(String l1, TextEditingController c1, String h1, String l2,
-            TextEditingController c2, String h2) =>
+            TextEditingController c2, String h2,
+            {String? Function(String?)? v1,
+            String? Function(String?)? v2,
+            bool number1 = false}) =>
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: AppInput(hint: h1, label: l1, controller: c1)),
+            Expanded(
+                child: AppInput(
+                    hint: h1,
+                    label: l1,
+                    controller: c1,
+                    keyboardType: number1 ? TextInputType.number : null,
+                    validator: v1)),
             const SizedBox(width: 12),
             Expanded(
                 child: AppInput(
                     hint: h2,
                     label: l2,
                     controller: c2,
-                    keyboardType: TextInputType.number)),
+                    keyboardType: TextInputType.number,
+                    validator: v2)),
           ],
         );
     return [
       Text('মায়ের প্রসব-পরবর্তী অবস্থা (PNC)', style: AppTextStyles.label),
       const SizedBox(height: 8),
-      num2('রক্তচাপ (BP)', _pncBp, 'যেমন 110/70', 'তাপমাত্রা (°F)', _pncTemp, '°F'),
+      num2('রক্তচাপ (BP)', _pncBp, 'যেমন 110/70', 'তাপমাত্রা (°F)', _pncTemp, '°F',
+          v1: _vBp, v2: _range(90, 110)),
       const SizedBox(height: 14),
       ..._flagBody('মায়ের বিপদচিহ্ন', _pncDangerSigns, target: _pncFlags),
       const Padding(
@@ -849,7 +1045,8 @@ class _VisitScreenState extends State<VisitScreen> {
       ),
       Text('নবজাতকের অবস্থা', style: AppTextStyles.label),
       const SizedBox(height: 8),
-      num2('ওজন (কেজি)', _hbWeight, 'কেজি', 'তাপমাত্রা (°F)', _hbTemp, '°F'),
+      num2('ওজন (কেজি)', _hbWeight, 'কেজি', 'তাপমাত্রা (°F)', _hbTemp, '°F',
+          number1: true, v1: _range(0.5, 8), v2: _range(90, 110)),
       const SizedBox(height: 14),
       ..._flagBody('নবজাতকের বিপদচিহ্ন যাচাই করুন', _newbornDangerSigns),
     ];
@@ -869,7 +1066,8 @@ class _VisitScreenState extends State<VisitScreen> {
                 hint: 'কেজি',
                 label: 'ওজন',
                 controller: _ycWeight,
-                keyboardType: TextInputType.number),
+                keyboardType: TextInputType.number,
+                validator: _range(1, 30, unit: 'কেজি')),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -878,6 +1076,7 @@ class _VisitScreenState extends State<VisitScreen> {
                 label: 'MUAC (বাহুর মাপ)',
                 controller: _ycMuac,
                 keyboardType: TextInputType.number,
+                validator: _vMuac,
                 onChanged: (_) => setState(() {})),
           ),
         ],
