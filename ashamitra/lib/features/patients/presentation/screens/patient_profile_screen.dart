@@ -14,6 +14,7 @@ import '../../controller/patient_controller.dart';
 import '../../data/models/patient_model.dart';
 import '../../services/mcp_report_pdf.dart';
 import '../../../../core/services/local_storage_service.dart';
+import '../../../../core/services/api_service.dart';
 import '../../../schedule/services/checkup_launcher.dart';
 import 'pregnancy_timeline_screen.dart';
 
@@ -323,6 +324,13 @@ class PatientProfileScreen extends StatelessWidget {
                         ),
                       ],
                       const SizedBox(height: 24),
+                      // ── Checkup timeline (schedule events, done + upcoming) ──
+                      if (patientId.isNotEmpty) ...[
+                        const _SectionTitle('চেকআপ টাইমলাইন'),
+                        const SizedBox(height: 12),
+                        _CheckupTimeline(patientId: patientId),
+                        const SizedBox(height: 24),
+                      ],
                       // ── Last assessment — real triage data ───────────
                       if (hasAssessment) ...[
                         const _SectionTitle('Last Assessment'),
@@ -677,6 +685,210 @@ class _ReportHistory extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Checkup timeline — the patient's schedule events (done + upcoming) ─────
+class _CheckupTimeline extends StatefulWidget {
+  final String patientId;
+  const _CheckupTimeline({required this.patientId});
+  @override
+  State<_CheckupTimeline> createState() => _CheckupTimelineState();
+}
+
+class _CheckupTimelineState extends State<_CheckupTimeline> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _events = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    List<dynamic> raw;
+    try {
+      raw = await ApiService.getScheduleForPatient(widget.patientId);
+    } catch (_) {
+      raw = const [];
+    }
+    if (!mounted) return;
+    setState(() {
+      _events =
+          raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+      _loading = false;
+    });
+  }
+
+  static String _fmt(dynamic iso) {
+    final d = DateTime.tryParse((iso ?? '').toString());
+    if (d == null) return '';
+    String p(int n) => n.toString().padLeft(2, '0');
+    return '${p(d.day)}/${p(d.month)}/${d.year}';
+  }
+
+  static IconData _icon(String k) => switch (k) {
+        'vaccine' => Icons.vaccines_rounded,
+        'anc' => Icons.pregnant_woman_rounded,
+        'pnc' => Icons.volunteer_activism_rounded,
+        'hbnc' => Icons.child_care_rounded,
+        'hbyc' => Icons.child_friendly_rounded,
+        _ => Icons.event_note_rounded,
+      };
+
+  DateTime _date(Map<String, dynamic> e) {
+    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
+    return DateTime.tryParse(
+            (rec['completedAt'] ?? e['dueDate'] ?? '').toString()) ??
+        DateTime(2100);
+  }
+
+  // What was recorded at a completed visit — short summary line.
+  String _summary(Map<String, dynamic> e) {
+    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
+    final kind = (e['kind'] ?? '').toString();
+    String r(String k) => (rec[k] ?? '').toString().trim();
+    if (kind == 'anc') {
+      final bits = <String>[
+        if (r('bp').isNotEmpty) 'BP ${r('bp')}',
+        if (r('hb').isNotEmpty) 'Hb ${r('hb')}',
+        if (r('weight').isNotEmpty) 'ওজন ${r('weight')}',
+      ];
+      return bits.isEmpty ? 'সম্পন্ন' : bits.join(' · ');
+    }
+    if (kind == 'vaccine') {
+      final g = (rec['givenVaccines'] as List?)?.length ?? 0;
+      return g > 0 ? '$g টি টিকা দেওয়া হয়েছে' : 'সম্পন্ন';
+    }
+    if (kind == 'hbyc') {
+      final ms = r('muacStatus');
+      return ms.isNotEmpty ? 'MUAC: $ms' : 'সম্পন্ন';
+    }
+    final flags = (rec['dangerFlags'] as List?)?.length ?? 0;
+    return flags > 0 ? '$flags টি বিপদচিহ্ন' : 'ঠিক আছে';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 18),
+        child: Center(
+            child: SizedBox(
+                width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))),
+      );
+    }
+    final now = DateTime.now();
+    final done = _events.where((e) => (e['status'] ?? '') == 'done').toList()
+      ..sort((a, b) => _date(b).compareTo(_date(a))); // recent first
+    final pending = _events
+        .where((e) => (e['status'] ?? 'pending') == 'pending')
+        .toList()
+      ..sort((a, b) => _date(a).compareTo(_date(b))); // soonest first
+
+    if (done.isEmpty && pending.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE0E7FF)),
+        ),
+        child: Column(children: [
+          Icon(Icons.event_busy_rounded,
+              size: 36, color: AppColors.primary.withValues(alpha: 0.4)),
+          const SizedBox(height: 10),
+          Text('এখনও কোনো সূচি নেই',
+              style: AppTextStyles.label.copyWith(color: AppColors.textSecondary)),
+          const SizedBox(height: 4),
+          Text('LMP / জন্ম তারিখ দিলে স্বয়ংক্রিয়ভাবে সূচি তৈরি হবে',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+        ]),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE0E7FF)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (pending.isNotEmpty) ...[
+            Text('আসন্ন / বকেয়া',
+                style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
+            const SizedBox(height: 8),
+            ...pending.map((e) => _row(e, done: false, overdue: _date(e).isBefore(now))),
+          ],
+          if (pending.isNotEmpty && done.isNotEmpty)
+            const Divider(height: 22, color: Color(0xFFE0E7FF)),
+          if (done.isNotEmpty) ...[
+            Text('সম্পন্ন',
+                style: AppTextStyles.caption.copyWith(
+                    color: AppColors.safeGreen, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
+            const SizedBox(height: 8),
+            ...done.map((e) => _row(e, done: true, overdue: false)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _row(Map<String, dynamic> e, {required bool done, required bool overdue}) {
+    final kind = (e['kind'] ?? '').toString();
+    final color = done
+        ? AppColors.safeGreen
+        : (overdue ? AppColors.emergencyRed : AppColors.warningYellow);
+    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
+    final date = _fmt(rec['completedAt'] ?? e['dueDate']);
+    final sub = done
+        ? _summary(e)
+        : (overdue ? 'বকেয়া হয়ে গেছে' : 'আসন্ন');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 30, height: 30,
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.14), shape: BoxShape.circle),
+            child: Icon(done ? Icons.check_rounded : _icon(kind), size: 17, color: color),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text((e['label'] ?? '').toString(),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700)),
+                    ),
+                    if (date.isNotEmpty)
+                      Text(date,
+                          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                  ],
+                ),
+                Text(sub,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.caption.copyWith(color: color, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
