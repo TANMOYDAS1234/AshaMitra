@@ -125,192 +125,130 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Register generator entry — turns the app's schedule into the official
   /// monthly due-list register (PDF/CSV). Solves the #1 field pain: paperwork.
-  Widget _registersBanner() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () => Get.toNamed(AppRoutes.registers),
-          child: Ink(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: AppShadows.low,
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.10),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.auto_stories_rounded,
-                        color: AppColors.primary, size: 24),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('রেজিস্টার তৈরি করুন',
-                            style: AppTextStyles.h3
-                                .copyWith(fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 2),
-                        Text('বকেয়া ANC / টিকা / নবজাতক তালিকা — PDF',
-                            style: AppTextStyles.bodySm
-                                .copyWith(color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.chevron_right_rounded,
-                      color: AppColors.primary, size: 24),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Referrals + outcome tracking entry. Shows a badge with the number of
-  /// "open" referrals (pending/reached) so the worker remembers to follow up —
-  /// the field-flagged gap of "patient vanishes after referral".
-  Widget _referralsBanner() {
-    final ctrl = Get.isRegistered<ReferralController>()
+  /// Compact "registers & records" group — the periodic/occasional entries
+  /// (registers, referral, family-planning, birth/death) as 2-per-row tiles so
+  /// they don't each claim a hero banner and the daily case grid stays near the
+  /// top. The referral tile carries the open-count badge.
+  Widget _recordsSection() {
+    final refCtrl = Get.isRegistered<ReferralController>()
         ? Get.find<ReferralController>()
         : Get.put(ReferralController(), permanent: true);
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () => Get.toNamed(AppRoutes.referralList),
-          child: Ink(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: AppShadows.low,
-              border: Border.all(color: AppColors.emergencyRed.withValues(alpha: 0.18)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.emergencyRed.withValues(alpha: 0.10),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.local_hospital_rounded,
-                        color: AppColors.emergencyRed, size: 24),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('রেফারেল ও ট্র্যাকিং',
-                            style: AppTextStyles.h3
-                                .copyWith(fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 2),
-                        Text('রোগী রেফার করুন ও ফলাফল ট্র্যাক করুন',
-                            style: AppTextStyles.bodySm
-                                .copyWith(color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  Obx(() {
-                    final open = ctrl.openCount;
-                    if (open == 0) {
-                      return const Icon(Icons.chevron_right_rounded,
-                          color: AppColors.emergencyRed, size: 24);
-                    }
-                    return Container(
-                      constraints: const BoxConstraints(minWidth: 34),
-                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.emergencyRed,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text('$open',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.label.copyWith(
-                              color: Colors.white, fontWeight: FontWeight.w800)),
-                    );
-                  }),
-                ],
-              ),
-            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 10),
+            child: Text('রেজিস্টার ও নথি',
+                style: AppTextStyles.label.copyWith(
+                    color: AppColors.textSecondary, fontWeight: FontWeight.w700)),
           ),
-        ),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 2.3,
+            children: [
+              _recordTile(
+                icon: Icons.auto_stories_rounded,
+                color: AppColors.primary,
+                title: 'রেজিস্টার তৈরি',
+                route: AppRoutes.registers,
+              ),
+              Obx(() => _recordTile(
+                    icon: Icons.local_hospital_rounded,
+                    color: AppColors.emergencyRed,
+                    title: 'রেফারেল ও ট্র্যাকিং',
+                    route: AppRoutes.referralList,
+                    badge: refCtrl.openCount,
+                  )),
+              _recordTile(
+                icon: Icons.favorite_rounded,
+                color: AppColors.purple,
+                title: 'যোগ্য দম্পতি (পরিবার পরিকল্পনা)',
+                route: AppRoutes.eligibleCouples,
+              ),
+              _recordTile(
+                icon: Icons.menu_book_rounded,
+                color: AppColors.sky,
+                title: 'জন্ম ও মৃত্যু নথি',
+                route: AppRoutes.vitalEvents,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  /// Compact navigation banner (used by the family-planning + birth/death
-  /// register entries). Same card language as the other home banners.
-  Widget _navBanner({
+  Widget _recordTile({
     required IconData icon,
     required Color color,
     required String title,
-    required String sub,
     required String route,
+    int badge = 0,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () => Get.toNamed(route),
-          child: Ink(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: AppShadows.low,
-              border: Border.all(color: color.withValues(alpha: 0.18)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.10),
-                      shape: BoxShape.circle,
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => Get.toNamed(route),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: AppShadows.low,
+            border: Border.all(color: color.withValues(alpha: 0.18)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 38, height: 38,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: color, size: 20),
                     ),
-                    child: Icon(icon, color: color, size: 24),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title,
-                            style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 2),
-                        Text(sub,
-                            style: AppTextStyles.bodySm
-                                .copyWith(color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right_rounded, color: color, size: 24),
-                ],
-              ),
+                    if (badge > 0)
+                      Positioned(
+                        right: -4, top: -4,
+                        child: Container(
+                          constraints: const BoxConstraints(minWidth: 18),
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: AppColors.emergencyRed,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppColors.surface, width: 1.5),
+                          ),
+                          child: Text('$badge',
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.caption.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 10)),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.label.copyWith(
+                          fontWeight: FontWeight.w700, height: 1.15)),
+                ),
+              ],
             ),
           ),
         ),
@@ -379,22 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const SizedBox(height: 4),
                       _dueBanner(),
-                      _registersBanner(),
-                      _referralsBanner(),
-                      _navBanner(
-                        icon: Icons.favorite_rounded,
-                        color: AppColors.purple,
-                        title: 'যোগ্য দম্পতি (পরিবার পরিকল্পনা)',
-                        sub: 'দম্পতি ও গর্ভনিরোধ ফলো-আপ',
-                        route: AppRoutes.eligibleCouples,
-                      ),
-                      _navBanner(
-                        icon: Icons.menu_book_rounded,
-                        color: AppColors.sky,
-                        title: 'জন্ম ও মৃত্যু নথি',
-                        sub: 'CRS রিপোর্টিং — জন্ম/মৃত্যু লিপিবদ্ধ',
-                        route: AppRoutes.vitalEvents,
-                      ),
+                      _recordsSection(),
                       Align(
                         alignment: Alignment.centerLeft,
                         child: Row(
