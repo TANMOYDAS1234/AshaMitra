@@ -13,7 +13,9 @@ class ModuleArt extends StatelessWidget {
   final double height;
   const ModuleArt({super.key, required this.kind, this.height = 150});
 
-  static String _norm(String k) => switch (k) {
+  /// Maps a schedule kind OR a registration case type to the canonical asset
+  /// key (anc/pnc/hbnc/hbyc/vaccine/other) used for the PNG filename + figure.
+  static String kindKey(String k) => switch (k) {
         'Pregnancy' || 'pregnancy' || 'anc' => 'anc',
         'pnc' || 'postpartum' => 'pnc',
         'Newborn' || 'newborn' || 'hbnc' => 'hbnc',
@@ -33,7 +35,7 @@ class ModuleArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final k = _norm(kind);
+    final k = kindKey(kind);
     final (bg1, bg2, fig) = _palette(k);
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),

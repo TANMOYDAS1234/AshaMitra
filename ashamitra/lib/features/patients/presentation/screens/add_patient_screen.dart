@@ -1784,8 +1784,19 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     child: Column(
                       children: [
                         _photoAvatar(),
-                        // Friendly per-case illustration (updates with the chips).
-                        ModuleArt(kind: _caseType, height: 110),
+                        // Friendly per-case illustration (Gemini art if present,
+                        // else the code-drawn figure) — updates with the chips.
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.asset(
+                            'assets/illustrations/${ModuleArt.kindKey(_caseType)}.png',
+                            height: 110,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                ModuleArt(kind: _caseType, height: 110),
+                          ),
+                        ),
                         const SizedBox(height: 16),
                         _aadhaarScanButton(),
                         AppInput(
