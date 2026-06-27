@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/services/api_service.dart';
 import '../../../../shared/widgets/patient_photo.dart';
 import '../../../patients/controller/patient_controller.dart';
 import '../../../patients/data/models/patient_model.dart';
@@ -306,6 +307,89 @@ class _ExistingPatientPicker extends StatefulWidget {
 
 class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
   String _query = '';
+  // patientId → soonest pending schedule event (for the due-status hint).
+  final Map<String, Map<String, dynamic>> _due = {};
+  bool _dueLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDue();
+  }
+
+  /// Loads the full schedule once and keeps each patient's *soonest pending*
+  /// event, so the picker can show who is actually due / overdue vs not.
+  Future<void> _loadDue() async {
+    try {
+      final evs = await ApiService.getAllSchedule();
+      final detail = <String, Map<String, dynamic>>{};
+      final soonest = <String, DateTime>{};
+      for (final e in evs) {
+        if (e is! Map) continue;
+        if ((e['status'] ?? 'pending').toString() == 'done') continue;
+        final pid = (e['patientId'] ?? '').toString();
+        if (pid.isEmpty) continue;
+        final dd = DateTime.tryParse((e['dueDate'] ?? '').toString());
+        if (dd == null) continue;
+        if (!soonest.containsKey(pid) || dd.isBefore(soonest[pid]!)) {
+          soonest[pid] = dd;
+          detail[pid] = Map<String, dynamic>.from(e);
+        }
+      }
+      if (mounted) {
+        setState(() {
+          _due
+            ..clear()
+            ..addAll(detail);
+          _dueLoaded = true;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _dueLoaded = true);
+    }
+  }
+
+  /// One-line due-status chip for a patient row.
+  Widget _dueHint(PatientModel p) {
+    if (!_dueLoaded) return const SizedBox.shrink();
+    final e = _due[p.id];
+    if (e == null) {
+      return Text('কোনো বকেয়া চেকআপ নেই',
+          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary));
+    }
+    final dd = DateTime.tryParse((e['dueDate'] ?? '').toString());
+    if (dd == null) return const SizedBox.shrink();
+    final today = DateTime.now();
+    final d0 = DateTime(today.year, today.month, today.day);
+    final due0 = DateTime(dd.year, dd.month, dd.day);
+    final days = due0.difference(d0).inDays;
+    String two(int n) => n.toString().padLeft(2, '0');
+    final label = (e['label'] ?? '').toString();
+    final (String text, Color color) = days < 0
+        ? ('${days.abs()} দিন পার — বকেয়া', AppColors.emergencyRed)
+        : days == 0
+            ? ('আজ বকেয়া', AppColors.accent)
+            : ('পরবর্তী: ${two(dd.day)}/${two(dd.month)} ($days দিন বাকি)',
+                AppColors.primary);
+    return Padding(
+      padding: const EdgeInsets.only(top: 3),
+      child: Row(
+        children: [
+          Icon(Icons.event_rounded, size: 13, color: color),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              label.isEmpty ? text : '$label · $text',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.caption
+                  .copyWith(color: color, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -427,6 +511,7 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
+                                        _dueHint(p),
                                       ],
                                     ),
                                   ),
