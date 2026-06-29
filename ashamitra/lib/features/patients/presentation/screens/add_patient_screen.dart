@@ -20,7 +20,6 @@ import '../../data/patient_matcher.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../shared/widgets/patient_photo.dart';
 import '../../../../shared/widgets/module_art.dart';
-import '../../../schedule/services/checkup_launcher.dart';
 import 'aadhaar_scanner_screen.dart';
 
 class AddPatientScreen extends StatefulWidget {
@@ -1644,60 +1643,6 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     }
   }
 
-  Future<void> _saveAndCheckup() async {
-    if (!_formKey.currentState!.validate()) return;
-    final mchError = _mchDateError();
-    if (mchError != null) {
-      _showSnack('তারিখ প্রয়োজন', mchError, AppColors.warningYellow);
-      return;
-    }
-    if (!await _confirmNotDuplicate()) return;
-    if (!mounted) return;
-    setState(() => _saving = true);
-    final result = await _ctrl.addPatient(
-      name: _nameCtrl.text.trim(),
-      type: _caseType,
-      village: _villageCtrl.text.trim().isEmpty ? 'Unknown' : _villageCtrl.text.trim(),
-      mobile: _mobileCtrl.text.trim(),
-      age: _ageCtrl.text.trim(),
-      ageUnit: _ageUnit,
-      gender: _gender,
-      dob:          _dob, // record for all cases; backend guards baby-vaccine gen to child/newborn
-      lmp:          _caseType == 'Pregnancy' ? _lmp : null,
-      edd:          _caseType == 'Pregnancy' ? _edd : null,
-      guardianName: _guardianCtrl.text.trim(),
-      motherId:     _motherId,
-      isTwin:       _isTwin,
-      birthOrder:   _isTwin ? _birthOrder : 0,
-      mcpDetails:   _collectMcp(),
-      highRisk:     _assessHighRisk().high,
-    );
-    if (!mounted) return; // 401 hook may have navigated us to login
-    setState(() => _saving = false);
-    if (result.outcome == PatientSaveOutcome.needsLogin || ApiService.token == null) {
-      // Session expired (this save or a concurrent call) → 401 hook is taking
-      // us to login; abort the checkup so triage isn't stacked over login.
-      return;
-    }
-    final patient = result.patient;
-    if (result.outcome == PatientSaveOutcome.queuedOffline) {
-      Get.snackbar(
-        'ফোনে সংরক্ষিত',
-        '${patient.name} — ইন্টারনেট এলে নিজে থেকে Atlas-এ সিঙ্ক হবে।',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.warningYellow,
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-        duration: const Duration(seconds: 4),
-      );
-    }
-    // Checkup = the structured MCP-card visit form for the just-registered
-    // patient — their next due visit, generated from the LMP/DOB just entered.
-    await CheckupLauncher.start(
-        patientId: patient.id, patientName: patient.name);
-  }
-
   // Localized display labels for the English-valued gender / case options.
   // ── Field validators ───────────────────────────────────────────────────────
   /// Age must be a positive number, plausible for the chosen unit, and (for a
@@ -1945,27 +1890,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                         _riskHistorySection(),
                         _mcpSection(),
                         const SizedBox(height: 32),
-                        Column(
-                          children: [
-                            AppButton(
-                              label: (_isEditing ? 'save_changes' : 'save_patient').tr,
-                              onPressed: _saving ? null : _save,
-                              isLoading: _saving,
-                              outlined: !_isEditing, // edit mode: primary; add mode: secondary (paired with checkup)
-                              width: double.infinity,
-                            ),
-                            // "Save & Start Checkup" only makes sense for new patients —
-                            // editing doesn't need a follow-up checkup step.
-                            if (!_isEditing) ...[
-                              const SizedBox(height: 10),
-                              AppButton(
-                                label: 'save_and_start_checkup'.tr,
-                                onPressed: _saving ? null : _saveAndCheckup,
-                                icon: Icons.mic_rounded,
-                                width: double.infinity,
-                              ),
-                            ],
-                          ],
+                        AppButton(
+                          label: (_isEditing ? 'save_changes' : 'save_patient').tr,
+                          onPressed: _saving ? null : _save,
+                          isLoading: _saving,
+                          width: double.infinity,
                         ),
                         const SizedBox(height: 24),
                       ],
