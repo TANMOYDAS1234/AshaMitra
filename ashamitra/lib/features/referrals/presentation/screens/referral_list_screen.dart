@@ -27,7 +27,7 @@ class ReferralListScreen extends StatelessWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('নতুন রেফারেল'),
+        label: Text('ref_new_referral'.tr),
         onPressed: () => Get.toNamed(AppRoutes.referralForm),
       ),
       body: Container(
@@ -36,11 +36,11 @@ class ReferralListScreen extends StatelessWidget {
           child: Column(
             children: [
               AppHeader(
-                title: 'রেফারেল ও ট্র্যাকিং',
+                title: 'ref_title'.tr,
                 actions: [
                   HeaderActionCircle(
                     icon: Icons.refresh_rounded,
-                    tooltip: 'রিফ্রেশ',
+                    tooltip: 'ref_refresh'.tr,
                     onTap: ctrl.syncFromServer,
                   ),
                 ],
@@ -62,7 +62,8 @@ class ReferralListScreen extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 10, left: 4),
                             child: Text(
-                              '$open টি খোলা রেফারেল — ফলো-আপ প্রয়োজন',
+                              'ref_open_banner'
+                                  .trParams({'count': '$open'}),
                               style: AppTextStyles.label
                                   .copyWith(color: AppColors.emergencyRed),
                             ),
@@ -89,13 +90,13 @@ class ReferralListScreen extends StatelessWidget {
                 size: 64, color: AppColors.primary.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             Center(
-              child: Text('এখনও কোনো রেফারেল নেই',
+              child: Text('ref_empty_title'.tr,
                   style: AppTextStyles.h3
                       .copyWith(color: AppColors.textSecondary)),
             ),
             const SizedBox(height: 8),
             Center(
-              child: Text('জরুরি রোগীকে রেফার করতে নিচের বোতাম চাপুন',
+              child: Text('ref_empty_subtitle'.tr,
                   style: AppTextStyles.label
                       .copyWith(color: AppColors.textSecondary)),
             ),
@@ -146,7 +147,8 @@ class _ReferralCard extends StatelessWidget {
                 Text(
                   [
                     if (referral.village.isNotEmpty) referral.village,
-                    if (referral.referredTo.isNotEmpty) '→ ${referral.referredTo}',
+                    if (referral.referredTo.isNotEmpty)
+                      'ref_referred_to'.trParams({'facility': referral.referredTo}),
                   ].join('  '),
                   style: AppTextStyles.label.copyWith(color: AppColors.textSecondary),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -173,10 +175,10 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      'reached' => ('পৌঁছেছেন', AppColors.primary),
-      'completed' => ('সম্পন্ন', AppColors.safeGreen),
-      'cancelled' => ('বাতিল', AppColors.textSecondary),
-      _ => ('অপেক্ষমাণ', AppColors.warningYellow),
+      'reached' => ('ref_status_reached'.tr, AppColors.primary),
+      'completed' => ('ref_status_completed'.tr, AppColors.safeGreen),
+      'cancelled' => ('ref_status_cancelled'.tr, AppColors.textSecondary),
+      _ => ('ref_status_pending'.tr, AppColors.warningYellow),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

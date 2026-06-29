@@ -41,10 +41,10 @@ class ReferralDetailScreen extends StatelessWidget {
   }
 
   String _caseLabel(String c) => switch (c) {
-        'Pregnancy' || 'pregnancy' => 'গর্ভবতী',
-        'Newborn' || 'newborn' => 'নবজাতক',
-        'Child' || 'child' => 'শিশু',
-        _ => 'অন্যান্য',
+        'Pregnancy' || 'pregnancy' => 'refd_case_pregnancy'.tr,
+        'Newborn' || 'newborn' => 'refd_case_newborn'.tr,
+        'Child' || 'child' => 'refd_case_child'.tr,
+        _ => 'refd_case_other'.tr,
       };
 
   String _fmtDate(DateTime? d) {
@@ -61,7 +61,7 @@ class ReferralDetailScreen extends StatelessWidget {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: 'রেফারেল বিবরণ'),
+              AppHeader(title: 'refd_title'.tr),
               const SizedBox(height: 8),
               Expanded(
                 child: Obx(() {
@@ -69,7 +69,7 @@ class ReferralDetailScreen extends StatelessWidget {
                       .firstWhereOrNull((x) => x.id == referralId);
                   if (r == null) {
                     return Center(
-                      child: Text('রেফারেলটি পাওয়া যায়নি',
+                      child: Text('refd_not_found'.tr,
                           style: AppTextStyles.body
                               .copyWith(color: AppColors.textSecondary)),
                     );
@@ -79,34 +79,35 @@ class ReferralDetailScreen extends StatelessWidget {
                     children: [
                       _bandBanner(r),
                       const SizedBox(height: 14),
-                      _card('রোগীর তথ্য', [
-                        _row('নাম', r.patientName),
-                        _row('বয়স', r.age),
-                        _row('লিঙ্গ', _genderLabel(r.gender)),
-                        if (r.guardianName.isNotEmpty) _row('অভিভাবক', r.guardianName),
-                        _row('গ্রাম', r.village),
-                        if (r.mobile.isNotEmpty) _row('মোবাইল', r.mobile),
-                        _row('কেস', _caseLabel(r.caseType)),
+                      _card('refd_patient_info'.tr, [
+                        _row('refd_name'.tr, r.patientName),
+                        _row('refd_age'.tr, r.age),
+                        _row('refd_gender'.tr, _genderLabel(r.gender)),
+                        if (r.guardianName.isNotEmpty) _row('refd_guardian'.tr, r.guardianName),
+                        _row('refd_village'.tr, r.village),
+                        if (r.mobile.isNotEmpty) _row('refd_mobile'.tr, r.mobile),
+                        _row('refd_case'.tr, _caseLabel(r.caseType)),
                       ]),
                       const SizedBox(height: 12),
-                      _card('চিকিৎসা তথ্য', [
-                        if (r.symptoms.isNotEmpty) _row('লক্ষণ', r.symptoms),
-                        if (r.currentWeight.isNotEmpty) _row('ওজন', '${r.currentWeight} কেজি'),
+                      _card('refd_medical_info'.tr, [
+                        if (r.symptoms.isNotEmpty) _row('refd_symptoms'.tr, r.symptoms),
+                        if (r.currentWeight.isNotEmpty)
+                          _row('refd_weight'.tr, 'refd_weight_kg'.trParams({'w': r.currentWeight})),
                         if (r.imnci.isNotEmpty) _row('IMNCI', r.imnci),
-                        if (r.medicinesGiven.isNotEmpty) _row('ওষুধ', r.medicinesGiven),
-                        _row('রেফার', r.referredTo),
-                        _row('তারিখ', _fmtDate(r.createdAt)),
+                        if (r.medicinesGiven.isNotEmpty) _row('refd_medicines'.tr, r.medicinesGiven),
+                        _row('refd_referred_to'.tr, r.referredTo),
+                        _row('refd_date'.tr, _fmtDate(r.createdAt)),
                       ]),
                       if (r.status != 'pending') ...[
                         const SizedBox(height: 12),
-                        _card('ফলাফল', [
-                          _row('অবস্থা', _statusLabel(r.status)),
+                        _card('refd_outcome'.tr, [
+                          _row('refd_status'.tr, _statusLabel(r.status)),
                           if (r.reachedDate != null)
-                            _row('পৌঁছেছেন', _fmtDate(r.reachedDate)),
-                          if (r.admittedBy.isNotEmpty) _row('ভর্তি করেছেন', r.admittedBy),
-                          if (r.relation.isNotEmpty) _row('সম্পর্ক', r.relation),
-                          if (r.outcome.isNotEmpty) _row('ফলাফল', r.outcome),
-                          if (r.facilityNotes.isNotEmpty) _row('মন্তব্য', r.facilityNotes),
+                            _row('refd_reached'.tr, _fmtDate(r.reachedDate)),
+                          if (r.admittedBy.isNotEmpty) _row('refd_admitted_by'.tr, r.admittedBy),
+                          if (r.relation.isNotEmpty) _row('refd_relation'.tr, r.relation),
+                          if (r.outcome.isNotEmpty) _row('refd_outcome'.tr, _outcomeLabel(r.outcome)),
+                          if (r.facilityNotes.isNotEmpty) _row('refd_facility_notes'.tr, r.facilityNotes),
                         ]),
                       ],
                       const SizedBox(height: 20),
@@ -126,7 +127,7 @@ class ReferralDetailScreen extends StatelessWidget {
     return [
       if (r.status == 'pending')
         AppButton(
-          label: 'কেন্দ্রে পৌঁছেছেন',
+          label: 'refd_btn_reached'.tr,
           icon: Icons.check_circle_outline,
           width: double.infinity,
           onPressed: () => _ctrl.updateReferral(
@@ -136,7 +137,7 @@ class ReferralDetailScreen extends StatelessWidget {
       if (r.isOpen) ...[
         const SizedBox(height: 10),
         AppButton(
-          label: 'ফলাফল নথিভুক্ত করুন',
+          label: 'refd_btn_record_outcome'.tr,
           icon: Icons.assignment_turned_in_outlined,
           width: double.infinity,
           onPressed: () => _recordOutcome(context, r),
@@ -144,7 +145,7 @@ class ReferralDetailScreen extends StatelessWidget {
       ],
       const SizedBox(height: 10),
       AppButton(
-        label: 'স্লিপ প্রিন্ট / PDF',
+        label: 'refd_btn_print_slip'.tr,
         icon: Icons.picture_as_pdf_outlined,
         width: double.infinity,
         outlined: true,
@@ -152,7 +153,7 @@ class ReferralDetailScreen extends StatelessWidget {
       ),
       const SizedBox(height: 10),
       AppButton(
-        label: 'স্লিপ সম্পাদনা',
+        label: 'refd_btn_edit_slip'.tr,
         icon: Icons.edit_outlined,
         width: double.infinity,
         outlined: true,
@@ -164,7 +165,7 @@ class ReferralDetailScreen extends StatelessWidget {
           if (r.isOpen)
             Expanded(
               child: AppButton(
-                label: 'বাতিল',
+                label: 'refd_btn_cancel'.tr,
                 width: double.infinity,
                 outlined: true,
                 color: AppColors.textSecondary,
@@ -174,7 +175,7 @@ class ReferralDetailScreen extends StatelessWidget {
           if (r.isOpen) const SizedBox(width: 10),
           Expanded(
             child: AppButton(
-              label: 'মুছুন',
+              label: 'refd_btn_delete'.tr,
               width: double.infinity,
               outlined: true,
               color: AppColors.emergencyRed,
@@ -190,6 +191,7 @@ class ReferralDetailScreen extends StatelessWidget {
     final admittedBy = TextEditingController(text: r.admittedBy);
     final relation = TextEditingController(text: r.relation);
     final notes = TextEditingController(text: r.facilityNotes);
+    // Stored values stay canonical (persisted in r.outcome); only labels are localized.
     String outcome = r.outcome.isNotEmpty ? r.outcome : 'ভর্তি করা হয়েছে';
     const options = [
       'ভর্তি করা হয়েছে',
@@ -216,9 +218,9 @@ class ReferralDetailScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('ফলাফল নথিভুক্ত করুন', style: AppTextStyles.h3),
+              Text('refd_btn_record_outcome'.tr, style: AppTextStyles.h3),
               const SizedBox(height: 14),
-              Text('ফলাফল', style: AppTextStyles.label),
+              Text('refd_outcome'.tr, style: AppTextStyles.label),
               const SizedBox(height: 6),
               DropdownButtonFormField<String>(
                 initialValue: outcome,
@@ -227,18 +229,26 @@ class ReferralDetailScreen extends StatelessWidget {
                 decoration: const InputDecoration(),
                 onChanged: (v) => setSheet(() => outcome = v ?? outcome),
                 items: options
-                    .map((o) => DropdownMenuItem(value: o, child: Text(o)))
+                    .map((o) => DropdownMenuItem(value: o, child: Text(_outcomeLabel(o))))
                     .toList(),
               ),
               const SizedBox(height: 12),
-              AppInput(hint: 'কে ভর্তি করেছেন', label: 'ভর্তি করেছেন', controller: admittedBy),
+              AppInput(
+                  hint: 'refd_admitted_by_hint'.tr,
+                  label: 'refd_admitted_by'.tr,
+                  controller: admittedBy),
               const SizedBox(height: 12),
-              AppInput(hint: 'সম্পর্ক', label: 'সম্পর্ক', controller: relation),
+              AppInput(
+                  hint: 'refd_relation'.tr, label: 'refd_relation'.tr, controller: relation),
               const SizedBox(height: 12),
-              AppInput(hint: 'কেন্দ্রের মন্তব্য', label: 'মন্তব্য', controller: notes, maxLines: 2),
+              AppInput(
+                  hint: 'refd_facility_notes_hint'.tr,
+                  label: 'refd_facility_notes'.tr,
+                  controller: notes,
+                  maxLines: 2),
               const SizedBox(height: 18),
               AppButton(
-                label: 'সম্পন্ন হিসেবে সংরক্ষণ',
+                label: 'refd_btn_save_completed'.tr,
                 width: double.infinity,
                 onPressed: () {
                   _ctrl.updateReferral(r.copyWith(
@@ -264,13 +274,14 @@ class ReferralDetailScreen extends StatelessWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('রেফারেল মুছবেন?'),
-        content: Text('${r.patientName}-এর রেফারেলটি মুছে ফেলা হবে।'),
+        title: Text('refd_delete_title'.tr),
+        content: Text('refd_delete_confirm'.trParams({'name': r.patientName})),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('না')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('refd_no'.tr)),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('মুছুন', style: TextStyle(color: AppColors.emergencyRed)),
+            child: Text('refd_btn_delete'.tr,
+                style: const TextStyle(color: AppColors.emergencyRed)),
           ),
         ],
       ),
@@ -283,16 +294,26 @@ class ReferralDetailScreen extends StatelessWidget {
 
   // ── small UI helpers ──────────────────────────────────────────────────────
   String _genderLabel(String g) => switch (g) {
-        'Female' => 'মহিলা',
-        'Male' => 'পুরুষ',
+        'Female' => 'refd_gender_female'.tr,
+        'Male' => 'refd_gender_male'.tr,
         _ => g,
       };
 
   String _statusLabel(String s) => switch (s) {
-        'reached' => 'কেন্দ্রে পৌঁছেছেন',
-        'completed' => 'সম্পন্ন',
-        'cancelled' => 'বাতিল',
-        _ => 'অপেক্ষমাণ',
+        'reached' => 'refd_status_reached'.tr,
+        'completed' => 'refd_status_completed'.tr,
+        'cancelled' => 'refd_status_cancelled'.tr,
+        _ => 'refd_status_pending'.tr,
+      };
+
+  // Maps the canonical stored outcome value to its localized display label.
+  String _outcomeLabel(String o) => switch (o) {
+        'ভর্তি করা হয়েছে' => 'refd_outcome_admitted'.tr,
+        'চিকিৎসা করে বাড়ি পাঠানো হয়েছে' => 'refd_outcome_treated_sent_home'.tr,
+        'উপরের কেন্দ্রে রেফার' => 'refd_outcome_referred_higher'.tr,
+        'মৃত্যু' => 'refd_outcome_death'.tr,
+        'অন্যান্য' => 'refd_outcome_other'.tr,
+        _ => o,
       };
 
   Widget _bandBanner(ReferralModel r) {
@@ -301,8 +322,8 @@ class ReferralDetailScreen extends StatelessWidget {
         ? AppColors.emergencyRed
         : (r.band == 'YELLOW' ? AppColors.warningYellow : AppColors.textSecondary);
     final text = isRed
-        ? 'জরুরি রেফার (RED) — ৩০ মিনিটের মধ্যে'
-        : (r.band == 'YELLOW' ? 'রেফার (YELLOW) — ২৪ ঘণ্টার মধ্যে' : 'রেফার');
+        ? 'refd_band_red'.tr
+        : (r.band == 'YELLOW' ? 'refd_band_yellow'.tr : 'refd_band_default'.tr);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

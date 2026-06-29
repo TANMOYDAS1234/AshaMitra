@@ -111,11 +111,11 @@ class _RegistersScreenState extends State<RegistersScreen> {
 
   Future<void> _generate({required bool csv}) async {
     if (_mode == 'due' && _kinds.isEmpty) {
-      _snack('কোনো বিভাগ নির্বাচন করুন', AppColors.warningYellow);
+      _snack('reg_snack_select_kind'.tr, AppColors.warningYellow);
       return;
     }
     if (_mode == 'full' && _registers.isEmpty) {
-      _snack('কোনো রেজিস্টার নির্বাচন করুন', AppColors.warningYellow);
+      _snack('reg_snack_select_register'.tr, AppColors.warningYellow);
       return;
     }
     setState(() => _busy = true);
@@ -158,13 +158,13 @@ class _RegistersScreenState extends State<RegistersScreen> {
         await DueRegisterService.generatePdf(data);
       }
     } catch (e) {
-      _snack('তৈরি করা গেল না: $e', AppColors.emergencyRed);
+      _snack('reg_snack_failed'.trParams({'error': '$e'}), AppColors.emergencyRed);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  void _snack(String msg, Color c) => Get.snackbar('রেজিস্টার', msg,
+  void _snack(String msg, Color c) => Get.snackbar('reg_snack_title'.tr, msg,
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: c,
       colorText: Colors.white,
@@ -179,7 +179,7 @@ class _RegistersScreenState extends State<RegistersScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              const AppHeader(title: 'রেজিস্টার তৈরি'),
+              AppHeader(title: 'reg_header_title'.tr),
               Expanded(
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
@@ -199,14 +199,14 @@ class _RegistersScreenState extends State<RegistersScreen> {
                           ],
                           const SizedBox(height: 24),
                           AppButton(
-                            label: 'PDF তৈরি করুন',
+                            label: 'reg_btn_pdf'.tr,
                             onPressed: _busy ? null : () => _generate(csv: false),
                             isLoading: _busy,
                             width: double.infinity,
                           ),
                           const SizedBox(height: 10),
                           AppButton(
-                            label: 'CSV রপ্তানি',
+                            label: 'reg_btn_csv'.tr,
                             onPressed: _busy ? null : () => _generate(csv: true),
                             outlined: true,
                             width: double.infinity,
@@ -233,8 +233,7 @@ class _RegistersScreenState extends State<RegistersScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'অ্যাপে থাকা তথ্য থেকে এই মাসের বকেয়া ANC / টিকা / নবজাতক তালিকা '
-                'সরকারি ছকে তৈরি হবে — হাতে লেখার দরকার নেই।',
+                'reg_intro'.tr,
                 style: AppTextStyles.label.copyWith(color: AppColors.textSecondary),
               ),
             ),
@@ -248,7 +247,7 @@ class _RegistersScreenState extends State<RegistersScreen> {
   // Segmented control: monthly due-list (work-plan) vs the full cumulative
   // register (the notebook substitute).
   Widget _modeToggle() {
-    const opts = [('due', 'মাসিক বকেয়া'), ('full', 'পূর্ণ রেজিস্টার')];
+    final opts = [('due', 'reg_mode_due'.tr), ('full', 'reg_mode_full'.tr)];
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -283,17 +282,17 @@ class _RegistersScreenState extends State<RegistersScreen> {
   }
 
   List<Widget> _dueControls() => [
-        _sectionLabel('সময়সীমা'),
+        _sectionLabel('reg_section_horizon'.tr),
         const SizedBox(height: 8),
         _horizonChips(),
         const SizedBox(height: 18),
-        _sectionLabel('কোন তালিকা?'),
+        _sectionLabel('reg_section_which_list'.tr),
         const SizedBox(height: 8),
         _kindChips(),
       ];
 
   List<Widget> _fullControls() => [
-        _sectionLabel('কোন রেজিস্টার?'),
+        _sectionLabel('reg_section_which_register'.tr),
         const SizedBox(height: 8),
         _registerChips(),
       ];
@@ -327,7 +326,12 @@ class _RegistersScreenState extends State<RegistersScreen> {
   }
 
   Widget _horizonChips() {
-    const opts = [(30, '৩০ দিন'), (45, '৪৫ দিন'), (60, '৬০ দিন'), (90, '৯০ দিন')];
+    final opts = [
+      (30, 'reg_horizon_30'.tr),
+      (45, 'reg_horizon_45'.tr),
+      (60, 'reg_horizon_60'.tr),
+      (90, 'reg_horizon_90'.tr),
+    ];
     return Wrap(
       spacing: 10,
       children: opts.map((o) {
@@ -378,14 +382,14 @@ class _RegistersScreenState extends State<RegistersScreen> {
   String _summaryText() {
     if (_mode == 'due') {
       return _selectedCount == 0
-          ? 'নির্বাচিত তালিকায় কোনো বকেয়া নেই'
-          : 'মোট $_selectedCount টি বকেয়া কাজ রেজিস্টারে যাবে';
+          ? 'reg_summary_due_empty'.tr
+          : 'reg_summary_due_count'.trParams({'count': '$_selectedCount'});
     }
     final parts = DueRegisterService.kindsFull
         .where(_registers.contains)
         .map((r) => '${DueRegisterService.fullLabel(r)}: ${_fullCountFor(r)}')
         .toList();
-    return parts.isEmpty ? 'কোনো রেজিস্টার নির্বাচন করা হয়নি' : parts.join('  ·  ');
+    return parts.isEmpty ? 'reg_summary_full_empty'.tr : parts.join('  ·  ');
   }
 
   Widget _summary() {
@@ -412,7 +416,7 @@ class _RegistersScreenState extends State<RegistersScreen> {
           const Icon(Icons.cloud_off_rounded, size: 16, color: AppColors.warningYellow),
           const SizedBox(width: 6),
           Expanded(
-            child: Text('অফলাইন — সর্বশেষ সংরক্ষিত তালিকা থেকে তৈরি হচ্ছে।',
+            child: Text('reg_cache_note'.tr,
                 style: AppTextStyles.label.copyWith(color: AppColors.warningYellow)),
           ),
         ],

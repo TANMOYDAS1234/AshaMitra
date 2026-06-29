@@ -13,18 +13,19 @@ import '../../../patients/controller/patient_controller.dart';
 import '../../../patients/data/models/patient_model.dart';
 
 // Family-planning methods, in the order the eligible-couple register lists them.
+// Keys are stored values; display labels are resolved via .tr at render time.
 const _fpMethods = <String, String>{
-  'none': 'কোনো পদ্ধতি নয়',
-  'condom': 'কন্ডোম',
-  'ocp': 'বড়ি (OCP)',
-  'iucd': 'কপার-টি (IUCD)',
-  'injectable': 'অন্তরা ইনজেকশন',
-  'female_sterilization': 'মহিলা বন্ধ্যাকরণ',
-  'male_sterilization': 'পুরুষ বন্ধ্যাকরণ (NSV)',
-  'other': 'অন্যান্য',
+  'none': 'ec_fp_none',
+  'condom': 'ec_fp_condom',
+  'ocp': 'ec_fp_ocp',
+  'iucd': 'ec_fp_iucd',
+  'injectable': 'ec_fp_injectable',
+  'female_sterilization': 'ec_fp_female_sterilization',
+  'male_sterilization': 'ec_fp_male_sterilization',
+  'other': 'ec_fp_other',
 };
 
-String _fpLabel(String k) => _fpMethods[k] ?? 'কোনো পদ্ধতি নয়';
+String _fpLabel(String k) => (_fpMethods[k] ?? 'ec_fp_none').tr;
 
 String _fmtDate(dynamic iso) {
   final d = DateTime.tryParse((iso ?? '').toString());
@@ -95,7 +96,7 @@ class EligibleCoupleListScreen extends StatelessWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('নতুন দম্পতি'),
+        label: Text('ec_new_couple'.tr),
         onPressed: () => Get.to(() => const EligibleCoupleFormScreen()),
       ),
       body: Container(
@@ -104,11 +105,11 @@ class EligibleCoupleListScreen extends StatelessWidget {
           child: Column(
             children: [
               AppHeader(
-                title: 'যোগ্য দম্পতি (পরিবার পরিকল্পনা)',
+                title: 'ec_list_title'.tr,
                 actions: [
                   HeaderActionCircle(
                     icon: Icons.refresh_rounded,
-                    tooltip: 'রিফ্রেশ',
+                    tooltip: 'ec_refresh'.tr,
                     onTap: ctrl.syncFromServer,
                   ),
                 ],
@@ -139,7 +140,8 @@ class EligibleCoupleListScreen extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8, left: 4),
                             child: Text(
-                                'প্রস্তাবিত (রেজিস্টার থেকে — ${suggestions.length} জন)',
+                                'ec_suggested_from_register'.trParams(
+                                    {'count': '${suggestions.length}'}),
                                 style: AppTextStyles.label.copyWith(
                                     color: AppColors.primary, fontWeight: FontWeight.w700)),
                           ),
@@ -166,12 +168,12 @@ class EligibleCoupleListScreen extends StatelessWidget {
                 size: 64, color: AppColors.primary.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             Center(
-              child: Text('এখনও কোনো দম্পতি নেই',
+              child: Text('ec_empty_title'.tr,
                   style: AppTextStyles.h3.copyWith(color: AppColors.textSecondary)),
             ),
             const SizedBox(height: 8),
             Center(
-              child: Text('যোগ্য দম্পতি যোগ করতে নিচের বোতাম চাপুন',
+              child: Text('ec_empty_subtitle'.tr,
                   style: AppTextStyles.label.copyWith(color: AppColors.textSecondary)),
             ),
           ],
@@ -231,7 +233,7 @@ class _CoupleCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                          suggested ? 'প্রস্তাবিত' : (closed ? 'বন্ধ' : _fpLabel(method)),
+                          suggested ? 'ec_chip_suggested'.tr : (closed ? 'ec_chip_closed'.tr : _fpLabel(method)),
                           style: AppTextStyles.caption
                               .copyWith(color: color, fontWeight: FontWeight.w700)),
                     ),
@@ -243,14 +245,17 @@ class _CoupleCard extends StatelessWidget {
                     if ((data['village'] ?? '').toString().isNotEmpty) data['village'],
                     if ((data['sons'] ?? '').toString().isNotEmpty ||
                         (data['daughters'] ?? '').toString().isNotEmpty)
-                      'সন্তান: ${data['sons'] ?? 0} ছেলে, ${data['daughters'] ?? 0} মেয়ে',
+                      'ec_children_summary'.trParams({
+                        'sons': '${data['sons'] ?? 0}',
+                        'daughters': '${data['daughters'] ?? 0}',
+                      }),
                   ].join('  ·  '),
                   style: AppTextStyles.label.copyWith(color: AppColors.textSecondary),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                 ),
                 if (follow.isNotEmpty) ...[
                   const SizedBox(height: 4),
-                  Text('পরবর্তী ফলো-আপ: $follow',
+                  Text('ec_next_followup'.trParams({'date': follow}),
                       style: AppTextStyles.caption
                           .copyWith(color: highRisk ? AppColors.emergencyRed : AppColors.primary)),
                 ],
@@ -333,7 +338,7 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
   String? _aadhaar(String? v) {
     final s = (v ?? '').trim();
     if (s.isEmpty) return null;
-    return RegExp(r'^\d{12}$').hasMatch(s) ? null : '১২ সংখ্যার আধার দিন';
+    return RegExp(r'^\d{12}$').hasMatch(s) ? null : 'ec_aadhaar_invalid'.tr;
   }
 
   Future<void> _pickFollowUp() async {
@@ -372,7 +377,7 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
     };
     await ctrl.upsert(rec);
     Get.back();
-    Get.snackbar('যোগ্য দম্পতি', 'সংরক্ষিত হয়েছে ✓',
+    Get.snackbar('ec_snack_title'.tr, 'ec_snack_saved'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.safeGreen,
         colorText: Colors.white,
@@ -389,7 +394,7 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: _editingId.isEmpty ? 'নতুন দম্পতি' : 'দম্পতি সম্পাদনা'),
+              AppHeader(title: _editingId.isEmpty ? 'ec_new_couple'.tr : 'ec_edit_couple'.tr),
               const SizedBox(height: 12),
               Expanded(
                 child: SingleChildScrollView(
@@ -400,26 +405,26 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         AppInput(
-                          hint: 'স্ত্রীর নাম',
-                          label: 'স্ত্রীর নাম',
+                          hint: 'ec_wife_name'.tr,
+                          label: 'ec_wife_name'.tr,
                           controller: _wife,
                           prefixIcon: const Icon(Icons.person_outline_rounded,
                               color: AppColors.primary, size: 20),
                           validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'নাম দিন' : null,
+                              (v == null || v.trim().isEmpty) ? 'ec_name_required'.tr : null,
                         ),
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: 'স্বামীর নাম',
-                          label: 'স্বামীর নাম',
+                          hint: 'ec_husband_name'.tr,
+                          label: 'ec_husband_name'.tr,
                           controller: _husband,
                           prefixIcon: const Icon(Icons.person_outline_rounded,
                               color: AppColors.primary, size: 20),
                         ),
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: '১২ সংখ্যার আধার নম্বর',
-                          label: 'স্ত্রীর আধার নম্বর',
+                          hint: 'ec_aadhaar_hint'.tr,
+                          label: 'ec_wife_aadhaar'.tr,
                           controller: _wifeAadhaar,
                           keyboardType: TextInputType.number,
                           maxLength: 12,
@@ -429,8 +434,8 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                         ),
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: '১২ সংখ্যার আধার নম্বর (ঐচ্ছিক)',
-                          label: 'স্বামীর আধার নম্বর',
+                          hint: 'ec_aadhaar_hint_optional'.tr,
+                          label: 'ec_husband_aadhaar'.tr,
                           controller: _husbandAadhaar,
                           keyboardType: TextInputType.number,
                           maxLength: 12,
@@ -442,8 +447,8 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                         Row(children: [
                           Expanded(
                             child: AppInput(
-                              hint: 'স্ত্রীর বয়স',
-                              label: 'স্ত্রীর বয়স',
+                              hint: 'ec_wife_age'.tr,
+                              label: 'ec_wife_age'.tr,
                               controller: _wifeAge,
                               keyboardType: TextInputType.number,
                             ),
@@ -451,8 +456,8 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: AppInput(
-                              hint: 'স্বামীর বয়স',
-                              label: 'স্বামীর বয়স',
+                              hint: 'ec_husband_age'.tr,
+                              label: 'ec_husband_age'.tr,
                               controller: _husbandAge,
                               keyboardType: TextInputType.number,
                             ),
@@ -462,8 +467,8 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                         Row(children: [
                           Expanded(
                             child: AppInput(
-                              hint: 'গ্রাম / এলাকা',
-                              label: 'গ্রাম',
+                              hint: 'ec_village_hint'.tr,
+                              label: 'ec_village'.tr,
                               controller: _village,
                               prefixIcon: const Icon(Icons.location_on_outlined,
                                   color: AppColors.primary, size: 20),
@@ -472,8 +477,8 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: AppInput(
-                              hint: 'মোবাইল',
-                              label: 'মোবাইল',
+                              hint: 'ec_mobile'.tr,
+                              label: 'ec_mobile'.tr,
                               controller: _mobile,
                               keyboardType: TextInputType.phone,
                               maxLength: 10,
@@ -484,8 +489,8 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                         Row(children: [
                           Expanded(
                             child: AppInput(
-                              hint: 'জীবিত ছেলে',
-                              label: 'ছেলে',
+                              hint: 'ec_sons_hint'.tr,
+                              label: 'ec_sons'.tr,
                               controller: _sons,
                               keyboardType: TextInputType.number,
                             ),
@@ -493,8 +498,8 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: AppInput(
-                              hint: 'জীবিত মেয়ে',
-                              label: 'মেয়ে',
+                              hint: 'ec_daughters_hint'.tr,
+                              label: 'ec_daughters'.tr,
                               controller: _daughters,
                               keyboardType: TextInputType.number,
                             ),
@@ -502,12 +507,12 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                         ]),
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: 'সর্বকনিষ্ঠ সন্তানের বয়স (যেমন ৮ মাস)',
-                          label: 'সর্বকনিষ্ঠ সন্তানের বয়স',
+                          hint: 'ec_youngest_child_age_hint'.tr,
+                          label: 'ec_youngest_child_age'.tr,
                           controller: _youngest,
                         ),
                         const SizedBox(height: 14),
-                        Text('বর্তমান পদ্ধতি', style: AppTextStyles.label),
+                        Text('ec_current_method'.tr, style: AppTextStyles.label),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
                           initialValue: _method,
@@ -516,12 +521,12 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                           onChanged: (v) => setState(() => _method = v ?? 'none'),
                           items: _fpMethods.entries
                               .map((e) => DropdownMenuItem(
-                                  value: e.key, child: Text(e.value)))
+                                  value: e.key, child: Text(e.value.tr)))
                               .toList(),
                         ),
                         const SizedBox(height: 14),
                         _DateField(
-                          label: 'পরবর্তী ফলো-আপ তারিখ',
+                          label: 'ec_next_followup_date'.tr,
                           value: _followUp,
                           onTap: _pickFollowUp,
                           onClear: () => setState(() => _followUp = null),
@@ -530,16 +535,16 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           activeThumbColor: AppColors.emergencyRed,
-                          title: Text('উচ্চ ঝুঁকি / অগ্রাধিকার',
+                          title: Text('ec_high_risk'.tr,
                               style: AppTextStyles.label),
                           value: _highRisk,
                           onChanged: (v) => setState(() => _highRisk = v),
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: Text('রেজিস্টার থেকে বন্ধ (closed)',
+                          title: Text('ec_closed_from_register'.tr,
                               style: AppTextStyles.label),
-                          subtitle: Text('প্রজনন বয়স পেরিয়ে গেছে / স্থানান্তরিত',
+                          subtitle: Text('ec_closed_reason'.tr,
                               style: AppTextStyles.caption
                                   .copyWith(color: AppColors.textSecondary)),
                           value: _closed,
@@ -547,14 +552,14 @@ class _EligibleCoupleFormScreenState extends State<EligibleCoupleFormScreen> {
                         ),
                         const SizedBox(height: 8),
                         AppInput(
-                          hint: 'মন্তব্য',
-                          label: 'মন্তব্য',
+                          hint: 'ec_notes'.tr,
+                          label: 'ec_notes'.tr,
                           controller: _notes,
                           maxLines: 3,
                         ),
                         const SizedBox(height: 24),
                         AppButton(
-                          label: 'সংরক্ষণ করুন',
+                          label: 'ec_save'.tr,
                           icon: Icons.check_rounded,
                           width: double.infinity,
                           onPressed: _save,
@@ -588,7 +593,7 @@ class _DateField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final txt = value == null ? 'তারিখ নির্বাচন করুন' : _fmtDate(value!.toIso8601String());
+    final txt = value == null ? 'ec_pick_date'.tr : _fmtDate(value!.toIso8601String());
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

@@ -117,10 +117,10 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
   }
 
   String _caseLabel(String c) => switch (c) {
-        'Pregnancy' => 'গর্ভবতী',
-        'Newborn' => 'নবজাতক',
-        'Child' => 'শিশু',
-        _ => 'অন্যান্য',
+        'Pregnancy' => 'reff_case_pregnancy'.tr,
+        'Newborn' => 'reff_case_newborn'.tr,
+        'Child' => 'reff_case_child'.tr,
+        _ => 'reff_case_other'.tr,
       };
 
   Future<void> _save() async {
@@ -150,7 +150,7 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       Get.back();
-      _snack('রেফারেল হালনাগাদ হয়েছে', AppColors.safeGreen);
+      _snack('reff_snack_updated'.tr, AppColors.safeGreen);
       return;
     }
 
@@ -163,14 +163,14 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
     }
     Get.back();
     if (result.outcome == ReferralSaveOutcome.synced) {
-      _snack('রেফারেল তৈরি হয়েছে ✓ (Atlas-এ সংরক্ষিত)', AppColors.safeGreen);
+      _snack('reff_snack_created_synced'.tr, AppColors.safeGreen);
     } else {
-      _snack('ফোনে সংরক্ষিত — ইন্টারনেট এলে Atlas-এ যাবে', AppColors.warningYellow);
+      _snack('reff_snack_created_offline'.tr, AppColors.warningYellow);
     }
   }
 
   void _snack(String msg, Color color) => Get.snackbar(
-        'রেফারেল', msg,
+        'reff_snack_title'.tr, msg,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: color,
         colorText: Colors.white,
@@ -187,7 +187,7 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: _editing != null ? 'রেফারেল সম্পাদনা' : 'নতুন রেফারেল (Form 3)'),
+              AppHeader(title: _editing != null ? 'reff_header_edit'.tr : 'reff_header_new'.tr),
               const SizedBox(height: 12),
               Expanded(
                 child: SingleChildScrollView(
@@ -198,24 +198,24 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Band selector
-                        Text('জরুরিত্ব', style: AppTextStyles.label),
+                        Text('reff_urgency'.tr, style: AppTextStyles.label),
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            _bandChip('RED', 'জরুরি (RED)', AppColors.emergencyRed),
+                            _bandChip('RED', 'reff_band_red'.tr, AppColors.emergencyRed),
                             const SizedBox(width: 10),
-                            _bandChip('YELLOW', '২৪ ঘণ্টা (YELLOW)', AppColors.warningYellow),
+                            _bandChip('YELLOW', 'reff_band_yellow'.tr, AppColors.warningYellow),
                           ],
                         ),
                         const SizedBox(height: 18),
                         AppInput(
-                          hint: 'রোগীর নাম',
-                          label: 'রোগীর নাম',
+                          hint: 'reff_patient_name'.tr,
+                          label: 'reff_patient_name'.tr,
                           controller: _nameCtrl,
                           prefixIcon: const Icon(Icons.person_outline_rounded,
                               color: AppColors.primary, size: 20),
                           validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'নাম দিন' : null,
+                              (v == null || v.trim().isEmpty) ? 'reff_val_name'.tr : null,
                         ),
                         const SizedBox(height: 14),
                         Row(
@@ -223,8 +223,8 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
                           children: [
                             Expanded(
                               child: AppInput(
-                                hint: 'বয়স',
-                                label: 'বয়স',
+                                hint: 'reff_age'.tr,
+                                label: 'reff_age'.tr,
                                 controller: _ageCtrl,
                                 prefixIcon: const Icon(Icons.cake_outlined,
                                     color: AppColors.primary, size: 20),
@@ -235,7 +235,7 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('লিঙ্গ', style: AppTextStyles.label),
+                                  Text('reff_gender'.tr, style: AppTextStyles.label),
                                   const SizedBox(height: 6),
                                   DropdownButtonFormField<String>(
                                     initialValue: _gender,
@@ -243,10 +243,10 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
                                     style: AppTextStyles.body,
                                     decoration: const InputDecoration(),
                                     onChanged: (v) => setState(() => _gender = v!),
-                                    items: const [
-                                      DropdownMenuItem(value: 'Female', child: Text('মহিলা')),
-                                      DropdownMenuItem(value: 'Male', child: Text('পুরুষ')),
-                                      DropdownMenuItem(value: 'Other', child: Text('অন্যান্য')),
+                                    items: [
+                                      DropdownMenuItem(value: 'Female', child: Text('reff_gender_female'.tr)),
+                                      DropdownMenuItem(value: 'Male', child: Text('reff_gender_male'.tr)),
+                                      DropdownMenuItem(value: 'Other', child: Text('reff_gender_other'.tr)),
                                     ],
                                   ),
                                 ],
@@ -256,7 +256,7 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
                         ),
                         const SizedBox(height: 14),
                         // Case type chips
-                        Text('কেস', style: AppTextStyles.label),
+                        Text('reff_case'.tr, style: AppTextStyles.label),
                         const SizedBox(height: 8),
                         Wrap(
                           spacing: 10,
@@ -276,22 +276,22 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
                         ),
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: 'অভিভাবক / স্বামীর নাম',
-                          label: 'অভিভাবক',
+                          hint: 'reff_guardian_hint'.tr,
+                          label: 'reff_guardian'.tr,
                           controller: _guardianCtrl,
                         ),
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: 'গ্রাম / এলাকা',
-                          label: 'গ্রাম',
+                          hint: 'reff_village_hint'.tr,
+                          label: 'reff_village'.tr,
                           controller: _villageCtrl,
                           prefixIcon: const Icon(Icons.location_on_outlined,
                               color: AppColors.primary, size: 20),
                         ),
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: 'মোবাইল নম্বর',
-                          label: 'মোবাইল',
+                          hint: 'reff_mobile_hint'.tr,
+                          label: 'reff_mobile'.tr,
                           controller: _mobileCtrl,
                           keyboardType: TextInputType.phone,
                           maxLength: 10,
@@ -300,12 +300,12 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
                         ),
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: 'অসুস্থতার লক্ষণ / বিপদচিহ্ন',
-                          label: 'লক্ষণ',
+                          hint: 'reff_symptoms_hint'.tr,
+                          label: 'reff_symptoms'.tr,
                           controller: _symptomsCtrl,
                           maxLines: 3,
                           validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'লক্ষণ লিখুন' : null,
+                              (v == null || v.trim().isEmpty) ? 'reff_val_symptoms'.tr : null,
                         ),
                         if (_isChild) ...[
                           const SizedBox(height: 14),
@@ -314,8 +314,8 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
                             children: [
                               Expanded(
                                 child: AppInput(
-                                  hint: 'ওজন (কেজি)',
-                                  label: 'বর্তমান ওজন',
+                                  hint: 'reff_weight_hint'.tr,
+                                  label: 'reff_weight'.tr,
                                   controller: _weightCtrl,
                                   keyboardType: TextInputType.number,
                                 ),
@@ -323,8 +323,8 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: AppInput(
-                                  hint: 'IMNCI শ্রেণি',
-                                  label: 'IMNCI',
+                                  hint: 'reff_imnci_hint'.tr,
+                                  label: 'reff_imnci'.tr,
                                   controller: _imnciCtrl,
                                 ),
                               ),
@@ -333,24 +333,24 @@ class _ReferralFormScreenState extends State<ReferralFormScreen> {
                         ],
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: 'কোন ওষুধ দেওয়া হয়েছে',
-                          label: 'ওষুধ দেওয়া হয়েছে',
+                          hint: 'reff_meds_hint'.tr,
+                          label: 'reff_meds'.tr,
                           controller: _medsCtrl,
                           maxLines: 2,
                         ),
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: 'যে কেন্দ্রে রেফার (FRU / PHC / জেলা হাসপাতাল)',
-                          label: 'রেফার করা হয়েছে',
+                          hint: 'reff_referred_to_hint'.tr,
+                          label: 'reff_referred_to'.tr,
                           controller: _referredToCtrl,
                           prefixIcon: const Icon(Icons.local_hospital_outlined,
                               color: AppColors.primary, size: 20),
                           validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'কেন্দ্রের নাম দিন' : null,
+                              (v == null || v.trim().isEmpty) ? 'reff_val_referred_to'.tr : null,
                         ),
                         const SizedBox(height: 28),
                         AppButton(
-                          label: _editing != null ? 'হালনাগাদ করুন' : 'রেফারেল তৈরি করুন',
+                          label: _editing != null ? 'reff_btn_update'.tr : 'reff_btn_create'.tr,
                           onPressed: _saving ? null : _save,
                           isLoading: _saving,
                           width: double.infinity,

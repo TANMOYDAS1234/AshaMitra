@@ -14,25 +14,29 @@ import '../../../patients/data/models/patient_model.dart';
 import '../../../eligible_couples/presentation/screens/eligible_couple_screen.dart'
     show DatePickField;
 
-const _sexes = <String, String>{'Female': 'মেয়ে / মহিলা', 'Male': 'ছেলে / পুরুষ', 'Other': 'অন্যান্য'};
-const _places = <String, String>{
-  'home': 'বাড়ি',
-  'institution': 'প্রতিষ্ঠান (হাসপাতাল)',
-  'transit': 'পথে',
-  'other': 'অন্যান্য',
-};
-const _deliveryTypes = <String, String>{
-  'normal': 'স্বাভাবিক',
-  'caesarean': 'সিজার',
-  'assisted': 'যন্ত্রসহায়',
-};
-const _attendedBy = <String, String>{
-  'doctor': 'ডাক্তার',
-  'anm': 'ANM',
-  'sba': 'প্রশিক্ষিত (SBA)',
-  'tba': 'দাই (TBA)',
-  'relative': 'আত্মীয়',
-};
+Map<String, String> get _sexes => {
+      'Female': 've_sex_female'.tr,
+      'Male': 've_sex_male'.tr,
+      'Other': 've_sex_other'.tr,
+    };
+Map<String, String> get _places => {
+      'home': 've_place_home'.tr,
+      'institution': 've_place_institution'.tr,
+      'transit': 've_place_transit'.tr,
+      'other': 've_place_other'.tr,
+    };
+Map<String, String> get _deliveryTypes => {
+      'normal': 've_delivery_normal'.tr,
+      'caesarean': 've_delivery_caesarean'.tr,
+      'assisted': 've_delivery_assisted'.tr,
+    };
+Map<String, String> get _attendedBy => {
+      'doctor': 've_attended_doctor'.tr,
+      'anm': 've_attended_anm'.tr,
+      'sba': 've_attended_sba'.tr,
+      'tba': 've_attended_tba'.tr,
+      'relative': 've_attended_relative'.tr,
+    };
 
 String _fmtDate(dynamic iso) {
   final d = DateTime.tryParse((iso ?? '').toString());
@@ -99,7 +103,7 @@ class VitalEventListScreen extends StatelessWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('নতুন নথি'),
+        label: Text('ve_new_record'.tr),
         onPressed: () => Get.to(() => const VitalEventFormScreen()),
       ),
       body: Container(
@@ -108,11 +112,11 @@ class VitalEventListScreen extends StatelessWidget {
           child: Column(
             children: [
               AppHeader(
-                title: 'জন্ম ও মৃত্যু নথি',
+                title: 've_list_title'.tr,
                 actions: [
                   HeaderActionCircle(
                     icon: Icons.refresh_rounded,
-                    tooltip: 'রিফ্রেশ',
+                    tooltip: 've_refresh'.tr,
                     onTap: ctrl.syncFromServer,
                   ),
                 ],
@@ -141,7 +145,9 @@ class VitalEventListScreen extends StatelessWidget {
                         if (pending > 0)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 10, left: 4),
-                            child: Text('$pending টি নথিভুক্তি বাকি (CRS)',
+                            child: Text(
+                                've_pending_registration'
+                                    .trParams({'count': '$pending'}),
                                 style: AppTextStyles.label
                                     .copyWith(color: AppColors.accent)),
                           ),
@@ -151,7 +157,8 @@ class VitalEventListScreen extends StatelessWidget {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8, left: 4),
                             child: Text(
-                                'প্রস্তাবিত (রেজিস্টার থেকে — ${suggestions.length} টি জন্ম)',
+                                've_suggested_header'.trParams(
+                                    {'count': '${suggestions.length}'}),
                                 style: AppTextStyles.label.copyWith(
                                     color: AppColors.primary, fontWeight: FontWeight.w700)),
                           ),
@@ -178,12 +185,12 @@ class VitalEventListScreen extends StatelessWidget {
                 size: 64, color: AppColors.primary.withValues(alpha: 0.4)),
             const SizedBox(height: 16),
             Center(
-              child: Text('এখনও কোনো নথি নেই',
+              child: Text('ve_empty_title'.tr,
                   style: AppTextStyles.h3.copyWith(color: AppColors.textSecondary)),
             ),
             const SizedBox(height: 8),
             Center(
-              child: Text('জন্ম বা মৃত্যু যোগ করতে নিচের বোতাম চাপুন',
+              child: Text('ve_empty_subtitle'.tr,
                   style: AppTextStyles.label.copyWith(color: AppColors.textSecondary)),
             ),
           ],
@@ -228,15 +235,17 @@ class _VitalCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        name.isNotEmpty ? name : (isBirth ? 'নবজাতক' : 'মৃত ব্যক্তি'),
+                        name.isNotEmpty
+                            ? name
+                            : (isBirth ? 've_newborn'.tr : 've_deceased'.tr),
                         style: AppTextStyles.h3,
                         maxLines: 1, overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Builder(builder: (_) {
                       final (label, chipColor) = suggested
-                          ? ('প্রস্তাবিত', AppColors.primary)
-                          : (registered ? 'নথিভুক্ত' : 'বাকি',
+                          ? ('ve_chip_suggested'.tr, AppColors.primary)
+                          : (registered ? 've_chip_registered'.tr : 've_chip_pending'.tr,
                               registered ? AppColors.safeGreen : AppColors.accent);
                       return Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -254,7 +263,7 @@ class _VitalCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   [
-                    isBirth ? 'জন্ম' : 'মৃত্যু',
+                    isBirth ? 've_birth'.tr : 've_death'.tr,
                     if (date.isNotEmpty) date,
                     if ((data['village'] ?? '').toString().isNotEmpty) data['village'],
                   ].join('  ·  '),
@@ -387,7 +396,7 @@ class _VitalEventFormScreenState extends State<VitalEventFormScreen> {
     };
     await _vitalCtrl().upsert(rec);
     Get.back();
-    Get.snackbar('জন্ম ও মৃত্যু', 'সংরক্ষিত হয়েছে ✓',
+    Get.snackbar('ve_snack_title'.tr, 've_snack_saved'.tr,
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.safeGreen,
         colorText: Colors.white,
@@ -452,7 +461,7 @@ class _VitalEventFormScreenState extends State<VitalEventFormScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: _editingId.isEmpty ? 'নতুন নথি' : 'নথি সম্পাদনা'),
+              AppHeader(title: _editingId.isEmpty ? 've_new_record'.tr : 've_edit_record'.tr),
               const SizedBox(height: 12),
               Expanded(
                 child: SingleChildScrollView(
@@ -463,31 +472,31 @@ class _VitalEventFormScreenState extends State<VitalEventFormScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(children: [
-                          _typeChip('birth', 'জন্ম', Icons.child_friendly_rounded,
+                          _typeChip('birth', 've_birth'.tr, Icons.child_friendly_rounded,
                               AppColors.safeGreen),
                           const SizedBox(width: 12),
-                          _typeChip('death', 'মৃত্যু', Icons.local_florist_rounded,
+                          _typeChip('death', 've_death'.tr, Icons.local_florist_rounded,
                               AppColors.emergencyRed),
                         ]),
                         const SizedBox(height: 18),
                         AppInput(
-                          hint: isBirth ? 'নবজাতকের নাম (থাকলে)' : 'মৃত ব্যক্তির নাম',
-                          label: isBirth ? 'নবজাতকের নাম' : 'নাম',
+                          hint: isBirth ? 've_name_hint_birth'.tr : 've_name_hint_death'.tr,
+                          label: isBirth ? 've_name_label_birth'.tr : 've_name_label_death'.tr,
                           controller: _name,
                           prefixIcon: const Icon(Icons.person_outline_rounded,
                               color: AppColors.primary, size: 20),
                           validator: (v) => (!isBirth && (v == null || v.trim().isEmpty))
-                              ? 'নাম দিন'
+                              ? 've_name_required'.tr
                               : null,
                         ),
                         const SizedBox(height: 14),
                         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Expanded(child: _dropdown('লিঙ্গ', _sex, _sexes,
+                          Expanded(child: _dropdown('ve_sex'.tr, _sex, _sexes,
                               (v) => setState(() => _sex = v))),
                           const SizedBox(width: 12),
                           Expanded(
                             child: DatePickField(
-                              label: isBirth ? 'জন্ম তারিখ' : 'মৃত্যুর তারিখ',
+                              label: isBirth ? 've_birth_date'.tr : 've_death_date'.tr,
                               value: _eventDate,
                               onTap: _pickDate,
                               onClear: () => setState(() => _eventDate = null),
@@ -495,20 +504,20 @@ class _VitalEventFormScreenState extends State<VitalEventFormScreen> {
                           ),
                         ]),
                         const SizedBox(height: 14),
-                        _dropdown(isBirth ? 'জন্মস্থান' : 'মৃত্যুর স্থান', _place, _places,
+                        _dropdown(isBirth ? 've_place_birth'.tr : 've_place_death'.tr, _place, _places,
                             (v) => setState(() => _place = v)),
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: 'প্রতিষ্ঠানের নাম (থাকলে)',
-                          label: 'প্রতিষ্ঠান',
+                          hint: 've_facility_hint'.tr,
+                          label: 've_facility_label'.tr,
                           controller: _facility,
                         ),
                         const SizedBox(height: 14),
                         Row(children: [
                           Expanded(
                             child: AppInput(
-                              hint: 'গ্রাম / এলাকা',
-                              label: 'গ্রাম',
+                              hint: 've_village_hint'.tr,
+                              label: 've_village_label'.tr,
                               controller: _village,
                               prefixIcon: const Icon(Icons.location_on_outlined,
                                   color: AppColors.primary, size: 20),
@@ -517,8 +526,8 @@ class _VitalEventFormScreenState extends State<VitalEventFormScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: AppInput(
-                              hint: 'মোবাইল',
-                              label: 'মোবাইল',
+                              hint: 've_mobile'.tr,
+                              label: 've_mobile'.tr,
                               controller: _mobile,
                               keyboardType: TextInputType.phone,
                               maxLength: 10,
@@ -529,16 +538,16 @@ class _VitalEventFormScreenState extends State<VitalEventFormScreen> {
                         Row(children: [
                           Expanded(
                             child: AppInput(
-                              hint: 'মায়ের নাম',
-                              label: 'মায়ের নাম',
+                              hint: 've_mother_name'.tr,
+                              label: 've_mother_name'.tr,
                               controller: _mother,
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: AppInput(
-                              hint: 'বাবার নাম',
-                              label: 'বাবার নাম',
+                              hint: 've_father_name'.tr,
+                              label: 've_father_name'.tr,
                               controller: _father,
                             ),
                           ),
@@ -547,32 +556,32 @@ class _VitalEventFormScreenState extends State<VitalEventFormScreen> {
                         // ── Birth-specific ──
                         if (isBirth) ...[
                           AppInput(
-                            hint: 'জন্ম ওজন (কেজি)',
-                            label: 'জন্ম ওজন',
+                            hint: 've_birth_weight_hint'.tr,
+                            label: 've_birth_weight_label'.tr,
                             controller: _birthWeight,
                             keyboardType: const TextInputType.numberWithOptions(decimal: true),
                             prefixIcon: const Icon(Icons.monitor_weight_outlined,
                                 color: AppColors.primary, size: 20),
                           ),
                           const SizedBox(height: 14),
-                          _dropdown('প্রসবের ধরন', _deliveryType, _deliveryTypes,
+                          _dropdown('ve_delivery_type'.tr, _deliveryType, _deliveryTypes,
                               (v) => setState(() => _deliveryType = v)),
                           const SizedBox(height: 14),
-                          _dropdown('কে প্রসব করিয়েছেন', _attended, _attendedBy,
+                          _dropdown('ve_attended_by'.tr, _attended, _attendedBy,
                               (v) => setState(() => _attended = v)),
                           const SizedBox(height: 14),
                         ],
                         // ── Death-specific ──
                         if (!isBirth) ...[
                           AppInput(
-                            hint: 'মৃত্যুকালীন বয়স (যেমন ৩২ বছর / ৫ দিন)',
-                            label: 'বয়স',
+                            hint: 've_age_at_death_hint'.tr,
+                            label: 've_age_at_death_label'.tr,
                             controller: _ageAtDeath,
                           ),
                           const SizedBox(height: 14),
                           AppInput(
-                            hint: 'মৃত্যুর সম্ভাব্য কারণ',
-                            label: 'মৃত্যুর কারণ',
+                            hint: 've_cause_hint'.tr,
+                            label: 've_cause_label'.tr,
                             controller: _cause,
                             maxLines: 2,
                           ),
@@ -580,7 +589,7 @@ class _VitalEventFormScreenState extends State<VitalEventFormScreen> {
                           SwitchListTile(
                             contentPadding: EdgeInsets.zero,
                             activeThumbColor: AppColors.emergencyRed,
-                            title: Text('মাতৃমৃত্যু (গর্ভাবস্থা/প্রসব/৪২ দিন)',
+                            title: Text('ve_maternal_death'.tr,
                                 style: AppTextStyles.label),
                             value: _maternalDeath,
                             onChanged: (v) => setState(() => _maternalDeath = v),
@@ -588,7 +597,7 @@ class _VitalEventFormScreenState extends State<VitalEventFormScreen> {
                           SwitchListTile(
                             contentPadding: EdgeInsets.zero,
                             activeThumbColor: AppColors.emergencyRed,
-                            title: Text('শিশুমৃত্যু (< ১ বছর)', style: AppTextStyles.label),
+                            title: Text('ve_infant_death'.tr, style: AppTextStyles.label),
                             value: _infantDeath,
                             onChanged: (v) => setState(() => _infantDeath = v),
                           ),
@@ -598,28 +607,28 @@ class _VitalEventFormScreenState extends State<VitalEventFormScreen> {
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           activeThumbColor: AppColors.safeGreen,
-                          title: Text('CRS-এ নথিভুক্ত হয়েছে', style: AppTextStyles.label),
+                          title: Text('ve_registered_switch'.tr, style: AppTextStyles.label),
                           value: _registered,
                           onChanged: (v) => setState(() => _registered = v),
                         ),
                         if (_registered) ...[
                           const SizedBox(height: 8),
                           AppInput(
-                            hint: 'রেজিস্ট্রেশন নম্বর',
-                            label: 'রেজিস্ট্রেশন নম্বর',
+                            hint: 've_registration_no'.tr,
+                            label: 've_registration_no'.tr,
                             controller: _regNo,
                           ),
                         ],
                         const SizedBox(height: 14),
                         AppInput(
-                          hint: 'মন্তব্য',
-                          label: 'মন্তব্য',
+                          hint: 've_notes'.tr,
+                          label: 've_notes'.tr,
                           controller: _notes,
                           maxLines: 3,
                         ),
                         const SizedBox(height: 24),
                         AppButton(
-                          label: 'সংরক্ষণ করুন',
+                          label: 've_save'.tr,
                           icon: Icons.check_rounded,
                           width: double.infinity,
                           onPressed: _save,
