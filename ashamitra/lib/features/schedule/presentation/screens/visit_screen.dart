@@ -10,9 +10,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_input.dart';
-import '../../../../shared/widgets/patient_photo.dart';
 import '../../../../shared/widgets/module_art.dart';
-import '../../../patients/controller/patient_controller.dart';
 
 /// Unified "conduct visit" screen — one UI shell for every scheduled visit
 /// type (ANC, immunization, HBNC newborn home visit). The body adapts to the
@@ -568,14 +566,18 @@ class _VisitScreenState extends State<VisitScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: _label),
+              AppHeader(
+                title: _e['patientName']?.toString().trim().isNotEmpty == true
+                    ? _e['patientName'].toString()
+                    : 'রোগী',
+                subtitle: _label, // the ANC/checkup name now sits under the name
+              ),
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _patientCard(),
                       _moduleIllustration(),
                       const SizedBox(height: 16),
                       if (_tooEarly) ...[
@@ -622,112 +624,27 @@ class _VisitScreenState extends State<VisitScreen> {
     );
   }
 
-  /// The patient's registration photo (if any), looked up from the cached
-  /// patient list by the event's patientId. Null → header falls back to the
-  /// illustration/icon.
-  ImageProvider? _patientPhoto() {
-    final pid = _e['patientId']?.toString() ?? '';
-    if (pid.isEmpty || !Get.isRegistered<PatientController>()) return null;
-    final list = Get.find<PatientController>().patients;
-    final i = list.indexWhere((p) => p.id == pid);
-    if (i == -1) return null;
-    return patientPhotoProvider(list[i].mcpDetails['photo']?.toString());
-  }
-
   /// Big, MCP-card-style illustration banner per module — makes the visit feel
   /// friendly + easy. Drop an image at `assets/illustrations/<kind>.png`
   /// (anc / pnc / hbnc / hbyc / vaccine) and it shows here automatically;
   /// absent → nothing (zero-height, no gap).
-  Widget _moduleIllustration() => ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+  Widget _moduleIllustration() => Container(
+        height: 200,
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          // Soft tinted backdrop so the contained image's letterbox blends in.
+          color: const Color(0xFFFDEFE9),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        // Show the FULL illustration (no cropping) — fit inside the banner.
         child: Image.asset(
           'assets/illustrations/$_kind.png',
-          height: 168,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          alignment: Alignment.topCenter, // keep the face/head fully visible
+          fit: BoxFit.contain,
           // No PNG dropped in → show the code-drawn illustration for this module.
-          errorBuilder: (_, __, ___) => ModuleArt(kind: _kind, height: 168),
+          errorBuilder: (_, __, ___) => ModuleArt(kind: _kind, height: 200),
         ),
       );
-
-  Widget _patientCard() {
-    final color = switch (_kind) {
-      'vaccine' => const Color(0xFF6366F1),
-      'anc' => AppColors.primary,
-      'hbnc' => AppColors.sky,
-      'hbyc' => const Color(0xFF10B981),
-      'pnc' => const Color(0xFFEC4899),
-      _ => AppColors.primary,
-    };
-    final icon = switch (_kind) {
-      'vaccine' => Icons.vaccines_rounded,
-      'anc' => Icons.pregnant_woman_rounded,
-      'hbnc' => Icons.child_care_rounded,
-      'hbyc' => Icons.child_friendly_rounded,
-      'pnc' => Icons.volunteer_activism_rounded,
-      _ => Icons.event_note_rounded,
-    };
-    // The patient's own photo (from registration) takes priority over the
-    // generic illustration — resolve it from the cached patient list by id.
-    final photo = _patientPhoto();
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withValues(alpha: 0.18), color.withValues(alpha: 0.04)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withValues(alpha: 0.22)),
-      ),
-      child: Row(
-        children: [
-          // Friendly illustration — drop a PNG at assets/illustrations/<kind>.png
-          // (anc/hbnc/hbyc/vaccine). Falls back to a Material icon when absent,
-          // so a missing file never breaks anything.
-          Container(
-            width: 58,
-            height: 58,
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.6),
-              shape: BoxShape.circle,
-              image: photo != null
-                  ? DecorationImage(image: photo, fit: BoxFit.cover)
-                  : null,
-            ),
-            // Priority: patient photo → illustration PNG → Material icon.
-            child: photo != null ? null : Icon(icon, color: color, size: 30),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_e['patientName']?.toString() ?? 'রোগী',
-                    style: AppTextStyles.h3),
-                // The visit name is already in the screen header — show the
-                // phone here instead (or nothing) to avoid the duplicate label.
-                if ((_e['patientMobile']?.toString() ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Icon(Icons.phone_outlined, size: 13, color: color),
-                      const SizedBox(width: 4),
-                      Text(_e['patientMobile'].toString(),
-                          style: AppTextStyles.label.copyWith(color: color)),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   List<Widget> _body() {
     switch (_kind) {
