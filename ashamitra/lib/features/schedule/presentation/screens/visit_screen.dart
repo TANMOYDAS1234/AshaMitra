@@ -8,9 +8,15 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../../app/routes.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/module_art.dart';
+import '../../../../shared/widgets/patient_photo.dart';
+import '../../../patients/controller/patient_controller.dart';
+import '../../../patients/data/models/patient_model.dart';
+import '../../services/reminder_service.dart';
 
 /// Unified "conduct visit" screen — one UI shell for every scheduled visit
 /// type (ANC, immunization, HBNC newborn home visit). The body adapts to the
@@ -545,12 +551,101 @@ class _VisitScreenState extends State<VisitScreen> {
     }
     _completed = true;
     await LocalStorageService.clearVisitDraft(_id); // visit done → drop the draft
+    // Find the next pending checkup for this patient to surface on completion.
+    Map<String, dynamic>? next;
+    final pid = _e['patientId']?.toString() ?? '';
+    if (pid.isNotEmpty) {
+      try {
+        final evs = await ApiService.getScheduleForPatient(pid);
+        final pending = evs
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .where((e) =>
+                (e['status'] ?? '') != 'done' && (e['id']?.toString() ?? '') != _id)
+            .toList()
+          ..sort((a, b) =>
+              (a['dueDate'] ?? '').toString().compareTo((b['dueDate'] ?? '').toString()));
+        if (pending.isNotEmpty) next = pending.first;
+      } catch (_) {}
+    }
+    if (!mounted) {
+      Get.back(result: true);
+      return;
+    }
+    await _showDoneDialog(next);
     Get.back(result: true); // due list refreshes
-    Get.snackbar('ভিজিট সম্পন্ন ✓', '${_e['patientName'] ?? ''} — $_label',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.safeGreen, colorText: Colors.white,
-        margin: const EdgeInsets.all(16), borderRadius: 12,
-        duration: const Duration(seconds: 2));
+  }
+
+  String _fmtDate(dynamic iso) {
+    final d = DateTime.tryParse((iso ?? '').toString());
+    if (d == null) return '';
+    String p(int n) => n.toString().padLeft(2, '0');
+    return '${p(d.day)}/${p(d.month)}/${d.year}';
+  }
+
+  /// Completion confirmation: success + the next checkup date + a one-tap remind.
+  Future<void> _showDoneDialog(Map<String, dynamic>? next) async {
+    final name = (_e['patientName'] ?? '').toString();
+    final nextLabel = (next?['label'] ?? '').toString();
+    final nextDate = next != null ? _fmtDate(next['dueDate']) : '';
+    final action = await Get.dialog<String>(
+      AlertDialog(
+        title: Row(children: const [
+          Icon(Icons.check_circle_rounded, color: AppColors.safeGreen),
+          SizedBox(width: 8),
+          Text('ভিজিট সম্পন্ন'),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$name — $_label সম্পন্ন হয়েছে ✓', style: AppTextStyles.body),
+            const SizedBox(height: 14),
+            if (next != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('পরবর্তী চেকআপ',
+                        style: AppTextStyles.caption
+                            .copyWith(color: AppColors.textSecondary)),
+                    const SizedBox(height: 2),
+                    Text('$nextLabel${nextDate.isNotEmpty ? ' — $nextDate' : ''}',
+                        style: AppTextStyles.label.copyWith(
+                            fontWeight: FontWeight.w700, color: AppColors.primary)),
+                  ],
+                ),
+              )
+            else
+              Text('সব নির্ধারিত চেকআপ সম্পন্ন!',
+                  style: AppTextStyles.label.copyWith(color: AppColors.safeGreen)),
+          ],
+        ),
+        actions: [
+          if (next != null)
+            TextButton.icon(
+              onPressed: () => Get.back(result: 'remind'),
+              icon: const Icon(Icons.notifications_active_outlined, size: 18),
+              label: const Text('মনে করান'),
+            ),
+          TextButton(
+              onPressed: () => Get.back(result: 'ok'), child: const Text('ঠিক আছে')),
+        ],
+      ),
+    );
+    if (action == 'remind' && next != null) {
+      await ReminderService.remind(Get.context!, {
+        ...next,
+        'patientName': name,
+        'patientMobile': _e['patientMobile'] ?? _patient()?.mobile ?? '',
+      });
+    }
   }
 
   @override
@@ -571,6 +666,16 @@ class _VisitScreenState extends State<VisitScreen> {
                     ? _e['patientName'].toString()
                     : 'রোগী',
                 subtitle: _label, // the ANC/checkup name now sits under the name
+                leading: GestureDetector(onTap: _openProfile, child: _headerAvatar()),
+                onTitleTap: _openProfile, // tap name → patient profile
+                actions: [
+                  HeaderActionCircle(
+                    icon: Icons.call_rounded,
+                    tooltip: 'ফোন করুন',
+                    color: AppColors.safeGreen,
+                    onTap: _callPatient,
+                  ),
+                ],
               ),
               Expanded(
                 child: SingleChildScrollView(
@@ -622,6 +727,67 @@ class _VisitScreenState extends State<VisitScreen> {
       ),
       ),
     );
+  }
+
+  // The patient this visit belongs to (from the cached list), for the header
+  // avatar, the "open profile" tap, and the call action.
+  PatientModel? _patient() {
+    final pid = _e['patientId']?.toString() ?? '';
+    if (pid.isEmpty || !Get.isRegistered<PatientController>()) return null;
+    final list = Get.find<PatientController>().patients;
+    final i = list.indexWhere((p) => p.id == pid);
+    return i == -1 ? null : list[i];
+  }
+
+  ImageProvider? _patientPhoto() {
+    final p = _patient();
+    if (p == null) return null;
+    return patientPhotoProvider(p.mcpDetails['photo']?.toString());
+  }
+
+  /// Header avatar — patient photo, or their initial on a tinted circle.
+  Widget _headerAvatar() {
+    final photo = _patientPhoto();
+    final name = (_e['patientName']?.toString() ?? '').trim();
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+      backgroundImage: photo,
+      child: photo == null
+          ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+              style: AppTextStyles.labelLg.copyWith(color: AppColors.primary))
+          : null,
+    );
+  }
+
+  /// Open this patient's profile (draft auto-saves via PopScope; visit stays
+  /// underneath so the worker returns right where they left off).
+  void _openProfile() {
+    final p = _patient();
+    if (p == null) {
+      Get.snackbar('তথ্য নেই', 'রোগীর প্রোফাইল পাওয়া গেল না।',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    Get.toNamed(AppRoutes.patientProfile, arguments: p.toJson());
+  }
+
+  Future<void> _callPatient() async {
+    final mobile =
+        (_e['patientMobile'] ?? _patient()?.mobile ?? '').toString().replaceAll(RegExp(r'\D'), '');
+    if (mobile.isEmpty) {
+      Get.snackbar('নম্বর নেই', 'এই রোগীর মোবাইল নম্বর নেই।',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.warningYellow, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12);
+      return;
+    }
+    try {
+      await launchUrl(Uri.parse('tel:$mobile'), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      Get.snackbar('খুলতে পারিনি', 'ফোন অ্যাপ খোলা গেল না।',
+          snackPosition: SnackPosition.BOTTOM);
+    }
   }
 
   /// Big, MCP-card-style illustration banner per module — makes the visit feel

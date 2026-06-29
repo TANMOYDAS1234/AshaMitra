@@ -1731,16 +1731,20 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                         _photoAvatar(),
                         // Friendly per-case illustration (Gemini art if present,
                         // else the code-drawn figure) — updates with the chips.
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
+                        // Shown in full (BoxFit.contain) so it isn't cropped.
+                        Container(
+                          height: 180,
+                          width: double.infinity,
+                          clipBehavior: Clip.antiAlias,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFDEFE9),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           child: Image.asset(
                             'assets/illustrations/${ModuleArt.kindKey(_caseType)}.png',
-                            height: 120,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            alignment: Alignment.topCenter,
+                            fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) =>
-                                ModuleArt(kind: _caseType, height: 120),
+                                ModuleArt(kind: _caseType, height: 180),
                           ),
                         ),
                         const SizedBox(height: 16),

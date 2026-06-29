@@ -18,6 +18,10 @@ class AppHeader extends StatelessWidget {
   final VoidCallback? onBack;
   final List<Widget> actions;
   final EdgeInsetsGeometry padding;
+  /// Optional widget shown between the back button and the title (e.g. an avatar).
+  final Widget? leading;
+  /// When set, the title/subtitle area becomes tappable (e.g. open a profile).
+  final VoidCallback? onTitleTap;
 
   const AppHeader({
     super.key,
@@ -27,6 +31,8 @@ class AppHeader extends StatelessWidget {
     this.onBack,
     this.actions = const [],
     this.padding = const EdgeInsets.fromLTRB(20, 16, 20, 8),
+    this.leading,
+    this.onTitleTap,
   });
 
   @override
@@ -44,27 +50,46 @@ class AppHeader extends StatelessWidget {
             ),
             const SizedBox(width: 12),
           ],
+          if (leading != null) ...[
+            leading!,
+            const SizedBox(width: 10),
+          ],
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.h1,
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodySm,
+            child: GestureDetector(
+              onTap: onTitleTap,
+              behavior: HitTestBehavior.opaque,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.h1,
+                        ),
+                      ),
+                      if (onTitleTap != null) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.chevron_right_rounded,
+                            size: 20, color: AppColors.textSecondary),
+                      ],
+                    ],
                   ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodySm,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
           for (final action in actions) ...[
