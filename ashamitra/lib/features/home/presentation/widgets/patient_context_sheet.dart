@@ -366,15 +366,20 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
     final today = DateTime.now();
     final d0 = DateTime(today.year, today.month, today.day);
     final due0 = DateTime(dd.year, dd.month, dd.day);
-    final days = due0.difference(d0).inDays;
+    final days = due0.difference(d0).inDays; // to window start (due)
+    // Window end (overdue only after this); fall back to due date if absent.
+    final weRaw = DateTime.tryParse((e['windowEnd'] ?? '').toString());
+    final end0 = weRaw != null ? DateTime(weRaw.year, weRaw.month, weRaw.day) : due0;
+    final toEnd = end0.difference(d0).inDays;
     String two(int n) => n.toString().padLeft(2, '0');
     final label = (e['label'] ?? '').toString();
-    final (String text, Color color) = days < 0
-        ? ('${days.abs()} দিন পার — বকেয়া', AppColors.emergencyRed)
-        : days == 0
-            ? ('আজ বকেয়া', AppColors.accent)
+    final (String text, Color color) = toEnd < 0
+        ? ('${toEnd.abs()} দিন পার — বকেয়া', AppColors.emergencyRed) // window closed
+        : days <= 0
+            ? (toEnd == 0 ? 'আজ শেষ দিন' : 'এখন করুন · $toEnd দিন বাকি',
+                AppColors.primary) // in window
             : ('পরবর্তী: ${two(dd.day)}/${two(dd.month)} ($days দিন বাকি)',
-                AppColors.primary);
+                AppColors.textSecondary); // upcoming
     final reminded = ReminderService.lastRemindedText(e);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

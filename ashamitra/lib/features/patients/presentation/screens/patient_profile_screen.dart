@@ -1014,7 +1014,13 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
                 style: AppTextStyles.caption.copyWith(
                     color: AppColors.primary, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
             const SizedBox(height: 8),
-            ...pending.map((e) => _row(e, done: false, overdue: _date(e).isBefore(now))),
+            ...pending.map((e) {
+              // Overdue only once the clinical window has closed (windowEnd),
+              // not the moment the due date passes.
+              final we = DateTime.tryParse((e['windowEnd'] ?? '').toString());
+              final isOverdue = (we ?? _date(e)).isBefore(now);
+              return _row(e, done: false, overdue: isOverdue);
+            }),
           ],
           if (pending.isNotEmpty && done.isNotEmpty)
             const Divider(height: 22, color: Color(0xFFE0E7FF)),
@@ -1032,9 +1038,17 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
 
   Widget _row(Map<String, dynamic> e, {required bool done, required bool overdue}) {
     final kind = (e['kind'] ?? '').toString();
+    // In-window = the due date has arrived but the window hasn't closed yet.
+    final now = DateTime.now();
+    final due = DateTime.tryParse((e['dueDate'] ?? '').toString());
+    final we = DateTime.tryParse((e['windowEnd'] ?? '').toString());
+    final inWindow = !done && !overdue && due != null && !due.isAfter(now) &&
+        (we == null || !we.isBefore(now));
     final color = done
         ? AppColors.safeGreen
-        : (overdue ? AppColors.emergencyRed : AppColors.warningYellow);
+        : (overdue
+            ? AppColors.emergencyRed
+            : (inWindow ? AppColors.primary : AppColors.warningYellow));
     final rec = e['record'] is Map ? (e['record'] as Map) : const {};
     // Headline date = the scheduled (guideline) date for every visit.
     final date = _fmt(e['dueDate']);
@@ -1045,7 +1059,7 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
         ? (recorded.isNotEmpty
             ? 'সম্পন্ন $recorded · $summary'
             : summary)
-        : (overdue ? 'বকেয়া হয়ে গেছে' : 'আসন্ন');
+        : (overdue ? 'বকেয়া হয়ে গেছে' : (inWindow ? 'এখন করুন' : 'আসন্ন'));
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -1063,19 +1077,24 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text((e['label'] ?? '').toString(),
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          // Show the full checkup name (wrap up to 2 lines) — the
+                          // names ("ANC ১ম পরীক্ষা (প্রথম ত্রৈমাসিক)") are long.
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700)),
                     ),
-                    if (date.isNotEmpty)
+                    if (date.isNotEmpty) ...[
+                      const SizedBox(width: 8),
                       Text(date,
                           style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                    ],
                   ],
                 ),
                 Text(sub,
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    maxLines: 2, overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.caption.copyWith(color: color, fontWeight: FontWeight.w600)),
               ],
             ),

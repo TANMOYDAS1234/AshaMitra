@@ -238,10 +238,13 @@ class _DueListScreenState extends State<DueListScreen> {
 
   // ── Display helpers ───────────────────────────────────────────────────────
   String _dueText(Map<String, dynamic> e) {
-    final overdue = e['overdue'] == true;
+    final overdue = e['overdue'] == true;     // clinical window closed
+    final inWindow = e['inWindow'] == true;   // due now, still in window
     final d = (e['daysUntil'] as num?)?.toInt() ?? 0;
-    if (d == 0) return 'আজ দেয়';
-    if (overdue) return '${d.abs()} দিন পার হয়েছে';
+    final toEnd = (e['daysToWindowEnd'] as num?)?.toInt() ?? d;
+    if (overdue) return '${toEnd.abs()} দিন পার হয়েছে';
+    if (inWindow) return toEnd <= 0 ? 'আজ শেষ দিন' : 'এখন করুন · $toEnd দিন বাকি';
+    if (d == 0) return 'আজ থেকে দেয়';
     return '$d দিন বাকি';
   }
 
@@ -458,7 +461,10 @@ class _DueListScreenState extends State<DueListScreen> {
 
   Widget _eventTile(Map<String, dynamic> e) {
     final overdue = e['overdue'] == true;
-    final color = overdue ? AppColors.emergencyRed : AppColors.warningYellow;
+    final inWindow = e['inWindow'] == true;
+    final color = overdue
+        ? AppColors.emergencyRed
+        : (inWindow ? AppColors.primary : AppColors.warningYellow);
     final kind = e['kind']?.toString() ?? '';
     final mobile = e['patientMobile']?.toString() ?? '';
     final vaccines = kind == 'vaccine' ? _vaccinesLine(e) : '';

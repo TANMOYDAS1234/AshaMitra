@@ -307,6 +307,24 @@ class _VisitScreenState extends State<VisitScreen> {
       _muacStatus == 'SAM' ||
       _autoAncFlags().isNotEmpty;
 
+  /// True when this ANC visit is being opened before its clinical window opens
+  /// (the due date is the window start). ANC1 (registration) is exempt — earlier
+  /// is always fine. Some measurements aren't assessable yet when too early.
+  bool get _tooEarly {
+    if (_kind != 'anc') return false;
+    if ((_e['code'] ?? '').toString() == 'ANC1') return false;
+    final due = DateTime.tryParse((_e['dueDate'] ?? '').toString());
+    if (due == null) return false;
+    return DateTime.now().isBefore(DateTime(due.year, due.month, due.day));
+  }
+
+  String get _windowStartText {
+    final due = DateTime.tryParse((_e['dueDate'] ?? '').toString());
+    if (due == null) return '';
+    String p(int n) => n.toString().padLeft(2, '0');
+    return '${p(due.day)}/${p(due.month)}/${due.year}';
+  }
+
   /// MUAC normalised to millimetres (accepts "11.5" cm or "115" mm).
   int? get _muacMm {
     final raw = _ycMuac.text.trim().replaceAll(RegExp(r'[^0-9.]'), '');
@@ -435,6 +453,27 @@ class _VisitScreenState extends State<VisitScreen> {
           margin: const EdgeInsets.all(16), borderRadius: 12);
       return;
     }
+    // Completing before the visit's window opens → confirm (some measurements
+    // aren't assessable yet, and marking it done stops further reminders).
+    if (_tooEarly) {
+      final proceed = await Get.dialog<bool>(
+        AlertDialog(
+          title: const Text('সময়ের আগে?'),
+          content: Text(
+              'এই চেকআপ নির্ধারিত $_windowStartText থেকে। এখন সম্পন্ন করলে কিছু '
+              'পরিমাপ সঠিক নাও হতে পারে এবং পরে আর মনে করানো হবে না। তবুও সম্পন্ন করবেন?'),
+          actions: [
+            TextButton(
+                onPressed: () => Get.back(result: false),
+                child: const Text('অপেক্ষা করুন')),
+            TextButton(
+                onPressed: () => Get.back(result: true),
+                child: const Text('তবুও সম্পন্ন করুন')),
+          ],
+        ),
+      );
+      if (proceed != true) return;
+    }
     if (_id.isEmpty) {
       Get.back();
       return;
@@ -529,6 +568,10 @@ class _VisitScreenState extends State<VisitScreen> {
                       _patientCard(),
                       _moduleIllustration(),
                       const SizedBox(height: 16),
+                      if (_tooEarly) ...[
+                        _tooEarlyBanner(),
+                        const SizedBox(height: 12),
+                      ],
                       Form(
                         key: _formKey,
                         child: Container(
@@ -1274,6 +1317,34 @@ class _VisitScreenState extends State<VisitScreen> {
               'বিপদচিহ্ন শনাক্ত হয়েছে — এখনই নিকটতম FRU/PHC-তে রেফার করুন (১০৮)।',
               style: AppTextStyles.label.copyWith(
                   color: AppColors.emergencyRed, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Shown when an ANC visit is opened before its window starts.
+  Widget _tooEarlyBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.warningYellow.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.warningYellow, width: 1),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.schedule_rounded, color: AppColors.accent),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'এই চেকআপ এখনও সময়ের আগে (নির্ধারিত $_windowStartText থেকে)। '
+              'কিছু পরিমাপ (যেমন বৃদ্ধি, হৃৎস্পন্দন) এখন সঠিক নাও হতে পারে — '
+              'সম্ভব হলে সময়মতো করুন।',
+              style: AppTextStyles.label.copyWith(
+                  color: AppColors.accentDeep, fontWeight: FontWeight.w600, height: 1.4),
             ),
           ),
         ],
