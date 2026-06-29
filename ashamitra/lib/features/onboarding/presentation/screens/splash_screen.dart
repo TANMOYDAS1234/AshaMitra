@@ -79,7 +79,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 _Reveal(
                   delay: const Duration(milliseconds: 600),
                   child: Text(
-                    'Voice AI for Safer Care',
+                    'splash_subtitle'.tr,
                     style: AppTextStyles.bodyLg.copyWith(
                       color: Colors.white.withValues(alpha: 0.85),
                       letterSpacing: 0.5,
@@ -95,7 +95,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 32),
                     child: Text(
-                      'Powered by AI · Works Offline · Bangla First',
+                      'splash_tagline'.tr,
                       style: AppTextStyles.caption.copyWith(
                         color: Colors.white.withValues(alpha: 0.55),
                       ),

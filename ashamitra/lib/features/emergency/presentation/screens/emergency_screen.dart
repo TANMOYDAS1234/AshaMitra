@@ -21,7 +21,7 @@ class EmergencyScreen extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      Get.snackbar('error'.tr, 'cannot_open_dialer'.tr, snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('error'.tr, 'emg_cannot_open_dialer'.tr, snackPosition: SnackPosition.BOTTOM);
     }
   }
 
@@ -30,14 +30,14 @@ class EmergencyScreen extends StatelessWidget {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      Get.snackbar('error'.tr, 'cannot_open_maps'.tr, snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('error'.tr, 'emg_cannot_open_maps'.tr, snackPosition: SnackPosition.BOTTOM);
     }
   }
 
   // ── Capture and share the patient's GPS so the ambulance can find them ────
   Future<void> _sharePatientLocation() async {
     if (!await Geolocator.isLocationServiceEnabled()) {
-      Get.snackbar('location_off'.tr, 'location_off_msg'.tr,
+      Get.snackbar('emg_location_off'.tr, 'emg_location_off_msg'.tr,
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
@@ -47,7 +47,7 @@ class EmergencyScreen extends StatelessWidget {
     }
     if (perm == LocationPermission.denied ||
         perm == LocationPermission.deniedForever) {
-      Get.snackbar('permission_needed'.tr, 'permission_needed_msg'.tr,
+      Get.snackbar('emg_permission_needed'.tr, 'emg_permission_needed_msg'.tr,
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
@@ -62,7 +62,7 @@ class EmergencyScreen extends StatelessWidget {
       Get.dialog(_locationDialog(pos.latitude, pos.longitude));
     } catch (_) {
       if (Get.isDialogOpen ?? false) Get.back();
-      Get.snackbar('failed'.tr, 'location_not_found'.tr,
+      Get.snackbar('emg_failed'.tr, 'emg_location_not_found'.tr,
           snackPosition: SnackPosition.BOTTOM);
     }
   }
@@ -72,13 +72,13 @@ class EmergencyScreen extends StatelessWidget {
     final shareLink = 'https://maps.google.com/?q=$lat,$lng';
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: AppRadius.lgR),
-      title: Text('patient_location'.tr, style: AppTextStyles.h2),
+      title: Text('emg_patient_location'.tr, style: AppTextStyles.h2),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'send_location_msg'.tr,
+            'emg_send_location_msg'.tr,
             style: AppTextStyles.bodySm,
           ),
           const SizedBox(height: 10),
@@ -98,17 +98,17 @@ class EmergencyScreen extends StatelessWidget {
           onPressed: () async {
             await Clipboard.setData(ClipboardData(text: shareLink));
             Get.back();
-            Get.snackbar('copied'.tr, 'location_link_copied'.tr,
+            Get.snackbar('emg_copied'.tr, 'emg_location_link_copied'.tr,
                 snackPosition: SnackPosition.BOTTOM);
           },
-          child: Text('copy_link'.tr),
+          child: Text('emg_copy_link'.tr),
         ),
         TextButton(
           onPressed: () {
             Get.back();
             _openMaps('$lat,$lng');
           },
-          child: Text('view_on_map'.tr),
+          child: Text('emg_view_on_map'.tr),
         ),
       ],
     );
@@ -145,7 +145,7 @@ class EmergencyScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          'emergency_title'.tr,
+                          'emg_emergency_title'.tr,
                           style: AppTextStyles.h2.copyWith(color: Colors.white),
                         ),
                       ],
@@ -154,14 +154,14 @@ class EmergencyScreen extends StatelessWidget {
                     const Icon(Icons.emergency_rounded, size: 56, color: Colors.white),
                     const SizedBox(height: 8),
                     Text(
-                      'emergency_subtitle'.tr,
+                      'emg_emergency_subtitle'.tr,
                       style: AppTextStyles.bodyLg.copyWith(color: Colors.white.withValues(alpha: 0.85)),
                     ),
                     const SizedBox(height: 6),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Text(
-                        'emergency_conditions'.tr,
+                        'emg_emergency_conditions'.tr,
                         textAlign: TextAlign.center,
                         style: AppTextStyles.bodySm.copyWith(color: Colors.white.withValues(alpha: 0.70)),
                       ),
@@ -184,39 +184,39 @@ class EmergencyScreen extends StatelessWidget {
                         children: [
                           EmergencyButton(
                             icon: Icons.emergency_rounded,
-                            label: 'call_ambulance'.tr,
-                            subtitle: 'call_ambulance_desc'.tr,
+                            label: 'emg_call_ambulance'.tr,
+                            subtitle: 'emg_call_ambulance_desc'.tr,
                             onTap: () => _call('102'),
                           ),
                           const SizedBox(height: 12),
                           EmergencyButton(
                             icon: Icons.share_location_rounded,
-                            label: 'share_location'.tr,
-                            subtitle: 'share_location_desc'.tr,
+                            label: 'emg_share_location'.tr,
+                            subtitle: 'emg_share_location_desc'.tr,
                             color: AppColors.primary,
                             onTap: _sharePatientLocation,
                           ),
                           const SizedBox(height: 12),
                           EmergencyButton(
                             icon: Icons.person_outline_rounded,
-                            label: 'call_anm'.tr,
-                            subtitle: 'call_anm_desc'.tr,
+                            label: 'emg_call_anm'.tr,
+                            subtitle: 'emg_call_anm_desc'.tr,
                             color: AppColors.purple,
                             onTap: () => _call('18001801104'),
                           ),
                           const SizedBox(height: 12),
                           EmergencyButton(
                             icon: Icons.local_hospital_rounded,
-                            label: 'call_health'.tr,
-                            subtitle: 'call_health_desc'.tr,
+                            label: 'emg_call_health'.tr,
+                            subtitle: 'emg_call_health_desc'.tr,
                             color: AppColors.sky,
                             onTap: () => _call('104'),
                           ),
                           const SizedBox(height: 12),
                           EmergencyButton(
                             icon: Icons.navigation_rounded,
-                            label: 'navigate_chc'.tr,
-                            subtitle: 'navigate_chc_desc'.tr,
+                            label: 'emg_navigate_chc'.tr,
+                            subtitle: 'emg_navigate_chc_desc'.tr,
                             color: AppColors.safeGreen,
                             onTap: () => _openMaps('Community Health Centre near me'),
                           ),
@@ -224,7 +224,7 @@ class EmergencyScreen extends StatelessWidget {
                           TextButton(
                             onPressed: () => Get.offAllNamed(AppRoutes.home),
                             child: Text(
-                              'back_to_home'.tr,
+                              'emg_back_to_home'.tr,
                               style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
                             ),
                           ),

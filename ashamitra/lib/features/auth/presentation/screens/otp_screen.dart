@@ -133,7 +133,7 @@ class _OtpScreenState extends State<OtpScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'PILOT MODE — OTP',
+                              'otp_pilot_mode'.tr,
                               style: AppTextStyles.overline.copyWith(color: const Color(0xFF92400E)),
                             ),
                             const SizedBox(height: 2),

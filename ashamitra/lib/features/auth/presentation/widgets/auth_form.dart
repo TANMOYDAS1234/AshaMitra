@@ -15,13 +15,13 @@ class AuthForm extends StatelessWidget {
   const AuthForm({super.key, required this.onSubmit, required this.isLoading, this.errorMsg});
 
   static const _cases = [
-    (icon: Icons.pregnant_woman_rounded,  label: '🤰 গর্ভবতী',     color: AppColors.primary),
-    (icon: Icons.health_and_safety_rounded, label: '🤱 প্রসব-পরবর্তী', color: AppColors.purple),
-    (icon: Icons.child_care_rounded,      label: '👶 নবজাতক',      color: Color(0xFF0891B2)),
-    (icon: Icons.baby_changing_station_rounded, label: '🍼 শিশু ১-১২ মাস', color: AppColors.safeGreen),
-    (icon: Icons.child_friendly_rounded,  label: '🧒 শিশু ১-৫ বছর', color: Color(0xFFF59E0B)),
-    (icon: Icons.vaccines_rounded,        label: '💉 টিকা',         color: Color(0xFF8B5CF6)),
-    (icon: Icons.emergency_rounded,       label: '🚨 জরুরি',        color: AppColors.emergencyRed),
+    (icon: Icons.pregnant_woman_rounded,  labelKey: 'auth_case_pregnant',  color: AppColors.primary),
+    (icon: Icons.health_and_safety_rounded, labelKey: 'auth_case_postnatal', color: AppColors.purple),
+    (icon: Icons.child_care_rounded,      labelKey: 'auth_case_newborn',   color: Color(0xFF0891B2)),
+    (icon: Icons.baby_changing_station_rounded, labelKey: 'auth_case_infant', color: AppColors.safeGreen),
+    (icon: Icons.child_friendly_rounded,  labelKey: 'auth_case_child',     color: Color(0xFFF59E0B)),
+    (icon: Icons.vaccines_rounded,        labelKey: 'auth_case_vaccine',   color: Color(0xFF8B5CF6)),
+    (icon: Icons.emergency_rounded,       labelKey: 'auth_case_emergency', color: AppColors.emergencyRed),
   ];
 
   @override
@@ -61,9 +61,9 @@ class AuthForm extends StatelessWidget {
                   style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold,
                       color: AppColors.onBackground)),
               const SizedBox(height: 6),
-              const Text('আপনার মোবাইল নম্বর দিয়ে লগইন করুন',
+              Text('auth_login_subtitle'.tr,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+                  style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
 
               const SizedBox(height: 24),
 
@@ -88,7 +88,7 @@ class AuthForm extends StatelessWidget {
                         children: [
                           Icon(c.icon, size: 14, color: c.color),
                           const SizedBox(width: 5),
-                          Text(c.label,
+                          Text(c.labelKey.tr,
                               style: TextStyle(fontSize: 11,
                                   fontWeight: FontWeight.w600, color: c.color)),
                         ],
@@ -108,11 +108,11 @@ class AuthForm extends StatelessWidget {
                   child: Column(
                     children: [
                       AppInput(
-                        hint: '10-digit mobile number',
+                        hint: 'auth_phone_hint'.tr,
                         controller: phoneCtrl,
                         keyboardType: TextInputType.phone,
                         maxLength: 10,
-                        label: 'মোবাইল নম্বর',
+                        label: 'auth_phone_label'.tr,
                         prefixIcon: const Icon(Icons.phone_rounded,
                             color: AppColors.primary, size: 20),
                         validator: Validators.phone,
@@ -136,7 +136,7 @@ class AuthForm extends StatelessWidget {
                                     style: const TextStyle(color: Color(0xFFB71C1C), fontSize: 13)),
                               ),
                             AppButton(
-                              label: 'OTP পাঠান',
+                              label: 'auth_send_otp'.tr,
                               onPressed: () {
                                 if (formKey.currentState!.validate()) {
                                   onSubmit(phoneCtrl.text);
@@ -155,10 +155,10 @@ class AuthForm extends StatelessWidget {
               ),
 
               const SizedBox(height: 24),
-              const Text(
-                'স্বাস্থ্য তথ্য গোপনীয়তা নীতি অনুযায়ী পরিচালিত।',
+              Text(
+                'auth_privacy_note'.tr,
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
               ),
               const SizedBox(height: 24),
             ],

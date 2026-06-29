@@ -412,7 +412,7 @@ class _ReferralMapWidgetState extends State<ReferralMapWidget> {
         if (elLat == null || elLng == null) continue;
         final dist = _distanceKm(lat, lng, elLat, elLng);
         final name = el['display_name']?.toString().split(',').first.trim()
-            ?? el['name']?.toString() ?? 'Hospital';
+            ?? el['name']?.toString() ?? 'map_hospital_fallback'.tr;
         places.add(_Place(
           name: name,
           pos: LatLng(elLat, elLng),

@@ -91,16 +91,22 @@ class _PatientListScreenState extends State<PatientListScreen> {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
         build: (ctx) => [
-          pw.Text('ASHA Mitra — Patient List',
+          pw.Text('plist_pdf_title'.tr,
               style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 4),
-          pw.Text('Generated: ${DateTime.now().toString().substring(0, 16)}',
+          pw.Text('plist_pdf_generated'.trParams({'date': DateTime.now().toString().substring(0, 16)}),
               style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
-          pw.Text('Total patients: ${list.length}',
+          pw.Text('plist_pdf_total'.trParams({'count': '${list.length}'}),
               style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700)),
           pw.Divider(height: 24),
           pw.Table.fromTextArray(
-            headers: ['Name', 'Type', 'Village', 'Last Visit', 'Risk'],
+            headers: [
+              'plist_pdf_col_name'.tr,
+              'plist_pdf_col_type'.tr,
+              'plist_pdf_col_village'.tr,
+              'plist_pdf_col_last_visit'.tr,
+              'plist_pdf_col_risk'.tr,
+            ],
             data: list.map((p) => [
               p.name,
               p.type,
@@ -133,7 +139,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                 actions: [
                   HeaderActionPill(
                     icon: Icons.download_rounded,
-                    label: 'PDF',
+                    label: 'plist_pdf_button'.tr,
                     onTap: _downloadPdf,
                   ),
                   HeaderActionCircle(

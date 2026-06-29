@@ -12,13 +12,13 @@ class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
   static const _cases = [
-    (icon: Icons.pregnant_woman_rounded,        label: 'গর্ভবতী মায়ের চেকআপ',      color: AppColors.primary),
-    (icon: Icons.health_and_safety_rounded,     label: 'প্রসব-পরবর্তী চেকআপ',      color: AppColors.purple),
-    (icon: Icons.child_care_rounded,            label: 'নবজাতক (০–২৮ দিন)',         color: Color(0xFF0891B2)),
-    (icon: Icons.baby_changing_station_rounded, label: 'শিশু (১–১২ মাস)',           color: AppColors.safeGreen),
-    (icon: Icons.child_friendly_rounded,        label: 'শিশু স্বাস্থ্য (১–৫ বছর)',  color: Color(0xFFF59E0B)),
-    (icon: Icons.vaccines_rounded,              label: 'টিকা / ইমিউনাইজেশন',       color: Color(0xFF8B5CF6)),
-    (icon: Icons.emergency_rounded,             label: 'জরুরি অবস্থা',              color: AppColors.emergencyRed),
+    (icon: Icons.pregnant_woman_rounded,        labelKey: 'wel_case_anc',       color: AppColors.primary),
+    (icon: Icons.health_and_safety_rounded,     labelKey: 'wel_case_pnc',       color: AppColors.purple),
+    (icon: Icons.child_care_rounded,            labelKey: 'wel_case_newborn',   color: Color(0xFF0891B2)),
+    (icon: Icons.baby_changing_station_rounded, labelKey: 'wel_case_infant',    color: AppColors.safeGreen),
+    (icon: Icons.child_friendly_rounded,        labelKey: 'wel_case_child',     color: Color(0xFFF59E0B)),
+    (icon: Icons.vaccines_rounded,              labelKey: 'wel_case_immunize',  color: Color(0xFF8B5CF6)),
+    (icon: Icons.emergency_rounded,             labelKey: 'wel_case_emergency', color: AppColors.emergencyRed),
   ];
 
   @override
@@ -44,7 +44,7 @@ class WelcomeScreen extends StatelessWidget {
                     borderRadius: AppRadius.smR,
                   ),
                   child: Text(
-                    'এই অ্যাপ দিয়ে ৭টি কেস পরিচালনা করুন — ভয়েস দিয়ে, বাংলায়।',
+                    'wel_badge'.tr,
                     style: AppTextStyles.label.copyWith(color: AppColors.primary),
                   ),
                 ),
@@ -78,7 +78,7 @@ class WelcomeScreen extends StatelessWidget {
                             const SizedBox(width: 14),
                             Expanded(
                               child: Text(
-                                c.label,
+                                c.labelKey.tr,
                                 style: AppTextStyles.labelLg,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,

@@ -396,7 +396,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           borderRadius: AppRadius.pillR,
                         ),
                         child: Text(
-                          'ID: ASHA-$shortId',
+                          'pf_worker_id'.trParams({'id': shortId}),
                           style: AppTextStyles.caption.copyWith(color: Colors.white),
                         ),
                       );
@@ -411,9 +411,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Obx(() => _Section(title: 'my_details'.tr, items: [
                             _InfoRow(Icons.location_on_rounded, 'block'.tr,
-                                auth.user.value?.block ?? 'Basirhat'),
+                                auth.user.value?.block ?? 'pf_block_default'.tr),
                             _InfoRow(Icons.map_rounded, 'district'.tr,
-                                auth.user.value?.district ?? 'North 24 Parganas'),
+                                auth.user.value?.district ?? 'pf_district_default'.tr),
                             _InfoRow(Icons.translate_rounded, 'language'.tr,
                                 lang.currentLabel),
                             _InfoRow(Icons.sync_rounded, 'offline_sync'.tr,
@@ -506,11 +506,11 @@ class _AppVersionFooterState extends State<_AppVersionFooter> {
     try {
       final info = await PackageInfo.fromPlatform();
       if (!mounted) return;
-      setState(() => _versionText =
-          'AshaMitra v${info.version}+${info.buildNumber}');
+      setState(() => _versionText = 'pf_app_version'
+          .trParams({'version': info.version, 'build': info.buildNumber}));
     } catch (_) {
       if (!mounted) return;
-      setState(() => _versionText = 'AshaMitra');
+      setState(() => _versionText = 'pf_app_name'.tr);
     }
   }
 
