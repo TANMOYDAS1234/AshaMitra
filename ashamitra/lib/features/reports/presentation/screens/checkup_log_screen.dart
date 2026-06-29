@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../../app/routes.dart';
 import '../../../../core/services/api_service.dart';
+import '../../../../core/services/local_storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -9,6 +11,10 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/components/bottom_nav.dart';
 import '../../../../shared/widgets/empty_state.dart';
+import '../../../patients/controller/patient_controller.dart';
+import '../../../patients/data/models/patient_model.dart';
+import '../../../patients/services/mcp_report_pdf.dart';
+import '../../services/checkup_log_pdf.dart';
 
 /// The "Reports" tab, repurposed as a **checkup log** — every completed checkup
 /// (ANC / PNC / vaccine / HBNC / HBYC) across all patients, newest first, with a
@@ -134,6 +140,107 @@ class _CheckupLogScreenState extends State<CheckupLogScreen> {
     return '${p(d.day)}/${p(d.month)}/${d.year}';
   }
 
+  // ── PDF + navigation ──────────────────────────────────────────────────────
+  PatientController get _pc => Get.isRegistered<PatientController>()
+      ? Get.find<PatientController>()
+      : Get.put(PatientController(), permanent: true);
+
+  PatientModel? _patientFor(Map<String, dynamic> e) {
+    final pid = (e['patientId'] ?? '').toString();
+    if (pid.isEmpty) return null;
+    final i = _pc.patients.indexWhere((p) => p.id == pid);
+    return i == -1 ? null : _pc.patients[i];
+  }
+
+  Map<String, String> _header() {
+    final u = LocalStorageService.loadUser() ?? const {};
+    String s(List<String> keys) {
+      for (final k in keys) {
+        final v = (u[k] ?? '').toString().trim();
+        if (v.isNotEmpty) return v;
+      }
+      return '';
+    }
+    return {
+      'asha': s(['name', 'fullName']),
+      'block': s(['block']),
+      'district': s(['district']),
+      'facility': s(['subCentre', 'subcentre', 'facilityName', 'facility']),
+    };
+  }
+
+  void _openProfile(Map<String, dynamic> e) {
+    final p = _patientFor(e);
+    if (p == null) {
+      Get.snackbar('clog_title'.tr, 'prof_patient_not_found'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.warningYellow, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12);
+      return;
+    }
+    Get.toNamed(AppRoutes.patientProfile, arguments: p.toJson());
+  }
+
+  Future<void> _downloadOne(Map<String, dynamic> e) async {
+    final p = _patientFor(e);
+    if (p == null) {
+      Get.snackbar('clog_title'.tr, 'prof_patient_not_found'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.warningYellow, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12);
+      return;
+    }
+    try {
+      await McpReportPdf.generateForEvent(p, e, header: _header());
+    } catch (_) {
+      Get.snackbar('clog_title'.tr, 'prof_report_failed'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.emergencyRed, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12);
+    }
+  }
+
+  Future<void> _downloadAll(List<Map<String, dynamic>> visible) async {
+    if (visible.isEmpty) {
+      Get.snackbar('clog_title'.tr, 'clog_no_match'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.warningYellow, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12);
+      return;
+    }
+    final rows = visible.map((e) {
+      final flags = _flags(e);
+      return [
+        _fmtDate(_completedDate(e)),
+        (e['patientName'] ?? '').toString(),
+        _kindLabel((e['kind'] ?? '').toString()),
+        (e['label'] ?? '').toString(),
+        flags.isEmpty
+            ? 'clog_band_ok'.tr
+            : 'clog_band_danger'.trParams({'count': '${flags.length}'}),
+        _summary(e),
+      ];
+    }).toList();
+    final now = DateTime.now();
+    final month = _done.where((e) {
+      final d = _completedDate(e);
+      return d != null && d.year == now.year && d.month == now.month;
+    }).length;
+    final danger = _done.where((e) => _flags(e).isNotEmpty).length;
+    try {
+      await CheckupLogPdf.generate(
+        rows: rows,
+        stats: {'total': '${visible.length}', 'month': '$month', 'danger': '$danger'},
+        header: _header(),
+      );
+    } catch (_) {
+      Get.snackbar('clog_title'.tr, 'prof_report_failed'.tr,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: AppColors.emergencyRed, colorText: Colors.white,
+          margin: const EdgeInsets.all(16), borderRadius: 12);
+    }
+  }
+
   bool _matches(Map<String, dynamic> e) {
     if (_kind != 'all' && (e['kind'] ?? '') != _kind) return false;
     if (_query.isNotEmpty) {
@@ -184,6 +291,11 @@ class _CheckupLogScreenState extends State<CheckupLogScreen> {
                 subtitle: 'clog_subtitle'.tr,
                 showBack: false,
                 actions: [
+                  HeaderActionPill(
+                    icon: Icons.download_rounded,
+                    label: 'clog_pdf_all'.tr,
+                    onTap: () => _downloadAll(visible),
+                  ),
                   HeaderActionCircle(
                     icon: Icons.refresh_rounded,
                     tooltip: 'clog_refresh'.tr,
@@ -308,7 +420,10 @@ class _CheckupLogScreenState extends State<CheckupLogScreen> {
     return Material(
       color: AppColors.surface,
       borderRadius: AppRadius.lgR,
-      child: Container(
+      child: InkWell(
+        borderRadius: AppRadius.lgR,
+        onTap: () => _openProfile(e), // tap → patient profile
+        child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           borderRadius: AppRadius.lgR,
@@ -367,7 +482,17 @@ class _CheckupLogScreenState extends State<CheckupLogScreen> {
                 ],
               ),
             ),
+            // Per-checkup report PDF
+            IconButton(
+              tooltip: 'clog_pdf_one'.tr,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+              onPressed: () => _downloadOne(e),
+              icon: const Icon(Icons.download_rounded, size: 20, color: AppColors.primary),
+            ),
           ],
+        ),
         ),
       ),
     );

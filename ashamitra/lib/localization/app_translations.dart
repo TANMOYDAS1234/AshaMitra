@@ -1256,6 +1256,8 @@ class AppTranslations extends Translations {
     'clog_summary_weight': 'Weight',
     'clog_summary_baby_weight': 'Baby weight',
     'clog_summary_vaccines': '@count vaccine(s)',
+    'clog_pdf_all': 'All PDF',
+    'clog_pdf_one': 'This checkup\'s report',
   };
 
   static const _bn = {
@@ -2509,6 +2511,8 @@ class AppTranslations extends Translations {
     'clog_summary_weight': 'ওজন',
     'clog_summary_baby_weight': 'শিশুর ওজন',
     'clog_summary_vaccines': '@count টি টিকা',
+    'clog_pdf_all': 'সব PDF',
+    'clog_pdf_one': 'এই চেকআপের রিপোর্ট',
   };
 
   static const _hi = {
@@ -3762,6 +3766,8 @@ class AppTranslations extends Translations {
     'clog_summary_weight': 'वज़न',
     'clog_summary_baby_weight': 'शिशु वज़न',
     'clog_summary_vaccines': '@count टीके',
+    'clog_pdf_all': 'सभी PDF',
+    'clog_pdf_one': 'इस चेकअप की रिपोर्ट',
   };
 
   @override
