@@ -387,14 +387,18 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
         Padding(
           padding: const EdgeInsets.only(top: 3),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.event_rounded, size: 13, color: color),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(Icons.event_rounded, size: 13, color: color),
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
                   label.isEmpty ? text : '$label · $text',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  // Show the full due status (checkup name + window) — wrap, don't clip.
+                  maxLines: 3,
                   style: AppTextStyles.caption
                       .copyWith(color: color, fontWeight: FontWeight.w600),
                 ),
