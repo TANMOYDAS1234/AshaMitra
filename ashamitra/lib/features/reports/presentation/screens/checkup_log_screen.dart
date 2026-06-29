@@ -1,0 +1,406 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../../../core/services/api_service.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_gradients.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_shadows.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/components/app_header.dart';
+import '../../../../shared/components/bottom_nav.dart';
+import '../../../../shared/widgets/empty_state.dart';
+
+/// The "Reports" tab, repurposed as a **checkup log** — every completed checkup
+/// (ANC / PNC / vaccine / HBNC / HBYC) across all patients, newest first, with a
+/// danger-flag band. (Triage isn't used, so the old triage-report view is
+/// replaced by this activity feed. Official register exports live in Registers.)
+class CheckupLogScreen extends StatefulWidget {
+  const CheckupLogScreen({super.key});
+  @override
+  State<CheckupLogScreen> createState() => _CheckupLogScreenState();
+}
+
+class _CheckupLogScreenState extends State<CheckupLogScreen> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _done = const [];
+  String _kind = 'all';   // all | anc | vaccine | hbnc | hbyc | pnc
+  String _time = 'all';   // all | today | week | month
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    List<dynamic> raw;
+    try {
+      raw = await ApiService.getAllSchedule();
+    } catch (_) {
+      raw = const [];
+    }
+    final done = raw
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((e) => (e['status'] ?? '') == 'done')
+        .toList()
+      ..sort((a, b) => _completedAt(b).compareTo(_completedAt(a))); // newest first
+    if (!mounted) return;
+    setState(() {
+      _done = done;
+      _loading = false;
+    });
+  }
+
+  String _completedAt(Map<String, dynamic> e) {
+    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
+    return (rec['completedAt'] ?? e['doneDate'] ?? e['dueDate'] ?? '').toString();
+  }
+
+  DateTime? _completedDate(Map<String, dynamic> e) =>
+      DateTime.tryParse(_completedAt(e));
+
+  List<String> _flags(Map<String, dynamic> e) {
+    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
+    final out = <String>[];
+    void add(dynamic v) {
+      if (v is List) out.addAll(v.map((x) => x.toString()).where((s) => s.isNotEmpty));
+    }
+    add(rec['dangerFlags']);
+    add(rec['tbSymptoms']);
+    add(rec['pncFlags']);
+    if (rec['motherPnc'] is Map) add((rec['motherPnc'] as Map)['dangerFlags']);
+    return out;
+  }
+
+  String _summary(Map<String, dynamic> e) {
+    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
+    final kind = (e['kind'] ?? '').toString();
+    String r(String k) => (rec[k] ?? '').toString().trim();
+    if (kind == 'anc') {
+      final bits = <String>[
+        if (r('bp').isNotEmpty) 'BP ${r('bp')}',
+        if (r('hb').isNotEmpty) 'Hb ${r('hb')}',
+        if (r('weight').isNotEmpty) '${'clog_summary_weight'.tr} ${r('weight')}',
+      ];
+      return bits.join(' · ');
+    }
+    if (kind == 'vaccine') {
+      final g = (rec['givenVaccines'] as List?)?.length ?? 0;
+      return g > 0 ? 'clog_summary_vaccines'.trParams({'count': '$g'}) : '';
+    }
+    if (kind == 'hbyc') {
+      final ms = r('muacStatus');
+      final w = r('weight');
+      return [
+        if (w.isNotEmpty) '${'clog_summary_weight'.tr} $w',
+        if (ms.isNotEmpty) 'MUAC: $ms',
+      ].join(' · ');
+    }
+    if (kind == 'hbnc') {
+      final bw = r('babyWeight');
+      return bw.isNotEmpty ? '${'clog_summary_baby_weight'.tr} $bw' : '';
+    }
+    if (kind == 'pnc') {
+      final bp = r('bp');
+      return bp.isNotEmpty ? 'BP $bp' : '';
+    }
+    return '';
+  }
+
+  static IconData _icon(String k) => switch (k) {
+        'vaccine' => Icons.vaccines_rounded,
+        'anc' => Icons.pregnant_woman_rounded,
+        'pnc' => Icons.volunteer_activism_rounded,
+        'hbnc' => Icons.child_care_rounded,
+        'hbyc' => Icons.child_friendly_rounded,
+        _ => Icons.event_note_rounded,
+      };
+
+  static String _kindLabel(String k) => switch (k) {
+        'anc' => 'clog_kind_anc'.tr,
+        'vaccine' => 'clog_kind_vaccine'.tr,
+        'hbnc' => 'clog_kind_hbnc'.tr,
+        'hbyc' => 'clog_kind_hbyc'.tr,
+        'pnc' => 'clog_kind_pnc'.tr,
+        _ => k,
+      };
+
+  String _fmtDate(DateTime? d) {
+    if (d == null) return '';
+    String p(int n) => n.toString().padLeft(2, '0');
+    return '${p(d.day)}/${p(d.month)}/${d.year}';
+  }
+
+  bool _matches(Map<String, dynamic> e) {
+    if (_kind != 'all' && (e['kind'] ?? '') != _kind) return false;
+    if (_query.isNotEmpty) {
+      final hay = '${e['patientName'] ?? ''} ${e['label'] ?? ''}'.toLowerCase();
+      if (!hay.contains(_query)) return false;
+    }
+    if (_time != 'all') {
+      final d = _completedDate(e);
+      if (d == null) return false;
+      final now = DateTime.now();
+      switch (_time) {
+        case 'today':
+          if (!(d.year == now.year && d.month == now.month && d.day == now.day)) {
+            return false;
+          }
+          break;
+        case 'week':
+          if (now.difference(d).inDays >= 7) return false;
+          break;
+        case 'month':
+          if (!(d.year == now.year && d.month == now.month)) return false;
+          break;
+      }
+    }
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visible = _done.where(_matches).toList();
+    final monthCount = _done.where((e) {
+      final d = _completedDate(e);
+      final now = DateTime.now();
+      return d != null && d.year == now.year && d.month == now.month;
+    }).length;
+    final dangerCount = _done.where((e) => _flags(e).isNotEmpty).length;
+
+    return Scaffold(
+      bottomNavigationBar: const BottomNav(currentIndex: 3),
+      body: Container(
+        decoration: const BoxDecoration(gradient: AppGradients.background),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppHeader(
+                title: 'clog_title'.tr,
+                subtitle: 'clog_subtitle'.tr,
+                showBack: false,
+                actions: [
+                  HeaderActionCircle(
+                    icon: Icons.refresh_rounded,
+                    tooltip: 'clog_refresh'.tr,
+                    onTap: _load,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              // Stats
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                child: Row(
+                  children: [
+                    _Stat('clog_stat_total'.tr, '${_done.length}', AppColors.primary),
+                    const SizedBox(width: 8),
+                    _Stat('clog_stat_month'.tr, '$monthCount', AppColors.sky),
+                    const SizedBox(width: 8),
+                    _Stat('clog_stat_danger'.tr, '$dangerCount', AppColors.emergencyRed),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Search
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TextField(
+                  onChanged: (v) => setState(() => _query = v.toLowerCase().trim()),
+                  decoration: InputDecoration(
+                    hintText: 'clog_search_hint'.tr,
+                    prefixIcon: const Icon(Icons.search_rounded,
+                        color: AppColors.primary, size: 22),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Kind chips
+              SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
+                    _chip('clog_kind_all'.tr, 'all', _kind, (v) => setState(() => _kind = v)),
+                    _chip('clog_kind_anc'.tr, 'anc', _kind, (v) => setState(() => _kind = v)),
+                    _chip('clog_kind_vaccine'.tr, 'vaccine', _kind, (v) => setState(() => _kind = v)),
+                    _chip('clog_kind_hbnc'.tr, 'hbnc', _kind, (v) => setState(() => _kind = v)),
+                    _chip('clog_kind_hbyc'.tr, 'hbyc', _kind, (v) => setState(() => _kind = v)),
+                    _chip('clog_kind_pnc'.tr, 'pnc', _kind, (v) => setState(() => _kind = v)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              // Time chips
+              SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: [
+                    _chip('filter_all_time'.tr, 'all', _time, (v) => setState(() => _time = v)),
+                    _chip('filter_today'.tr, 'today', _time, (v) => setState(() => _time = v)),
+                    _chip('filter_week'.tr, 'week', _time, (v) => setState(() => _time = v)),
+                    _chip('filter_month'.tr, 'month', _time, (v) => setState(() => _time = v)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : (_done.isEmpty
+                        ? EmptyState(
+                            icon: Icons.fact_check_outlined,
+                            title: 'clog_empty_title'.tr,
+                            subtitle: 'clog_empty_subtitle'.tr,
+                          )
+                        : (visible.isEmpty
+                            ? EmptyState(
+                                icon: Icons.filter_alt_off_rounded,
+                                title: 'clog_no_match'.tr,
+                                subtitle: 'clog_no_match_sub'.tr,
+                              )
+                            : RefreshIndicator(
+                                onRefresh: _load,
+                                child: ListView.separated(
+                                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                                  itemCount: visible.length,
+                                  itemBuilder: (_, i) => _card(visible[i]),
+                                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                                ),
+                              ))),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _chip(String label, String value, String current, ValueChanged<String> onTap) {
+    final sel = current == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: sel,
+        selectedColor: AppColors.primary,
+        labelStyle: AppTextStyles.label.copyWith(
+            color: sel ? AppColors.onPrimary : AppColors.textSecondary),
+        onSelected: (_) => onTap(value),
+      ),
+    );
+  }
+
+  Widget _card(Map<String, dynamic> e) {
+    final kind = (e['kind'] ?? '').toString();
+    final flags = _flags(e);
+    final ok = flags.isEmpty;
+    final color = ok ? AppColors.safeGreen : AppColors.emergencyRed;
+    final date = _fmtDate(_completedDate(e));
+    final summary = _summary(e);
+    return Material(
+      color: AppColors.surface,
+      borderRadius: AppRadius.lgR,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.lgR,
+          boxShadow: AppShadows.low,
+          border: Border(left: BorderSide(color: color, width: 4)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 34, height: 34,
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.14), shape: BoxShape.circle),
+              child: Icon(_icon(kind), size: 18, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text((e['patientName'] ?? '').toString(),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.h3),
+                      ),
+                      if (date.isNotEmpty)
+                        Text(date,
+                            style: AppTextStyles.caption
+                                .copyWith(color: AppColors.textSecondary)),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_kindLabel(kind)} · ${(e['label'] ?? '').toString()}',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.label
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    ok
+                        ? 'clog_band_ok'.tr
+                        : 'clog_band_danger'.trParams({'count': '${flags.length}'}),
+                    style: AppTextStyles.caption
+                        .copyWith(color: color, fontWeight: FontWeight.w700),
+                  ),
+                  if (summary.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(summary,
+                        maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption
+                            .copyWith(color: AppColors.onBackground)),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Stat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _Stat(this.label, this.value, this.color);
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.lgR,
+          boxShadow: AppShadows.tinted(color),
+        ),
+        child: Column(
+          children: [
+            Text(value,
+                style: AppTextStyles.h2.copyWith(color: color, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 2),
+            Text(label,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+          ],
+        ),
+      ),
+    );
+  }
+}

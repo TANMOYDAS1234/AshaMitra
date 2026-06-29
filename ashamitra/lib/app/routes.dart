@@ -21,7 +21,7 @@ import '../features/eligible_couples/presentation/screens/eligible_couple_screen
 import '../features/vital_events/presentation/screens/vital_event_screen.dart';
 import '../features/emergency/presentation/screens/emergency_screen.dart';
 import '../features/emergency/presentation/screens/nearby_facilities_screen.dart';
-import '../features/reports/presentation/screens/reports_screen.dart';
+import '../features/reports/presentation/screens/checkup_log_screen.dart';
 import '../features/profile/presentation/screens/profile_screen.dart';
 import '../features/admin/presentation/screens/admin_shell.dart';
 import '../features/admin/presentation/screens/admin_asha_list_screen.dart';
@@ -135,7 +135,7 @@ class AppRoutes {
     ),
     GetPage(
       name: reports,
-      page: () => const ReportsScreen(),
+      page: () => const CheckupLogScreen(),
       transition: Transition.fadeIn,
       transitionDuration: _fast,
     ),
