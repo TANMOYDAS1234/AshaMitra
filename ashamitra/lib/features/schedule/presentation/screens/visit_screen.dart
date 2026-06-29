@@ -64,50 +64,51 @@ class _VisitScreenState extends State<VisitScreen> {
   final _notes = TextEditingController();      // অন্যান্য সমস্যা / মন্তব্য
   // Supplements / injections given this ANC visit.
   final Set<String> _ancGiven = {};
-  static const _ancSupplements = ['IFA', 'ক্যালসিয়াম', 'অ্যালবেন্ডাজল', 'TD টিকা'];
+  List<String> get _ancSupplements =>
+      ['IFA', 'visit_supp_calcium'.tr, 'visit_supp_albendazole'.tr, 'visit_supp_td'.tr];
   // WB MCP-card pg-5 TB screening inside ANC — any flag ⇒ prompt a NAAT test.
   final Set<String> _tb = {};
-  static const _ancTbSigns = [
-    'কাশি / জ্বর (২ সপ্তাহের বেশি)',
-    'রাতে ঘাম হওয়া',
-    'গত ৩ মাসে ওজন বাড়েনি',
-  ];
+  List<String> get _ancTbSigns => [
+        'visit_tb_cough_fever'.tr,
+        'visit_tb_night_sweats'.tr,
+        'visit_tb_no_weight_gain'.tr,
+      ];
   // Danger-sign flags (ANC / newborn / young-child).
   final Set<String> _flags = {};
 
-  static const _ancDangerSigns = [
-    'পা/মুখ/হাত ফোলা',
-    'চোখে ঝাপসা দেখা',
-    'তীব্র মাথাব্যথা',
-    'যোনিপথে রক্তপাত',
-    'খিঁচুনি',
-    'গর্ভস্থ শিশুর নড়াচড়া কম',
-    'তীব্র জ্বর',
-    'ফ্যাকাসে ভাব (রক্তাল্পতা)',
-    'জন্ডিস',
-  ];
+  List<String> get _ancDangerSigns => [
+        'visit_anc_ds_swelling'.tr,
+        'visit_anc_ds_blurred_vision'.tr,
+        'visit_anc_ds_severe_headache'.tr,
+        'visit_anc_ds_vaginal_bleeding'.tr,
+        'visit_anc_ds_convulsions'.tr,
+        'visit_anc_ds_reduced_movement'.tr,
+        'visit_anc_ds_high_fever'.tr,
+        'visit_anc_ds_pallor'.tr,
+        'visit_anc_ds_jaundice'.tr,
+      ];
 
-  static const _newbornDangerSigns = [
-    'দুধ খেতে পারছে না',
-    'খিঁচুনি',
-    'দ্রুত শ্বাস (৬০+/মিনিট)',
-    'বুক ভেতরে ঢুকছে',
-    'গা গরম (জ্বর)',
-    'গা ঠান্ডা',
-    'নিস্তেজ / সাড়া কম',
-    'নাভিতে পুঁজ / লালভাব',
-  ];
+  List<String> get _newbornDangerSigns => [
+        'visit_nb_ds_cannot_feed'.tr,
+        'visit_nb_ds_convulsions'.tr,
+        'visit_nb_ds_fast_breathing'.tr,
+        'visit_nb_ds_chest_indrawing'.tr,
+        'visit_nb_ds_fever'.tr,
+        'visit_nb_ds_cold'.tr,
+        'visit_nb_ds_lethargic'.tr,
+        'visit_nb_ds_umbilical_infection'.tr,
+      ];
 
   // HBYC young-child home-visit checklist (IIBYC card) — care + danger items.
-  static const _hbycSigns = [
-    'শিশু অসুস্থ',
-    'বুকের দুধ / পরিপূরক খাবার ঠিকমতো হচ্ছে না',
-    'ওজন বাড়ছে না',
-    'টিকা বাকি আছে',
-    'ডায়রিয়া / নিউমোনিয়ার লক্ষণ',
-    'বিকাশে দেরি',
-    'ঘরে ORS / আয়রন সিরাপ নেই',
-  ];
+  List<String> get _hbycSigns => [
+        'visit_hbyc_sign_child_sick'.tr,
+        'visit_hbyc_sign_feeding_poor'.tr,
+        'visit_hbyc_sign_no_weight_gain'.tr,
+        'visit_hbyc_sign_vaccine_pending'.tr,
+        'visit_hbyc_sign_diarrhea_pneumonia'.tr,
+        'visit_hbyc_sign_dev_delay'.tr,
+        'visit_hbyc_sign_no_ors_iron'.tr,
+      ];
 
   // ── HBNC: newborn measurements + mother PNC (MCP card pg 7) ──────────────
   final _hbWeight = TextEditingController(); // নবজাতকের ওজন (কেজি)
@@ -115,23 +116,27 @@ class _VisitScreenState extends State<VisitScreen> {
   final _pncBp = TextEditingController();    // মায়ের রক্তচাপ
   final _pncTemp = TextEditingController();  // মায়ের তাপমাত্রা (°F)
   final Set<String> _pncFlags = {};
-  static const _pncDangerSigns = [
-    'অতিরিক্ত রক্তস্রাব',
-    'দুর্গন্ধযুক্ত স্রাব (লোকিয়া)',
-    'স্তন ফোলা / ব্যথা',
-    'তীব্র জ্বর',
-    'খিঁচুনি',
-    'সেলাইয়ে সংক্রমণ',
-    'বিষণ্নতা / মানসিক সমস্যা',
-  ];
+  List<String> get _pncDangerSigns => [
+        'visit_pnc_ds_heavy_bleeding'.tr,
+        'visit_pnc_ds_foul_discharge'.tr,
+        'visit_pnc_ds_breast_pain'.tr,
+        'visit_pnc_ds_high_fever'.tr,
+        'visit_pnc_ds_convulsions'.tr,
+        'visit_pnc_ds_stitch_infection'.tr,
+        'visit_pnc_ds_depression'.tr,
+      ];
 
   // ── HBYC: growth (weight + MUAC → SAM/MAM) + services given ──────────────
   final _ycWeight = TextEditingController(); // ওজন (কেজি)
   final _ycMuac = TextEditingController();   // MUAC বাহুর মাপ (মিমি)
   final Set<String> _hbycGiven = {};
-  static const _hbycGivenItems = [
-    'ভিটামিন এ', 'ORS প্যাকেট', 'আয়রন সিরাপ', 'কৃমিনাশক', 'পুষ্টি পরামর্শ',
-  ];
+  List<String> get _hbycGivenItems => [
+        'visit_hbyc_given_vit_a'.tr,
+        'visit_hbyc_given_ors'.tr,
+        'visit_hbyc_given_iron'.tr,
+        'visit_hbyc_given_deworming'.tr,
+        'visit_hbyc_given_nutrition'.tr,
+      ];
 
   @override
   void initState() {
@@ -184,7 +189,7 @@ class _VisitScreenState extends State<VisitScreen> {
       final sched = f(done.first['dueDate']);
       final recd = f(done.first['doneDate'] ?? rec['completedAt']);
       _prevAncDate = (recd.isNotEmpty && recd != sched)
-          ? '$sched · সম্পন্ন $recd'
+          ? 'visit_prev_sched_done'.trParams({'sched': sched, 'recd': recd})
           : (recd.isNotEmpty ? recd : sched);
       // Carry forward once-per-pregnancy results when this visit hasn't set them.
       if (_hiv.text.trim().isEmpty && (rec['hiv']?.toString() ?? '').isNotEmpty) {
@@ -299,7 +304,7 @@ class _VisitScreenState extends State<VisitScreen> {
   }
 
   String get _kind => _e['kind']?.toString() ?? '';
-  String get _label => _e['label']?.toString() ?? 'ভিজিট';
+  String get _label => _e['label']?.toString() ?? 'visit_default_label'.tr;
   String get _id => _e['id']?.toString() ?? '';
   List<String> get _vaccines {
     final meta = _e['meta'];
@@ -420,9 +425,9 @@ class _VisitScreenState extends State<VisitScreen> {
     final s = (v ?? '').trim();
     if (s.isEmpty) return null;
     final m = RegExp(r'^(\d{2,3})\s*/\s*(\d{2,3})$').firstMatch(s);
-    if (m == null) return 'যেমন 120/80';
+    if (m == null) return 'visit_val_bp_example'.tr;
     final sys = int.parse(m.group(1)!), dia = int.parse(m.group(2)!);
-    if (sys < 70 || sys > 260 || dia < 40 || dia > 160) return 'BP যাচাই করুন';
+    if (sys < 70 || sys > 260 || dia < 40 || dia > 160) return 'visit_val_bp_check'.tr;
     return null;
   }
 
@@ -431,8 +436,14 @@ class _VisitScreenState extends State<VisitScreen> {
         final s = (v ?? '').trim();
         if (s.isEmpty) return null;
         final n = double.tryParse(s);
-        if (n == null) return 'সংখ্যায় লিখুন';
-        if (n < min || n > max) return 'মান $min–$max${unit.isNotEmpty ? ' $unit' : ''}';
+        if (n == null) return 'visit_val_enter_number'.tr;
+        if (n < min || n > max) {
+          return 'visit_val_range'.trParams({
+            'min': '$min',
+            'max': '$max',
+            'unit': unit.isNotEmpty ? ' $unit' : '',
+          });
+        }
         return null;
       };
 
@@ -440,22 +451,22 @@ class _VisitScreenState extends State<VisitScreen> {
     final s = (v ?? '').trim().toLowerCase();
     if (s.isEmpty) return null;
     if (RegExp(r'^(nil|trace|\+{1,3})$').hasMatch(s)) return null;
-    return 'nil / + / ++ / +++';
+    return 'visit_val_urine'.tr;
   }
 
   String? _vMuac(String? v) {
     final s = (v ?? '').trim();
     if (s.isEmpty) return null;
     final n = double.tryParse(s.replaceAll(RegExp(r'[^0-9.]'), ''));
-    if (n == null) return 'সংখ্যায় লিখুন';
+    if (n == null) return 'visit_val_enter_number'.tr;
     final mm = n < 40 ? n * 10 : n; // accept cm or mm
-    if (mm < 70 || mm > 250) return 'MUAC যাচাই করুন';
+    if (mm < 70 || mm > 250) return 'visit_val_muac_check'.tr;
     return null;
   }
 
   Future<void> _complete() async {
     if (!(_formKey.currentState?.validate() ?? true)) {
-      Get.snackbar('তথ্য যাচাই করুন', 'লাল চিহ্নিত ঘরগুলো ঠিক করুন।',
+      Get.snackbar('visit_validate_title'.tr, 'visit_validate_msg'.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.warningYellow, colorText: Colors.white,
           margin: const EdgeInsets.all(16), borderRadius: 12);
@@ -466,17 +477,16 @@ class _VisitScreenState extends State<VisitScreen> {
     if (_tooEarly) {
       final proceed = await Get.dialog<bool>(
         AlertDialog(
-          title: const Text('সময়ের আগে?'),
+          title: Text('visit_too_early_title'.tr),
           content: Text(
-              'এই চেকআপ নির্ধারিত $_windowStartText থেকে। এখন সম্পন্ন করলে কিছু '
-              'পরিমাপ সঠিক নাও হতে পারে এবং পরে আর মনে করানো হবে না। তবুও সম্পন্ন করবেন?'),
+              'visit_too_early_confirm'.trParams({'date': _windowStartText})),
           actions: [
             TextButton(
                 onPressed: () => Get.back(result: false),
-                child: const Text('অপেক্ষা করুন')),
+                child: Text('visit_wait'.tr)),
             TextButton(
                 onPressed: () => Get.back(result: true),
-                child: const Text('তবুও সম্পন্ন করুন')),
+                child: Text('visit_complete_anyway'.tr)),
           ],
         ),
       );
@@ -543,7 +553,7 @@ class _VisitScreenState extends State<VisitScreen> {
     if (!mounted) return;
     setState(() => _saving = false);
     if (ok == null) {
-      Get.snackbar('সংযোগ সমস্যা', 'এখন সংরক্ষণ করা গেল না, আবার চেষ্টা করুন।',
+      Get.snackbar('visit_conn_error_title'.tr, 'visit_conn_error_msg'.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.warningYellow, colorText: Colors.white,
           margin: const EdgeInsets.all(16), borderRadius: 12);
@@ -590,16 +600,17 @@ class _VisitScreenState extends State<VisitScreen> {
     final nextDate = next != null ? _fmtDate(next['dueDate']) : '';
     final action = await Get.dialog<String>(
       AlertDialog(
-        title: Row(children: const [
-          Icon(Icons.check_circle_rounded, color: AppColors.safeGreen),
-          SizedBox(width: 8),
-          Text('ভিজিট সম্পন্ন'),
+        title: Row(children: [
+          const Icon(Icons.check_circle_rounded, color: AppColors.safeGreen),
+          const SizedBox(width: 8),
+          Text('visit_done_title'.tr),
         ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('$name — $_label সম্পন্ন হয়েছে ✓', style: AppTextStyles.body),
+            Text('visit_done_summary'.trParams({'name': name, 'label': _label}),
+                style: AppTextStyles.body),
             const SizedBox(height: 14),
             if (next != null)
               Container(
@@ -612,7 +623,7 @@ class _VisitScreenState extends State<VisitScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('পরবর্তী চেকআপ',
+                    Text('visit_next_checkup'.tr,
                         style: AppTextStyles.caption
                             .copyWith(color: AppColors.textSecondary)),
                     const SizedBox(height: 2),
@@ -623,7 +634,7 @@ class _VisitScreenState extends State<VisitScreen> {
                 ),
               )
             else
-              Text('সব নির্ধারিত চেকআপ সম্পন্ন!',
+              Text('visit_all_done'.tr,
                   style: AppTextStyles.label.copyWith(color: AppColors.safeGreen)),
           ],
         ),
@@ -632,10 +643,10 @@ class _VisitScreenState extends State<VisitScreen> {
             TextButton.icon(
               onPressed: () => Get.back(result: 'remind'),
               icon: const Icon(Icons.notifications_active_outlined, size: 18),
-              label: const Text('মনে করান'),
+              label: Text('visit_remind'.tr),
             ),
           TextButton(
-              onPressed: () => Get.back(result: 'ok'), child: const Text('ঠিক আছে')),
+              onPressed: () => Get.back(result: 'ok'), child: Text('visit_ok'.tr)),
         ],
       ),
     );
@@ -664,14 +675,14 @@ class _VisitScreenState extends State<VisitScreen> {
               AppHeader(
                 title: _e['patientName']?.toString().trim().isNotEmpty == true
                     ? _e['patientName'].toString()
-                    : 'রোগী',
+                    : 'visit_patient'.tr,
                 subtitle: _label, // the ANC/checkup name now sits under the name
                 leading: GestureDetector(onTap: _openProfile, child: _headerAvatar()),
                 onTitleTap: _openProfile, // tap name → patient profile
                 actions: [
                   HeaderActionCircle(
                     icon: Icons.call_rounded,
-                    tooltip: 'ফোন করুন',
+                    tooltip: 'visit_call'.tr,
                     color: AppColors.safeGreen,
                     onTap: _callPatient,
                   ),
@@ -712,7 +723,7 @@ class _VisitScreenState extends State<VisitScreen> {
                       ],
                       const SizedBox(height: 28),
                       AppButton(
-                        label: _saving ? 'সংরক্ষণ হচ্ছে…' : 'ভিজিট সম্পন্ন করুন',
+                        label: _saving ? 'visit_saving'.tr : 'visit_complete_button'.tr,
                         onPressed: _saving ? null : _complete,
                         width: double.infinity,
                         icon: Icons.check_circle_outline_rounded,
@@ -765,7 +776,7 @@ class _VisitScreenState extends State<VisitScreen> {
   void _openProfile() {
     final p = _patient();
     if (p == null) {
-      Get.snackbar('তথ্য নেই', 'রোগীর প্রোফাইল পাওয়া গেল না।',
+      Get.snackbar('visit_no_info_title'.tr, 'visit_no_profile_msg'.tr,
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
@@ -776,7 +787,7 @@ class _VisitScreenState extends State<VisitScreen> {
     final mobile =
         (_e['patientMobile'] ?? _patient()?.mobile ?? '').toString().replaceAll(RegExp(r'\D'), '');
     if (mobile.isEmpty) {
-      Get.snackbar('নম্বর নেই', 'এই রোগীর মোবাইল নম্বর নেই।',
+      Get.snackbar('visit_no_number_title'.tr, 'visit_no_number_msg'.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.warningYellow, colorText: Colors.white,
           margin: const EdgeInsets.all(16), borderRadius: 12);
@@ -785,7 +796,7 @@ class _VisitScreenState extends State<VisitScreen> {
     try {
       await launchUrl(Uri.parse('tel:$mobile'), mode: LaunchMode.externalApplication);
     } catch (_) {
-      Get.snackbar('খুলতে পারিনি', 'ফোন অ্যাপ খোলা গেল না।',
+      Get.snackbar('visit_cannot_open_title'.tr, 'visit_cannot_open_phone_msg'.tr,
           snackPosition: SnackPosition.BOTTOM);
     }
   }
@@ -825,17 +836,17 @@ class _VisitScreenState extends State<VisitScreen> {
       case 'pnc':
         return _pncBody();
       default:
-        return [Text('এই ভিজিটটি সম্পন্ন হিসেবে চিহ্নিত করুন।',
+        return [Text('visit_mark_done_generic'.tr,
             style: AppTextStyles.body)];
     }
   }
 
   List<Widget> _vaccineBody() {
     if (_vaccines.isEmpty) {
-      return [Text('এই ভিজিটে টিকার তালিকা নেই।', style: AppTextStyles.body)];
+      return [Text('visit_no_vaccines'.tr, style: AppTextStyles.body)];
     }
     return [
-      Text('এই ভিজিটে দেওয়ার টিকা', style: AppTextStyles.label),
+      Text('visit_vaccines_to_give'.tr, style: AppTextStyles.label),
       const SizedBox(height: 6),
       ..._vaccines.map((v) => CheckboxListTile(
             contentPadding: EdgeInsets.zero,
@@ -856,9 +867,9 @@ class _VisitScreenState extends State<VisitScreen> {
     String v(String k) => (p[k]?.toString() ?? '').trim();
     final bits = <String>[
       if (v('bp').isNotEmpty) 'BP ${v('bp')}',
-      if (v('weight').isNotEmpty) 'ওজন ${v('weight')} কেজি',
+      if (v('weight').isNotEmpty) 'visit_prev_weight'.trParams({'v': v('weight')}),
       if (v('hb').isNotEmpty) 'Hb ${v('hb')}',
-      if (v('bloodSugar').isNotEmpty) 'সুগার ${v('bloodSugar')}',
+      if (v('bloodSugar').isNotEmpty) 'visit_prev_sugar'.trParams({'v': v('bloodSugar')}),
     ];
     if (bits.isEmpty) return const SizedBox.shrink();
     return Container(
@@ -876,7 +887,10 @@ class _VisitScreenState extends State<VisitScreen> {
             children: [
               const Icon(Icons.history_rounded, size: 16, color: AppColors.primary),
               const SizedBox(width: 6),
-              Text('গত বার${_prevAncDate.isNotEmpty ? ' ($_prevAncDate)' : ''}',
+              Text(
+                  _prevAncDate.isNotEmpty
+                      ? 'visit_last_time_dated'.trParams({'date': _prevAncDate})
+                      : 'visit_last_time'.tr,
                   style: AppTextStyles.label.copyWith(
                       color: AppColors.primary, fontWeight: FontWeight.w700)),
             ],
@@ -909,11 +923,15 @@ class _VisitScreenState extends State<VisitScreen> {
     final cur = _leadNum(_hb.text);
     final prev = _leadNum(_prevAnc?['hb']?.toString());
     if (cur != null && cur < 7) {
-      return _trendChip('⚠ তীব্র রক্তাল্পতা (Hb < ৭) — রেফার করুন', AppColors.emergencyRed);
+      return _trendChip('visit_trend_hb_severe'.tr, AppColors.emergencyRed);
     }
     if (cur == null || prev == null) return const SizedBox.shrink();
-    if (cur < prev) return _trendChip('↓ Hb কমেছে (গত বার $prev)', AppColors.emergencyRed);
-    return _trendChip('✓ গত বার $prev', AppColors.safeGreen);
+    if (cur < prev) {
+      return _trendChip(
+          'visit_trend_hb_dropped'.trParams({'prev': '$prev'}), AppColors.emergencyRed);
+    }
+    return _trendChip(
+        'visit_trend_last_time_value'.trParams({'prev': '$prev'}), AppColors.safeGreen);
   }
 
   Widget _weightTrend() {
@@ -921,9 +939,12 @@ class _VisitScreenState extends State<VisitScreen> {
     final prev = _leadNum(_prevAnc?['weight']?.toString());
     if (cur == null || prev == null) return const SizedBox.shrink();
     if (cur <= prev) {
-      return _trendChip('ওজন বাড়েনি (গত বার $prev কেজি)', AppColors.warningYellow);
+      return _trendChip(
+          'visit_trend_no_weight_gain'.trParams({'prev': '$prev'}), AppColors.warningYellow);
     }
-    return _trendChip('✓ +${(cur - prev).toStringAsFixed(1)} কেজি', AppColors.safeGreen);
+    return _trendChip(
+        'visit_trend_weight_gain'.trParams({'gain': (cur - prev).toStringAsFixed(1)}),
+        AppColors.safeGreen);
   }
 
   Widget _bpTrend() {
@@ -931,7 +952,7 @@ class _VisitScreenState extends State<VisitScreen> {
     final sys = _leadNum(parts.isNotEmpty ? parts[0] : '');
     final dia = _leadNum(parts.length > 1 ? parts[1] : '');
     if ((sys != null && sys >= 140) || (dia != null && dia >= 90)) {
-      return _trendChip('⚠ উচ্চ রক্তচাপ (≥140/90) — মনোযোগ দিন', AppColors.emergencyRed);
+      return _trendChip('visit_trend_high_bp'.tr, AppColors.emergencyRed);
     }
     return const SizedBox.shrink();
   }
@@ -946,20 +967,20 @@ class _VisitScreenState extends State<VisitScreen> {
     final sys = _leadNum(parts.isNotEmpty ? parts[0] : '');
     final dia = _leadNum(parts.length > 1 ? parts[1] : '');
     if ((sys != null && sys >= 140) || (dia != null && dia >= 90)) {
-      out.add('উচ্চ রক্তচাপ (≥১৪০/৯০)');
+      out.add('visit_auto_high_bp'.tr);
     }
     final hb = _leadNum(_hb.text);
     if (hb != null) {
       if (hb < 7) {
-        out.add('তীব্র রক্তাল্পতা (Hb < ৭)');
+        out.add('visit_auto_severe_anemia'.tr);
       } else if (hb < 11) {
-        out.add('রক্তাল্পতা (Hb < ১১)');
+        out.add('visit_auto_anemia'.tr);
       }
     }
     final alb = _urineAlb.text.trim().toLowerCase();
     const negatives = ['', 'nil', 'absent', 'negative', 'neg', '0', '-', 'নেই', 'অনুপস্থিত'];
     if (!negatives.contains(alb)) {
-      out.add('মূত্রে অ্যালবুমিন (প্রি-এক্লাম্পসিয়া ঝুঁকি)');
+      out.add('visit_auto_urine_albumin'.tr);
     }
     return out;
   }
@@ -970,25 +991,25 @@ class _VisitScreenState extends State<VisitScreen> {
         _prevAncCard(),
         const SizedBox(height: 14),
       ],
-      Text('পরিমাপ লিখুন', style: AppTextStyles.label),
+      Text('visit_enter_measurements'.tr, style: AppTextStyles.label),
       const SizedBox(height: 8),
       Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: AppInput(
-              hint: 'সপ্তাহ',
-              label: 'গর্ভকাল (সপ্তাহ)',
+              hint: 'visit_hint_weeks'.tr,
+              label: 'visit_label_ga'.tr,
               controller: _ga,
               keyboardType: TextInputType.number,
-              validator: _range(1, 45, unit: 'সপ্তাহ'),
+              validator: _range(1, 45, unit: 'visit_unit_weeks'.tr),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: AppInput(
-              hint: '/মিনিট',
-              label: 'নাড়ির গতি',
+              hint: 'visit_hint_per_min'.tr,
+              label: 'visit_label_pulse'.tr,
               controller: _pulse,
               keyboardType: TextInputType.number,
               validator: _range(30, 200),
@@ -998,8 +1019,8 @@ class _VisitScreenState extends State<VisitScreen> {
       ),
       const SizedBox(height: 14),
       AppInput(
-        hint: 'যেমন 120/80',
-        label: 'রক্তচাপ (BP)',
+        hint: 'visit_hint_bp_example'.tr,
+        label: 'visit_label_bp'.tr,
         controller: _bp,
         prefixIcon: const Icon(Icons.favorite_outline, color: AppColors.primary, size: 20),
         suffixIcon: _micSuffix('bp', _bp),
@@ -1009,19 +1030,19 @@ class _VisitScreenState extends State<VisitScreen> {
       _bpTrend(),
       const SizedBox(height: 14),
       AppInput(
-        hint: 'কেজি',
-        label: 'ওজন',
+        hint: 'visit_hint_kg'.tr,
+        label: 'visit_label_weight'.tr,
         controller: _weight,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.monitor_weight_outlined, color: AppColors.primary, size: 20),
-        validator: _range(25, 200, unit: 'কেজি'),
+        validator: _range(25, 200, unit: 'visit_unit_kg'.tr),
         onChanged: (_) => setState(() {}),
       ),
       _weightTrend(),
       const SizedBox(height: 14),
       AppInput(
         hint: 'g/dL',
-        label: 'হিমোগ্লোবিন (Hb)',
+        label: 'visit_label_hb'.tr,
         controller: _hb,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.bloodtype_outlined, color: AppColors.primary, size: 20),
@@ -1032,7 +1053,7 @@ class _VisitScreenState extends State<VisitScreen> {
       const SizedBox(height: 14),
       AppInput(
         hint: 'mg/dL',
-        label: 'রক্তে শর্করা (Blood sugar)',
+        label: 'visit_label_blood_sugar'.tr,
         controller: _bsugar,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.water_drop_outlined, color: AppColors.primary, size: 20),
@@ -1045,7 +1066,7 @@ class _VisitScreenState extends State<VisitScreen> {
           Expanded(
             child: AppInput(
               hint: 'nil/+/++',
-              label: 'মূত্রে অ্যালবুমিন',
+              label: 'visit_label_urine_albumin'.tr,
               controller: _urineAlb,
               validator: _vUrine,
             ),
@@ -1054,7 +1075,7 @@ class _VisitScreenState extends State<VisitScreen> {
           Expanded(
             child: AppInput(
               hint: 'nil/+/++',
-              label: 'মূত্রে শর্করা',
+              label: 'visit_label_urine_sugar'.tr,
               controller: _urineSugar,
               validator: _vUrine,
             ),
@@ -1063,8 +1084,8 @@ class _VisitScreenState extends State<VisitScreen> {
       ),
       const SizedBox(height: 14),
       AppInput(
-        hint: 'সেমি',
-        label: 'জরায়ুর উচ্চতা (Fundal height)',
+        hint: 'visit_hint_cm'.tr,
+        label: 'visit_label_fundal'.tr,
         controller: _fundal,
         keyboardType: TextInputType.number,
         prefixIcon: const Icon(Icons.straighten_outlined, color: AppColors.primary, size: 20),
@@ -1076,8 +1097,8 @@ class _VisitScreenState extends State<VisitScreen> {
         children: [
           Expanded(
             child: AppInput(
-              hint: '/মিনিট',
-              label: 'শিশুর হৃদস্পন্দন (FHR)',
+              hint: 'visit_hint_per_min'.tr,
+              label: 'visit_label_fhr'.tr,
               controller: _fhr,
               keyboardType: TextInputType.number,
               validator: _range(60, 220),
@@ -1086,8 +1107,8 @@ class _VisitScreenState extends State<VisitScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: AppInput(
-              hint: 'Lie / Presentation',
-              label: 'গর্ভস্থ অবস্থান',
+              hint: 'visit_hint_lie'.tr,
+              label: 'visit_label_lie'.tr,
               controller: _lie,
               suffixIcon: _micSuffix('lie', _lie),
             ),
@@ -1095,7 +1116,7 @@ class _VisitScreenState extends State<VisitScreen> {
         ],
       ),
       const SizedBox(height: 16),
-      Text('আবশ্যিক পরীক্ষা', style: AppTextStyles.label),
+      Text('visit_mandatory_tests'.tr, style: AppTextStyles.label),
       const SizedBox(height: 8),
       Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1105,24 +1126,24 @@ class _VisitScreenState extends State<VisitScreen> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: AppInput(hint: 'R / NR', label: 'সিফিলিস', controller: _syphilis),
+            child: AppInput(hint: 'R / NR', label: 'visit_label_syphilis'.tr, controller: _syphilis),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: AppInput(hint: 'হ্যাঁ/না', label: 'USG', controller: _usg),
+            child: AppInput(hint: 'visit_hint_yes_no'.tr, label: 'USG', controller: _usg),
           ),
         ],
       ),
       const SizedBox(height: 14),
       AppInput(
-        hint: 'অন্যান্য সমস্যা / মন্তব্য',
-        label: 'মন্তব্য',
+        hint: 'visit_hint_notes'.tr,
+        label: 'visit_label_notes'.tr,
         controller: _notes,
         maxLines: 2,
         suffixIcon: _micSuffix('notes', _notes),
       ),
       const SizedBox(height: 16),
-      Text('এই ভিজিটে যা দেওয়া হয়েছে', style: AppTextStyles.label),
+      Text('visit_given_this_visit'.tr, style: AppTextStyles.label),
       const SizedBox(height: 8),
       Wrap(
         spacing: 8,
@@ -1144,9 +1165,9 @@ class _VisitScreenState extends State<VisitScreen> {
         }).toList(),
       ),
       const SizedBox(height: 18),
-      ..._flagBody('বিপদচিহ্ন যাচাই করুন', _ancDangerSigns),
+      ..._flagBody('visit_check_danger_signs'.tr, _ancDangerSigns),
       const SizedBox(height: 18),
-      ..._flagBody('যক্ষ্মা (TB) লক্ষণ যাচাই', _ancTbSigns,
+      ..._flagBody('visit_check_tb_signs'.tr, _ancTbSigns,
           target: _tb, color: AppColors.warningYellow),
       if (_tb.isNotEmpty) ...[
         const SizedBox(height: 10),
@@ -1158,15 +1179,15 @@ class _VisitScreenState extends State<VisitScreen> {
   // ── PNC: mother's postnatal visit (own schedule, from delivery date) ──────
   List<Widget> _pncBody() {
     return [
-      Text('মায়ের প্রসব-পরবর্তী অবস্থা (PNC)', style: AppTextStyles.label),
+      Text('visit_mother_pnc'.tr, style: AppTextStyles.label),
       const SizedBox(height: 8),
       Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: AppInput(
-                hint: 'যেমন 110/70',
-                label: 'রক্তচাপ (BP)',
+                hint: 'visit_hint_bp_example2'.tr,
+                label: 'visit_label_bp'.tr,
                 controller: _pncBp,
                 suffixIcon: _micSuffix('pncBp', _pncBp),
                 validator: _vBp),
@@ -1175,7 +1196,7 @@ class _VisitScreenState extends State<VisitScreen> {
           Expanded(
             child: AppInput(
                 hint: '°F',
-                label: 'তাপমাত্রা',
+                label: 'visit_label_temp'.tr,
                 controller: _pncTemp,
                 keyboardType: TextInputType.number,
                 validator: _range(90, 110)),
@@ -1183,7 +1204,7 @@ class _VisitScreenState extends State<VisitScreen> {
         ],
       ),
       const SizedBox(height: 14),
-      ..._flagBody('মায়ের বিপদচিহ্ন যাচাই করুন', _pncDangerSigns, target: _pncFlags),
+      ..._flagBody('visit_check_mother_danger_signs'.tr, _pncDangerSigns, target: _pncFlags),
     ];
   }
 
@@ -1215,22 +1236,24 @@ class _VisitScreenState extends State<VisitScreen> {
           ],
         );
     return [
-      Text('মায়ের প্রসব-পরবর্তী অবস্থা (PNC)', style: AppTextStyles.label),
+      Text('visit_mother_pnc'.tr, style: AppTextStyles.label),
       const SizedBox(height: 8),
-      num2('রক্তচাপ (BP)', _pncBp, 'যেমন 110/70', 'তাপমাত্রা (°F)', _pncTemp, '°F',
+      num2('visit_label_bp'.tr, _pncBp, 'visit_hint_bp_example2'.tr,
+          'visit_label_temp_f'.tr, _pncTemp, '°F',
           v1: _vBp, v2: _range(90, 110)),
       const SizedBox(height: 14),
-      ..._flagBody('মায়ের বিপদচিহ্ন', _pncDangerSigns, target: _pncFlags),
+      ..._flagBody('visit_mother_danger_signs'.tr, _pncDangerSigns, target: _pncFlags),
       const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: Divider(height: 1),
       ),
-      Text('নবজাতকের অবস্থা', style: AppTextStyles.label),
+      Text('visit_newborn_status'.tr, style: AppTextStyles.label),
       const SizedBox(height: 8),
-      num2('ওজন (কেজি)', _hbWeight, 'কেজি', 'তাপমাত্রা (°F)', _hbTemp, '°F',
+      num2('visit_label_weight_kg'.tr, _hbWeight, 'visit_hint_kg'.tr,
+          'visit_label_temp_f'.tr, _hbTemp, '°F',
           number1: true, v1: _range(0.5, 8), v2: _range(90, 110)),
       const SizedBox(height: 14),
-      ..._flagBody('নবজাতকের বিপদচিহ্ন যাচাই করুন', _newbornDangerSigns),
+      ..._flagBody('visit_check_newborn_danger_signs'.tr, _newbornDangerSigns),
     ];
   }
 
@@ -1238,24 +1261,24 @@ class _VisitScreenState extends State<VisitScreen> {
   List<Widget> _hbycBody() {
     final status = _muacStatus;
     return [
-      Text('বৃদ্ধি পর্যবেক্ষণ', style: AppTextStyles.label),
+      Text('visit_growth_monitoring'.tr, style: AppTextStyles.label),
       const SizedBox(height: 8),
       Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: AppInput(
-                hint: 'কেজি',
-                label: 'ওজন',
+                hint: 'visit_hint_kg'.tr,
+                label: 'visit_label_weight'.tr,
                 controller: _ycWeight,
                 keyboardType: TextInputType.number,
-                validator: _range(1, 30, unit: 'কেজি')),
+                validator: _range(1, 30, unit: 'visit_unit_kg'.tr)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: AppInput(
-                hint: 'মিমি (যেমন 125)',
-                label: 'MUAC (বাহুর মাপ)',
+                hint: 'visit_hint_muac_mm'.tr,
+                label: 'visit_label_muac'.tr,
                 controller: _ycMuac,
                 keyboardType: TextInputType.number,
                 validator: _vMuac,
@@ -1268,7 +1291,7 @@ class _VisitScreenState extends State<VisitScreen> {
         _muacBanner(status),
       ],
       const SizedBox(height: 16),
-      Text('এই ভিজিটে দেওয়া হয়েছে', style: AppTextStyles.label),
+      Text('visit_given_this_visit2'.tr, style: AppTextStyles.label),
       const SizedBox(height: 8),
       Wrap(
         spacing: 8,
@@ -1290,7 +1313,7 @@ class _VisitScreenState extends State<VisitScreen> {
         }).toList(),
       ),
       const SizedBox(height: 18),
-      ..._flagBody('শিশুর যত্ন ও বিপদচিহ্ন যাচাই করুন', _hbycSigns),
+      ..._flagBody('visit_check_child_care_danger'.tr, _hbycSigns),
     ];
   }
 
@@ -1299,13 +1322,13 @@ class _VisitScreenState extends State<VisitScreen> {
     final (color, text) = switch (status) {
       'SAM' => (
           AppColors.emergencyRed,
-          'তীব্র অপুষ্টি (SAM) — এখনই NRC/পুষ্টি পুনর্বাসন কেন্দ্রে রেফার করুন।'
+          'visit_muac_sam'.tr
         ),
       'MAM' => (
           AppColors.warningYellow,
-          'মাঝারি অপুষ্টি (MAM) — পুষ্টি পরামর্শ ও ঘন ঘন ফলো-আপ দিন।'
+          'visit_muac_mam'.tr
         ),
-      _ => (AppColors.safeGreen, 'বাহুর মাপ স্বাভাবিক।'),
+      _ => (AppColors.safeGreen, 'visit_muac_normal'.tr),
     };
     return Container(
       width: double.infinity,
@@ -1374,7 +1397,7 @@ class _VisitScreenState extends State<VisitScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'টিবি সন্দেহ — কফ পরীক্ষা / NAAT করান এবং নিকটস্থ TB কেন্দ্রে জানান।',
+              'visit_naat_banner'.tr,
               style: AppTextStyles.label.copyWith(
                   color: AppColors.textSecondary, fontWeight: FontWeight.w600),
             ),
@@ -1399,7 +1422,7 @@ class _VisitScreenState extends State<VisitScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'বিপদচিহ্ন শনাক্ত হয়েছে — এখনই নিকটতম FRU/PHC-তে রেফার করুন (১০৮)।',
+              'visit_danger_banner'.tr,
               style: AppTextStyles.label.copyWith(
                   color: AppColors.emergencyRed, fontWeight: FontWeight.w700),
             ),
@@ -1425,9 +1448,7 @@ class _VisitScreenState extends State<VisitScreen> {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              'এই চেকআপ এখনও সময়ের আগে (নির্ধারিত $_windowStartText থেকে)। '
-              'কিছু পরিমাপ (যেমন বৃদ্ধি, হৃৎস্পন্দন) এখন সঠিক নাও হতে পারে — '
-              'সম্ভব হলে সময়মতো করুন।',
+              'visit_too_early_banner'.trParams({'date': _windowStartText}),
               style: AppTextStyles.label.copyWith(
                   color: AppColors.accentDeep, fontWeight: FontWeight.w600, height: 1.4),
             ),

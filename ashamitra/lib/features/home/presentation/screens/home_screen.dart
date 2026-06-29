@@ -90,14 +90,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('বকেয়া টিকা ও ANC',
+                        Text('home_due_banner_title'.tr,
                             style: AppTextStyles.h3.copyWith(
                                 color: Colors.white, fontWeight: FontWeight.w800)),
                         const SizedBox(height: 3),
                         Text(
                           hasDue
-                              ? '$_dueCount জন রোগীর টিকা / পরীক্ষা বাকি আছে'
-                              : 'টিকা ও পরীক্ষার তালিকা দেখুন',
+                              ? 'home_due_banner_count'.trParams({'count': '$_dueCount'})
+                              : 'home_due_banner_empty'.tr,
                           style: AppTextStyles.bodySm
                               .copyWith(color: Colors.white.withValues(alpha: 0.92)),
                         ),
@@ -149,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.only(left: 4, bottom: 10),
-            child: Text('রেজিস্টার ও নথি',
+            child: Text('home_records_section'.tr,
                 style: AppTextStyles.label.copyWith(
                     color: AppColors.textSecondary, fontWeight: FontWeight.w700)),
           ),
@@ -164,26 +164,26 @@ class _HomeScreenState extends State<HomeScreen> {
               _recordTile(
                 icon: Icons.auto_stories_rounded,
                 color: AppColors.primary,
-                title: 'রেজিস্টার তৈরি',
+                title: 'home_record_registers'.tr,
                 route: AppRoutes.registers,
               ),
               Obx(() => _recordTile(
                     icon: Icons.local_hospital_rounded,
                     color: AppColors.emergencyRed,
-                    title: 'রেফারেল ও ট্র্যাকিং',
+                    title: 'home_record_referrals'.tr,
                     route: AppRoutes.referralList,
                     badge: refCtrl.openCount,
                   )),
               _recordTile(
                 icon: Icons.favorite_rounded,
                 color: AppColors.purple,
-                title: 'যোগ্য দম্পতি (পরিবার পরিকল্পনা)',
+                title: 'home_record_eligible_couples'.tr,
                 route: AppRoutes.eligibleCouples,
               ),
               _recordTile(
                 icon: Icons.menu_book_rounded,
                 color: AppColors.sky,
-                title: 'জন্ম ও মৃত্যু নথি',
+                title: 'home_record_vital_events'.tr,
                 route: AppRoutes.vitalEvents,
               ),
             ],
@@ -305,7 +305,7 @@ class _HomeScreenState extends State<HomeScreen> {
       (Icons.child_friendly_rounded,         'case_infant_title'.tr,         'case_infant_sub'.tr,    const Color(0xFF10B981),   'infant'),
       (Icons.face_rounded,                   'case_child_title'.tr,          'case_child_sub'.tr,const Color(0xFFF59E0B),  'child'),
       (Icons.vaccines_rounded,               'case_immunisation_title'.tr,    'case_immunisation_sub'.tr,     const Color(0xFF6366F1),   'immunization'),
-      (Icons.emoji_people_rounded,           'শিশু বিকাশ',                    'মাইলস্টোন যাচাই',              const Color(0xFFEC4899),   'development'),
+      (Icons.emoji_people_rounded,           'home_card_development_title'.tr, 'home_card_development_sub'.tr, const Color(0xFFEC4899),   'development'),
       (Icons.emergency_rounded,              'case_emergency_title'.tr,           'case_emergency_sub'.tr,     AppColors.emergencyRed,    'emergency'),
     ];
 

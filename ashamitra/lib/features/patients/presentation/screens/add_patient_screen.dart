@@ -73,72 +73,72 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       ({String key, String label, String section, List<String> cases, bool number, bool isBool})>
       _mcpFields = [
     // পরিবার পরিচয়
-    (key: 'nameEn',        label: 'ইংরেজি নাম (Aadhaar — official)', section: 'পরিবার পরিচয়', cases: [], number: false, isBool: false),
-    (key: 'fatherName',    label: 'বাবার নাম',              section: 'পরিবার পরিচয়', cases: [], number: false, isBool: false),
-    (key: 'address',       label: 'ঠিকানা',                 section: 'পরিবার পরিচয়', cases: [], number: false, isBool: false),
-    (key: 'fatherMobile',  label: 'বাবার মোবাইল',           section: 'পরিবার পরিচয়', cases: [], number: true,  isBool: false),
-    (key: 'rchId',         label: 'RCH / MCTS নিবন্ধন নং',  section: 'পরিবার পরিচয়', cases: [], number: false, isBool: false),
-    (key: 'motherAadhaar', label: 'মায়ের আধার নং',          section: 'পরিবার পরিচয়', cases: [], number: true,  isBool: false),
-    (key: 'childAadhaar',  label: 'শিশুর আধার নং',          section: 'পরিবার পরিচয়', cases: ['Newborn', 'Child'], number: true, isBool: false),
+    (key: 'nameEn',        label: 'addp_f_nameEn',        section: 'পরিবার পরিচয়', cases: [], number: false, isBool: false),
+    (key: 'fatherName',    label: 'addp_f_fatherName',    section: 'পরিবার পরিচয়', cases: [], number: false, isBool: false),
+    (key: 'address',       label: 'addp_f_address',       section: 'পরিবার পরিচয়', cases: [], number: false, isBool: false),
+    (key: 'fatherMobile',  label: 'addp_f_fatherMobile',  section: 'পরিবার পরিচয়', cases: [], number: true,  isBool: false),
+    (key: 'rchId',         label: 'addp_f_rchId',         section: 'পরিবার পরিচয়', cases: [], number: false, isBool: false),
+    (key: 'motherAadhaar', label: 'addp_f_motherAadhaar', section: 'পরিবার পরিচয়', cases: [], number: true,  isBool: false),
+    (key: 'childAadhaar',  label: 'addp_f_childAadhaar',  section: 'পরিবার পরিচয়', cases: ['Newborn', 'Child'], number: true, isBool: false),
     // ব্যাঙ্ক ও যোজনা
-    (key: 'pmmvyEligible', label: 'PMMVY-র জন্য যোগ্য?',     section: 'ব্যাঙ্ক ও যোজনা', cases: [], number: false, isBool: true),
-    (key: 'jsyRegNo',      label: 'JSY নিবন্ধন নং',          section: 'ব্যাঙ্ক ও যোজনা', cases: [], number: false, isBool: false),
-    (key: 'bankName',      label: 'ব্যাঙ্ক ও শাখার নাম',     section: 'ব্যাঙ্ক ও যোজনা', cases: [], number: false, isBool: false),
-    (key: 'bankAccount',   label: 'অ্যাকাউন্ট নং',           section: 'ব্যাঙ্ক ও যোজনা', cases: [], number: true,  isBool: false),
-    (key: 'ifsc',          label: 'IFSC কোড',               section: 'ব্যাঙ্ক ও যোজনা', cases: [], number: false, isBool: false),
+    (key: 'pmmvyEligible', label: 'addp_f_pmmvyEligible', section: 'ব্যাঙ্ক ও যোজনা', cases: [], number: false, isBool: true),
+    (key: 'jsyRegNo',      label: 'addp_f_jsyRegNo',      section: 'ব্যাঙ্ক ও যোজনা', cases: [], number: false, isBool: false),
+    (key: 'bankName',      label: 'addp_f_bankName',      section: 'ব্যাঙ্ক ও যোজনা', cases: [], number: false, isBool: false),
+    (key: 'bankAccount',   label: 'addp_f_bankAccount',   section: 'ব্যাঙ্ক ও যোজনা', cases: [], number: true,  isBool: false),
+    (key: 'ifsc',          label: 'addp_f_ifsc',          section: 'ব্যাঙ্ক ও যোজনা', cases: [], number: false, isBool: false),
     // জনতাত্ত্বিক (demographics — register columns: religion / caste / blood group)
-    (key: 'religion',   label: 'ধর্ম',           section: 'জনতাত্ত্বিক', cases: [], number: false, isBool: false),
-    (key: 'caste',      label: 'জাতিগত শ্রেণি',  section: 'জনতাত্ত্বিক', cases: [], number: false, isBool: false),
-    (key: 'bloodGroup', label: 'রক্তের গ্রুপ',   section: 'জনতাত্ত্বিক', cases: [], number: false, isBool: false),
+    (key: 'religion',   label: 'addp_f_religion',   section: 'জনতাত্ত্বিক', cases: [], number: false, isBool: false),
+    (key: 'caste',      label: 'addp_f_caste',      section: 'জনতাত্ত্বিক', cases: [], number: false, isBool: false),
+    (key: 'bloodGroup', label: 'addp_f_bloodGroup', section: 'জনতাত্ত্বিক', cases: [], number: false, isBool: false),
     // গর্ভাবস্থা — gravida/para/abortion (G-P-L-A) + living children + delivery
-    (key: 'gravida',          label: 'গর্ভসঞ্চারের সংখ্যা (Gravida)', section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
-    (key: 'para',             label: 'পূর্ববর্তী প্রসব (Para)',       section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
-    (key: 'prevLiveBirths',   label: 'জীবিত শিশুর সংখ্যা',           section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
-    (key: 'abortions',        label: 'গর্ভপাত / মৃত প্রসব সংখ্যা',    section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
-    (key: 'lastChildAge',     label: 'সর্বশেষ সন্তানের বয়স (বছর)',    section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
-    (key: 'lastDeliveryPlace',label: 'সর্বশেষ প্রসবের স্থান',         section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: false, isBool: false),
-    (key: 'plannedDelivery',  label: 'চিহ্নিত প্রসব কেন্দ্র',         section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: false, isBool: false),
-    (key: 'pregnancyOutcome', label: 'গর্ভাবস্থার ফলাফল',           section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: false, isBool: false),
+    (key: 'gravida',          label: 'addp_f_gravida',          section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
+    (key: 'para',             label: 'addp_f_para',             section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
+    (key: 'prevLiveBirths',   label: 'addp_f_prevLiveBirths',   section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
+    (key: 'abortions',        label: 'addp_f_abortions',        section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
+    (key: 'lastChildAge',     label: 'addp_f_lastChildAge',     section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: true,  isBool: false),
+    (key: 'lastDeliveryPlace',label: 'addp_f_lastDeliveryPlace',section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: false, isBool: false),
+    (key: 'plannedDelivery',  label: 'addp_f_plannedDelivery',  section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: false, isBool: false),
+    (key: 'pregnancyOutcome', label: 'addp_f_pregnancyOutcome', section: 'গর্ভাবস্থা', cases: ['Pregnancy'], number: false, isBool: false),
     // ঝুঁকির ইতিহাস — prior obstetric complications (MCP card pg 5); any → high-risk
-    (key: 'histAPH',        label: 'পূর্বে গর্ভকালীন রক্তস্রাব (APH)',     section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'histPPH',        label: 'পূর্বে প্রসবোত্তর রক্তস্রাব (PPH)',     section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'histEclampsia',  label: 'পূর্বে খিঁচুনি / এক্লাম্পসিয়া',        section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'histPIH',        label: 'পূর্বে গর্ভকালীন উচ্চ রক্তচাপ (PIH)',   section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'histLSCS',       label: 'পূর্বে সিজার (LSCS)',                  section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'histObstructed', label: 'পূর্বে বাধাপ্রাপ্ত প্রসব',             section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'histAbortion',   label: 'পূর্বে গর্ভপাত / মৃত শিশু',            section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'histCongenital', label: 'পূর্বে জন্মগত ত্রুটিযুক্ত শিশু',        section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'histAPH',        label: 'addp_f_histAPH',        section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'histPPH',        label: 'addp_f_histPPH',        section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'histEclampsia',  label: 'addp_f_histEclampsia',  section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'histPIH',        label: 'addp_f_histPIH',        section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'histLSCS',       label: 'addp_f_histLSCS',       section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'histObstructed', label: 'addp_f_histObstructed', section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'histAbortion',   label: 'addp_f_histAbortion',   section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'histCongenital', label: 'addp_f_histCongenital', section: 'ঝুঁকির ইতিহাস', cases: ['Pregnancy'], number: false, isBool: true),
     // দীর্ঘমেয়াদি অসুখ — chronic disease history (MCP card pg 5); any → high-risk
-    (key: 'chrTB',           label: 'যক্ষ্মা (TB)',      section: 'দীর্ঘমেয়াদি অসুখ', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'chrHypertension', label: 'উচ্চ রক্তচাপ',     section: 'দীর্ঘমেয়াদি অসুখ', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'chrHeart',        label: 'হৃদরোগ',          section: 'দীর্ঘমেয়াদি অসুখ', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'chrDiabetes',     label: 'ডায়াবেটিস',        section: 'দীর্ঘমেয়াদি অসুখ', cases: ['Pregnancy'], number: false, isBool: true),
-    (key: 'chrAsthma',       label: 'হাঁপানি',          section: 'দীর্ঘমেয়াদি অসুখ', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'chrTB',           label: 'addp_f_chrTB',           section: 'দীর্ঘমেয়াদি অসুখ', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'chrHypertension', label: 'addp_f_chrHypertension', section: 'দীর্ঘমেয়াদি অসুখ', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'chrHeart',        label: 'addp_f_chrHeart',        section: 'দীর্ঘমেয়াদি অসুখ', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'chrDiabetes',     label: 'addp_f_chrDiabetes',     section: 'দীর্ঘমেয়াদি অসুখ', cases: ['Pregnancy'], number: false, isBool: true),
+    (key: 'chrAsthma',       label: 'addp_f_chrAsthma',       section: 'দীর্ঘমেয়াদি অসুখ', cases: ['Pregnancy'], number: false, isBool: true),
     // জন্ম রেকর্ড
-    (key: 'birthWeight',   label: 'জন্ম ওজন (কেজি)',         section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: true,  isBool: false),
-    (key: 'birthTime',     label: 'জন্মের সময়',             section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
-    (key: 'deliveryPlace', label: 'প্রসবের স্থান',           section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
-    (key: 'birthRegNo',    label: 'জন্ম নিবন্ধন নং',         section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
-    (key: 'childRchId',    label: 'শিশুর MCTS / RCH / নিবন্ধন নং', section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
+    (key: 'birthWeight',   label: 'addp_f_birthWeight',   section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: true,  isBool: false),
+    (key: 'birthTime',     label: 'addp_f_birthTime',     section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
+    (key: 'deliveryPlace', label: 'addp_f_deliveryPlace', section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
+    (key: 'birthRegNo',    label: 'addp_f_birthRegNo',    section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
+    (key: 'childRchId',    label: 'addp_f_childRchId',     section: 'জন্ম রেকর্ড', cases: ['Newborn', 'Child'], number: false, isBool: false),
     // প্রতিষ্ঠান (MCP card pg 3 — institution block)
-    (key: 'anganwadiCentre', label: 'অঙ্গনওয়াড়ি কেন্দ্র',       section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'awcNumber',       label: 'অঙ্গনওয়াড়ি কেন্দ্র নং',    section: 'প্রতিষ্ঠান', cases: [], number: true,  isBool: false),
-    (key: 'lgdCode',         label: 'LGD কোড',                section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'panchayat',       label: 'গ্রাম পঞ্চায়েত / ওয়ার্ড',  section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'block',           label: 'ব্লক / মিউনিসিপ্যাল বডি',  section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'postOffice',      label: 'পোস্ট অফিস',             section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'pincode',         label: 'পোস্টাল কোড (পিন)',       section: 'প্রতিষ্ঠান', cases: [], number: true,  isBool: false),
-    (key: 'anmName',         label: 'ANM / FHW / FTS নাম',     section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'anmMobile',       label: 'ANM / FTS মোবাইল',        section: 'প্রতিষ্ঠান', cases: [], number: true,  isBool: false),
-    (key: 'deliveryCentrePhone', label: 'প্রসব কেন্দ্রের ফোন নং', section: 'প্রতিষ্ঠান', cases: [], number: true, isBool: false),
-    (key: 'facilityName',    label: 'প্রাথমিক স্বাস্থ্যকেন্দ্র (PHC/UPHC)', section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'bphc',            label: 'ব্লক প্রাথমিক স্বাস্থ্যকেন্দ্র (BPHC)', section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'ruralHospital',   label: 'গ্রামীণ হাসপাতাল (RH)',    section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'district',        label: 'জেলা',                   section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'subcentreName',   label: 'উপস্বাস্থ্যকেন্দ্রের নাম',  section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'subcentreRegNo',  label: 'উপকেন্দ্র নিবন্ধন নং',     section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'referralHospital',label: 'রেফারেল হাসপাতাল',        section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
-    (key: 'vhndDay',         label: 'স্বাস্থ্য পুষ্টি দিবস',    section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'anganwadiCentre', label: 'addp_f_anganwadiCentre', section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'awcNumber',       label: 'addp_f_awcNumber',       section: 'প্রতিষ্ঠান', cases: [], number: true,  isBool: false),
+    (key: 'lgdCode',         label: 'addp_f_lgdCode',         section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'panchayat',       label: 'addp_f_panchayat',       section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'block',           label: 'addp_f_block',           section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'postOffice',      label: 'addp_f_postOffice',      section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'pincode',         label: 'addp_f_pincode',         section: 'প্রতিষ্ঠান', cases: [], number: true,  isBool: false),
+    (key: 'anmName',         label: 'addp_f_anmName',         section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'anmMobile',       label: 'addp_f_anmMobile',       section: 'প্রতিষ্ঠান', cases: [], number: true,  isBool: false),
+    (key: 'deliveryCentrePhone', label: 'addp_f_deliveryCentrePhone', section: 'প্রতিষ্ঠান', cases: [], number: true, isBool: false),
+    (key: 'facilityName',    label: 'addp_f_facilityName',    section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'bphc',            label: 'addp_f_bphc',            section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'ruralHospital',   label: 'addp_f_ruralHospital',   section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'district',        label: 'addp_f_district',        section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'subcentreName',   label: 'addp_f_subcentreName',   section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'subcentreRegNo',  label: 'addp_f_subcentreRegNo',  section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'referralHospital',label: 'addp_f_referralHospital',section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
+    (key: 'vhndDay',         label: 'addp_f_vhndDay',         section: 'প্রতিষ্ঠান', cases: [], number: false, isBool: false),
   ];
 
   // Enumerable fields render as dropdowns (better data quality than free text).
@@ -150,6 +150,42 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     'bloodGroup': ['A+', 'A−', 'B+', 'B−', 'O+', 'O−', 'AB+', 'AB−', 'জানা নেই'],
     'pregnancyOutcome': ['জীবিত শিশুর প্রসব', 'মৃত শিশুর প্রসব', 'প্রযোজ্য নয়'],
   };
+
+  // Dropdown option VALUES are stored as-is in mcpDetails (the stored value
+  // stays language-neutral). Only the worker-visible label is translated; codes
+  // like A+/SC/ST have no key so they display verbatim.
+  static const Map<String, String> _optionLabelKeys = {
+    'হিন্দু': 'addp_opt_hindu',
+    'মুসলিম': 'addp_opt_muslim',
+    'খ্রিস্টান': 'addp_opt_christian',
+    'শিখ': 'addp_opt_sikh',
+    'বৌদ্ধ': 'addp_opt_buddhist',
+    'অন্যান্য': 'addp_opt_other',
+    'সাধারণ (General)': 'addp_opt_general',
+    'জানা নেই': 'addp_opt_unknown',
+    'জীবিত শিশুর প্রসব': 'addp_opt_liveBirth',
+    'মৃত শিশুর প্রসব': 'addp_opt_stillBirth',
+    'প্রযোজ্য নয়': 'addp_opt_notApplicable',
+  };
+
+  String _fieldOptionLabel(String value) {
+    final k = _optionLabelKeys[value];
+    return k != null ? k.tr : value;
+  }
+
+  // Maps a section identifier (kept in Bengali so grouping/comparison logic is
+  // unchanged) to its worker-visible translated title.
+  String _sectionLabel(String section) => switch (section) {
+        'পরিবার পরিচয়' => 'addp_sec_family'.tr,
+        'জনতাত্ত্বিক' => 'addp_sec_demographics'.tr,
+        'ব্যাঙ্ক ও যোজনা' => 'addp_sec_bankScheme'.tr,
+        'গর্ভাবস্থা' => 'addp_sec_pregnancy'.tr,
+        'ঝুঁকির ইতিহাস' => 'addp_sec_riskHistory'.tr,
+        'দীর্ঘমেয়াদি অসুখ' => 'addp_sec_chronic'.tr,
+        'জন্ম রেকর্ড' => 'addp_sec_birthRecord'.tr,
+        'প্রতিষ্ঠান' => 'addp_sec_institution'.tr,
+        _ => section,
+      };
 
   // ── Speak-to-fill (voice dictation for free-text fields) ────────────────
   // Many ASHA workers type slowly; letting them speak the name/village in
@@ -283,7 +319,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       initialDate: _lmp ?? now.subtract(const Duration(days: 56)),
       firstDate: now.subtract(const Duration(days: 310)), // within ~10 months
       lastDate: now,
-      helpText: 'শেষ মাসিকের তারিখ (LMP)',
+      helpText: 'addp_picker_lmp'.tr,
     );
     if (picked != null && mounted) setState(() => _lmp = picked);
   }
@@ -295,7 +331,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       initialDate: _deliveryDate ?? now,
       firstDate: now.subtract(const Duration(days: 365)), // within the last year
       lastDate: now,
-      helpText: 'প্রসবের তারিখ (delivery date)',
+      helpText: 'addp_picker_deliveryDate'.tr,
     );
     if (picked != null && mounted) setState(() => _deliveryDate = picked);
   }
@@ -309,7 +345,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       firstDate: now.subtract(Duration(
           days: (_caseType == 'Newborn' || _caseType == 'Child') ? 6 * 365 : 110 * 365)),
       lastDate: now,
-      helpText: 'জন্ম তারিখ (DOB)',
+      helpText: 'addp_picker_dob'.tr,
     );
     if (picked != null && mounted) {
       setState(() {
@@ -392,7 +428,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                 Icon(icon, color: AppColors.primary, size: 20),
                 const SizedBox(width: 12),
                 Text(
-                  value != null ? _fmtDate(value) : 'তারিখ নির্বাচন করুন',
+                  value != null ? _fmtDate(value) : 'addp_select_date'.tr,
                   style: value != null
                       ? AppTextStyles.body
                       : AppTextStyles.body
@@ -416,7 +452,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         children: [
           const SizedBox(height: 16),
           _dateField(
-            label: 'শেষ মাসিকের তারিখ (LMP) — আবশ্যক',
+            label: 'addp_lmp_required'.tr,
             value: _lmp,
             onTap: _pickLmp,
             icon: Icons.calendar_month_outlined,
@@ -437,7 +473,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'সম্ভাব্য প্রসবের তারিখ (EDD): ${_fmtDate(_edd!)}',
+                      'addp_edd'.trParams({'date': _fmtDate(_edd!)}),
                       style: AppTextStyles.label.copyWith(color: AppColors.primary),
                     ),
                   ),
@@ -449,7 +485,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           // Mother's DOB — record only (auto from age, editable). Does NOT drive
           // the schedule (that's LMP above); the server guards baby-vaccines.
           _dateField(
-            label: 'মায়ের জন্ম তারিখ (DOB)',
+            label: 'addp_mother_dob'.tr,
             value: _dob,
             onTap: _pickDob,
             icon: Icons.cake_outlined,
@@ -457,7 +493,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           const SizedBox(height: 16),
           // Set ONLY after she delivers → generates the PNC (postnatal) schedule.
           _dateField(
-            label: 'প্রসবের তারিখ — প্রসব হলে দিন (PNC সূচি তৈরি হবে)',
+            label: 'addp_delivery_date_pnc'.tr,
             value: _deliveryDate,
             onTap: _pickDeliveryDate,
             icon: Icons.child_friendly_outlined,
@@ -471,15 +507,15 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         children: [
           const SizedBox(height: 16),
           _dateField(
-            label: 'জন্ম তারিখ (DOB) — আবশ্যক',
+            label: 'addp_dob_required'.tr,
             value: _dob,
             onTap: _pickDob,
             icon: Icons.cake_outlined,
           ),
           const SizedBox(height: 16),
           AppInput(
-            hint: 'মায়ের নাম',
-            label: 'মায়ের নাম',
+            hint: 'addp_mother_name'.tr,
+            label: 'addp_mother_name'.tr,
             controller: _guardianCtrl,
             prefixIcon: const Icon(Icons.woman_outlined,
                 color: AppColors.primary, size: 20),
@@ -492,7 +528,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
             dense: true,
             value: _isTwin,
             activeThumbColor: AppColors.primary,
-            title: Text('যমজ শিশু?', style: AppTextStyles.label),
+            title: Text('addp_twin'.tr, style: AppTextStyles.label),
             onChanged: (v) => setState(() => _isTwin = v),
           ),
           if (_isTwin)
@@ -502,7 +538,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                 return Padding(
                   padding: const EdgeInsets.only(right: 10),
                   child: ChoiceChip(
-                    label: Text('শিশু $n'),
+                    label: Text('addp_twin_child'.trParams({'n': '$n'})),
                     selected: sel,
                     selectedColor: AppColors.primary,
                     labelStyle: AppTextStyles.label.copyWith(
@@ -522,7 +558,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       children: [
         const SizedBox(height: 16),
         _dateField(
-          label: 'জন্ম তারিখ (DOB)',
+          label: 'addp_dob'.tr,
           value: _dob,
           onTap: _pickDob,
           icon: Icons.cake_outlined,
@@ -543,7 +579,11 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           ? InputChip(
               avatar: const Icon(Icons.link_rounded, size: 16, color: AppColors.primary),
               label: Text(
-                'মা যুক্ত: ${_guardianCtrl.text.trim().isEmpty ? 'নির্বাচিত' : _guardianCtrl.text.trim()}',
+                'addp_mother_linked'.trParams({
+                  'name': _guardianCtrl.text.trim().isEmpty
+                      ? 'addp_mother_selected'.tr
+                      : _guardianCtrl.text.trim()
+                }),
                 style: AppTextStyles.label,
               ),
               backgroundColor: AppColors.primary.withValues(alpha: 0.08),
@@ -552,7 +592,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           : OutlinedButton.icon(
               onPressed: _pickMother,
               icon: const Icon(Icons.link_rounded, size: 18, color: AppColors.primary),
-              label: Text('তালিকা থেকে মা যুক্ত করুন (ঐচ্ছিক)',
+              label: Text('addp_link_mother'.tr,
                   style: AppTextStyles.label.copyWith(color: AppColors.primary)),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
@@ -572,8 +612,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
             (p.type == 'Pregnancy' || p.gender == 'Female'))
         .toList();
     if (all.isEmpty) {
-      _showSnack('মা পাওয়া যায়নি',
-          'তালিকায় কোনো গর্ভবতী/মহিলা রোগী নেই — মায়ের নাম হাতে লিখুন।',
+      _showSnack('addp_no_mother_title'.tr,
+          'addp_no_mother_msg'.tr,
           AppColors.warningYellow);
       return;
     }
@@ -601,14 +641,14 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                    child: Text('মা নির্বাচন করুন', style: AppTextStyles.h3),
+                    child: Text('addp_pick_mother_title'.tr, style: AppTextStyles.h3),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: TextField(
                       autofocus: false,
                       decoration: InputDecoration(
-                        hintText: 'নাম বা মোবাইল দিয়ে খুঁজুন',
+                        hintText: 'addp_search_name_mobile'.tr,
                         prefixIcon: const Icon(Icons.search_rounded),
                         border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12)),
@@ -700,7 +740,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   const Icon(Icons.people_alt_outlined, color: AppColors.warningYellow),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text('সম্ভাব্য ডুপ্লিকেট রোগী', style: AppTextStyles.h3),
+                    child: Text('addp_dup_title'.tr, style: AppTextStyles.h3),
                   ),
                 ],
               ),
@@ -708,7 +748,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Text(
-                'এই রোগী হয়তো আগে থেকেই তালিকায় আছেন। মিলে গেলে সেটি খুলুন — না হলে নতুন হিসেবে যোগ করুন।',
+                'addp_dup_body'.tr,
                 style: AppTextStyles.label.copyWith(color: AppColors.textSecondary),
               ),
             ),
@@ -742,7 +782,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                             .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(m.strong ? 'নিশ্চিত মিল' : 'সম্ভাব্য',
+                      child: Text(m.strong ? 'addp_dup_strong'.tr : 'addp_dup_possible'.tr,
                           style: AppTextStyles.label.copyWith(
                               fontSize: 11,
                               color: m.strong
@@ -762,7 +802,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.pop(ctx, null),
-                      child: Text('বাতিল', style: AppTextStyles.label),
+                      child: Text('addp_cancel'.tr, style: AppTextStyles.label),
                     ),
                   ),
                   Expanded(
@@ -770,7 +810,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     child: FilledButton.icon(
                       onPressed: () => Navigator.pop(ctx, 'new'),
                       icon: const Icon(Icons.person_add_alt_1, size: 18),
-                      label: const Text('নতুন রোগী যোগ করুন'),
+                      label: Text('addp_add_new_patient'.tr),
                     ),
                   ),
                 ],
@@ -806,18 +846,17 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   Future<String?> _sameMotherChoice(PatientModel m) => showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('একই মা'),
+          title: Text('addp_same_mother_title'.tr),
           content: Text(
-              '${m.name} আগে থেকেই তালিকায় আছেন। প্রতিটি গর্ভাবস্থার জন্য আলাদা MCP কার্ড হয় — '
-              'এটি কি নতুন গর্ভ, নাকি পুরোনো রেকর্ড দেখবেন?'),
+              'addp_same_mother_body'.trParams({'name': m.name})),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, 'open'),
-              child: const Text('পুরোনো রেকর্ড খুলুন'),
+              child: Text('addp_open_old_record'.tr),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, 'new'),
-              child: const Text('নতুন গর্ভ হিসেবে যোগ করুন'),
+              child: Text('addp_add_new_pregnancy'.tr),
             ),
           ],
         ),
@@ -883,8 +922,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           ? existingPersonId
           : (_realAadhaar(aad) ? aad : m.id);
     });
-    _showSnack('একই মা — নতুন গর্ভ',
-        'পূর্বের তথ্য বসানো হয়েছে — এখন নতুন LMP দিন।', AppColors.safeGreen);
+    _showSnack('addp_same_mother_snack_title'.tr,
+        'addp_same_mother_snack_msg'.tr, AppColors.safeGreen);
   }
 
   // Sections promoted OUT of the collapse and shown inline (clinical priority):
@@ -942,7 +981,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
               Icon(Icons.health_and_safety_outlined, color: accent, size: 20),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('ঝুঁকির ইতিহাস (উচ্চ-ঝুঁকি যাচাই)',
+                child: Text('addp_risk_section_title'.tr,
                     style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700)),
               ),
               if (hr.high)
@@ -952,7 +991,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     color: AppColors.emergencyRed.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('উচ্চ ঝুঁকি',
+                  child: Text('addp_high_risk'.tr,
                       style: AppTextStyles.label.copyWith(
                           color: AppColors.emergencyRed,
                           fontWeight: FontWeight.w800,
@@ -961,13 +1000,13 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
             ],
           ),
           const SizedBox(height: 2),
-          Text('পূর্বের গর্ভ-জটিলতা বা দীর্ঘমেয়াদি অসুখ থাকলে চিহ্নিত করুন',
+          Text('addp_risk_section_subtitle'.tr,
               style: AppTextStyles.label
                   .copyWith(color: AppColors.textSecondary, fontSize: 11)),
           ...hist.map(_mcpFieldWidget),
           if (chronic.isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text('দীর্ঘমেয়াদি অসুখ',
+            Text(_sectionLabel('দীর্ঘমেয়াদি অসুখ'),
                 style: AppTextStyles.label.copyWith(color: AppColors.primary)),
             ...chronic.map(_mcpFieldWidget),
           ],
@@ -999,7 +1038,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
       if (fields.isEmpty) continue;
       children.add(Padding(
         padding: const EdgeInsets.only(top: 10, bottom: 6),
-        child: Text(sec,
+        child: Text(_sectionLabel(sec),
             style: AppTextStyles.label.copyWith(color: AppColors.primary)),
       ));
       children.addAll(fields.map(_mcpFieldWidget));
@@ -1019,7 +1058,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           // Kept in the title (not `trailing`) so the expand chevron remains.
           title: Row(
             children: [
-              Flexible(child: Text('বিস্তারিত তথ্য (MCP কার্ড)', style: AppTextStyles.label)),
+              Flexible(child: Text('addp_mcp_details'.tr, style: AppTextStyles.label)),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
@@ -1036,7 +1075,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
               ),
             ],
           ),
-          subtitle: Text('ঐচ্ছিক — পরিবার, যোজনা, প্রতিষ্ঠানের তথ্য',
+          subtitle: Text('addp_mcp_details_sub'.tr,
               style: AppTextStyles.label
                   .copyWith(color: AppColors.textSecondary, fontSize: 11)),
           children: children,
@@ -1053,7 +1092,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         dense: true,
         value: _mcpBools[f.key] ?? false,
         activeThumbColor: AppColors.primary,
-        title: Text(f.label, style: AppTextStyles.label),
+        title: Text(f.label.tr, style: AppTextStyles.label),
         onChanged: (v) => setState(() => _mcpBools[f.key] = v),
       );
     }
@@ -1065,16 +1104,16 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(f.label, style: AppTextStyles.label),
+            Text(f.label.tr, style: AppTextStyles.label),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               initialValue: options.contains(cur) ? cur : null,
               isExpanded: true,
               style: AppTextStyles.body,
               decoration: const InputDecoration(),
-              hint: Text('নির্বাচন করুন', style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
+              hint: Text('addp_select'.tr, style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
               items: options
-                  .map((o) => DropdownMenuItem(value: o, child: Text(o)))
+                  .map((o) => DropdownMenuItem(value: o, child: Text(_fieldOptionLabel(o))))
                   .toList(),
               onChanged: (v) => setState(() => _mcpCtrl(f.key).text = v ?? ''),
             ),
@@ -1085,8 +1124,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AppInput(
-        hint: f.label,
-        label: f.label,
+        hint: f.label.tr,
+        label: f.label.tr,
         controller: _mcpCtrl(f.key),
         keyboardType: f.number ? TextInputType.number : TextInputType.text,
         // Voice-fill on text fields (numbers are unreliable by Bengali STT).
@@ -1213,18 +1252,18 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
-              title: const Text('লাইভ QR স্ক্যান'),
-              subtitle: const Text('সবচেয়ে নির্ভরযোগ্য — ক্যামেরা QR কোডের দিকে ধরুন'),
+              title: Text('addp_live_qr'.tr),
+              subtitle: Text('addp_live_qr_sub'.tr),
               onTap: () => Navigator.pop(context, 'live'),
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
-              title: const Text('ক্যামেরা দিয়ে ছবি তুলুন'),
+              title: Text('addp_take_photo_camera'.tr),
               onTap: () => Navigator.pop(context, 'camera'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined, color: AppColors.primary),
-              title: const Text('গ্যালারি থেকে বাছুন'),
+              title: Text('addp_pick_gallery'.tr),
               onTap: () => Navigator.pop(context, 'gallery'),
             ),
           ],
@@ -1263,8 +1302,8 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     setState(() => _scanning = false);
     if (r == null) {
       _showSnack(
-        'আধার স্ক্যান',
-        'তথ্য পড়া গেল না। আধার কার্ডের পিছনের QR কোডটি — আলোয়, সমান করে, সম্পূর্ণ ফ্রেমে — কাছ থেকে তুলুন, তারপর আবার চেষ্টা করুন। অথবা লাইভ QR স্ক্যান ব্যবহার করুন।',
+        'addp_aadhaar_scan'.tr,
+        'addp_aadhaar_scan_failed'.tr,
         AppColors.warningYellow,
       );
       return;
@@ -1334,9 +1373,12 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         _mcpCtrl(key).text = aad;
       }
     });
-    final via = r['source']?.toString() == 'qr' ? 'QR (যাচাইকৃত)' : 'OCR';
-    final caseHint = detectedCase != null ? ' • কেস: ${_caseLabel(detectedCase!)}' : '';
-    _showSnack('আধার $via ✓', 'তথ্য বসানো হয়েছে$caseHint — যাচাই করে নিন।',
+    final via = r['source']?.toString() == 'qr' ? 'addp_via_qr'.tr : 'OCR';
+    final caseHint = detectedCase != null
+        ? 'addp_aadhaar_case_hint'.trParams({'case': _caseLabel(detectedCase!)})
+        : '';
+    _showSnack('addp_aadhaar_via'.trParams({'via': via}),
+        'addp_aadhaar_applied'.trParams({'hint': caseHint}),
         AppColors.safeGreen);
   }
 
@@ -1351,18 +1393,18 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined, color: AppColors.primary),
-              title: const Text('ক্যামেরা দিয়ে তুলুন'),
+              title: Text('photo_take'.tr),
               onTap: () => Navigator.pop(context, 'camera'),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined, color: AppColors.primary),
-              title: const Text('গ্যালারি থেকে বাছুন'),
+              title: Text('photo_choose_gallery'.tr),
               onTap: () => Navigator.pop(context, 'gallery'),
             ),
             if (_photoB64 != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: AppColors.emergencyRed),
-                title: const Text('ছবি সরান'),
+                title: Text('photo_remove'.tr),
                 onTap: () => Navigator.pop(context, 'remove'),
               ),
           ],
@@ -1459,10 +1501,10 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('আধার কার্ড স্ক্যান করুন',
+                      Text('addp_scan_aadhaar'.tr,
                           style: AppTextStyles.label.copyWith(
                               color: AppColors.primary, fontWeight: FontWeight.w700)),
-                      Text('নাম, জন্মতারিখ, লিঙ্গ স্বয়ংক্রিয়ভাবে বসবে',
+                      Text('addp_scan_aadhaar_sub'.tr,
                           style: AppTextStyles.label.copyWith(
                               color: AppColors.textSecondary, fontSize: 11)),
                     ],
@@ -1563,7 +1605,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     if (!_formKey.currentState!.validate()) return;
     final mchError = _mchDateError();
     if (mchError != null) {
-      _showSnack('তারিখ প্রয়োজন', mchError, AppColors.warningYellow);
+      _showSnack('addp_date_required'.tr, mchError, AppColors.warningYellow);
       return;
     }
 
@@ -1636,10 +1678,10 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     }
     Get.back();
     if (result.outcome == PatientSaveOutcome.synced) {
-      _showSnack('সংরক্ষিত ✓', 'Atlas-এ সংরক্ষিত হয়েছে — $name', AppColors.safeGreen);
+      _showSnack('addp_saved'.tr, 'addp_saved_atlas'.trParams({'name': name}), AppColors.safeGreen);
     } else {
-      _showSnack('ফোনে সংরক্ষিত',
-          '$name — ইন্টারনেট এলে নিজে থেকে Atlas-এ সিঙ্ক হবে।', AppColors.warningYellow);
+      _showSnack('addp_saved_phone'.tr,
+          'addp_saved_phone_msg'.trParams({'name': name}), AppColors.warningYellow);
     }
   }
 
@@ -1649,16 +1691,16 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   /// pregnancy) within reproductive years.
   String? _validateAge(String? v) {
     final s = (v ?? '').trim();
-    if (s.isEmpty) return 'বয়স দিন';
+    if (s.isEmpty) return 'addp_val_age_required'.tr;
     final n = int.tryParse(s);
-    if (n == null || n <= 0) return 'সঠিক বয়স দিন';
-    if (_ageUnit == 'days' && n > 90) return 'দিনের হিসাবে বেশি — ইউনিট/বয়স দেখুন';
-    if (_ageUnit == 'months' && n > 60) return 'মাসের হিসাবে বেশি — ইউনিট/বয়স দেখুন';
-    if (_ageUnit == 'years' && n > 120) return 'বয়স যাচাই করুন';
+    if (n == null || n <= 0) return 'addp_val_age_valid'.tr;
+    if (_ageUnit == 'days' && n > 90) return 'addp_val_age_days_high'.tr;
+    if (_ageUnit == 'months' && n > 60) return 'addp_val_age_months_high'.tr;
+    if (_ageUnit == 'years' && n > 120) return 'addp_val_age_check'.tr;
     // Floor 12 / ceiling 55 catches typos without blocking real teenage
     // pregnancies (12–18 are allowed but auto-flagged high-risk).
     if (_caseType == 'Pregnancy' && _ageUnit == 'years' && (n < 12 || n > 55)) {
-      return 'গর্ভবতীর বয়স সাধারণত ১২–৫৫ বছর';
+      return 'addp_val_age_pregnancy_range'.tr;
     }
     return null;
   }
@@ -1666,7 +1708,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   /// Gender must fit the case type — a pregnancy beneficiary is female.
   String? _validateGender(String? v) {
     if (_caseType == 'Pregnancy' && v != 'Female') {
-      return 'গর্ভাবস্থার জন্য লিঙ্গ "মহিলা" হতে হবে';
+      return 'addp_val_gender_female'.tr;
     }
     return null;
   }
@@ -1678,7 +1720,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     if (s.isEmpty) return null;
     if (s.contains('X') || s.contains('x')) return null; // masked from scan
     final digits = s.replaceAll(RegExp(r'\D'), '');
-    if (digits.length != 12) return 'আধার নম্বর ১২ সংখ্যার হতে হবে';
+    if (digits.length != 12) return 'addp_val_aadhaar_12'.tr;
     return null;
   }
 
@@ -1688,10 +1730,10 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   /// Returns an error message, or null if OK.
   String? _mchDateError() {
     if (_caseType == 'Pregnancy' && _lmp == null) {
-      return 'গর্ভবতীর জন্য শেষ মাসিকের তারিখ (LMP) দিন — ANC সূচি তৈরির জন্য জরুরি।';
+      return 'addp_err_lmp_required'.tr;
     }
     if ((_caseType == 'Newborn' || _caseType == 'Child') && _dob == null) {
-      return 'শিশুর জন্ম তারিখ (DOB) দিন — টিকা সূচি তৈরির জন্য জরুরি।';
+      return 'addp_err_dob_required'.tr;
     }
     return null;
   }
@@ -1829,7 +1871,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                           prefixIcon: const Icon(Icons.location_on_outlined, color: AppColors.primary, size: 20),
                           suffixIcon: _micSuffix('village', _villageCtrl),
                           validator: (v) =>
-                              (v == null || v.trim().isEmpty) ? 'গ্রাম/এলাকার নাম দিন' : null,
+                              (v == null || v.trim().isEmpty) ? 'addp_val_village_required'.tr : null,
                         ),
                         const SizedBox(height: 16),
                         AppInput(

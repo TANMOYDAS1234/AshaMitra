@@ -102,17 +102,17 @@ class _DueListScreenState extends State<DueListScreen> {
 
   // ── Remind the patient (Call / WhatsApp / SMS) + log it ──────────────────
   String _reminderMsg(Map<String, dynamic> e) {
-    final name = (e['patientName'] ?? 'রোগী').toString();
+    final name = (e['patientName'] ?? 'due_patient_fallback'.tr).toString();
     final label = (e['label'] ?? '').toString();
     final due = _dueText(e);
     final kind = (e['kind'] ?? '').toString();
     if (kind == 'anc') {
-      return 'নমস্কার, $name এর ANC পরীক্ষা ($label) $due। অনুগ্রহ করে নিকটতম স্বাস্থ্যকেন্দ্রে যান।';
+      return 'due_remind_anc'.trParams({'name': name, 'label': label, 'due': due});
     }
     if (kind == 'vaccine') {
-      return '$name এর টিকা ($label) $due। সময়মতো অঙ্গনওয়াড়ি বা স্বাস্থ্যকেন্দ্রে টিকা দিন।';
+      return 'due_remind_vaccine'.trParams({'name': name, 'label': label, 'due': due});
     }
-    return '$name — $label: $due।';
+    return 'due_remind_generic'.trParams({'name': name, 'label': label, 'due': due});
   }
 
   String? _lastRemindedText(Map<String, dynamic> e) {
@@ -123,19 +123,19 @@ class _DueListScreenState extends State<DueListScreen> {
     final days = DateTime.now().difference(dt).inDays;
     final ch = (e['lastReminderChannel'] ?? '').toString();
     final chBn = switch (ch) {
-      'call' => 'ফোন',
+      'call' => 'due_channel_call'.tr,
       'whatsapp' => 'WhatsApp',
       'sms' => 'SMS',
       _ => '',
     };
-    final whenBn = days <= 0 ? 'আজ' : '$days দিন আগে';
-    return 'মনে করানো হয়েছে ($chBn) — $whenBn';
+    final whenBn = days <= 0 ? 'due_today'.tr : 'due_days_ago'.trParams({'days': '$days'});
+    return 'due_reminded'.trParams({'channel': chBn, 'when': whenBn});
   }
 
   Future<void> _remind(Map<String, dynamic> e) async {
     final mobile = (e['patientMobile'] ?? '').toString().replaceAll(RegExp(r'\D'), '');
     if (mobile.isEmpty) {
-      Get.snackbar('নম্বর নেই', 'এই রোগীর মোবাইল নম্বর নেই — রেজিস্ট্রেশনে যোগ করুন।',
+      Get.snackbar('due_no_number_title'.tr, 'due_no_number_msg'.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.warningYellow, colorText: Colors.white,
           margin: const EdgeInsets.all(16), borderRadius: 12);
@@ -149,7 +149,7 @@ class _DueListScreenState extends State<DueListScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.call, color: AppColors.safeGreen),
-              title: const Text('ফোন করুন'),
+              title: Text('due_call'.tr),
               subtitle: Text(mobile),
               onTap: () => Navigator.pop(context, 'call'),
             ),
@@ -179,7 +179,7 @@ class _DueListScreenState extends State<DueListScreen> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (_) {
       if (!mounted) return;
-      Get.snackbar('খুলতে পারিনি', 'অ্যাপটি খোলা গেল না।',
+      Get.snackbar('due_open_failed_title'.tr, 'due_open_failed_msg'.tr,
           snackPosition: SnackPosition.BOTTOM);
     }
     final updated = await ApiService.logReminder(e['id'].toString(), channel);
@@ -213,7 +213,7 @@ class _DueListScreenState extends State<DueListScreen> {
                 const Icon(Icons.notifications_active_outlined,
                     size: 15, color: AppColors.primary),
                 const SizedBox(width: 6),
-                Text('মনে করান',
+                Text('due_remind'.tr,
                     style: AppTextStyles.label.copyWith(
                         color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w700)),
               ],
@@ -242,10 +242,14 @@ class _DueListScreenState extends State<DueListScreen> {
     final inWindow = e['inWindow'] == true;   // due now, still in window
     final d = (e['daysUntil'] as num?)?.toInt() ?? 0;
     final toEnd = (e['daysToWindowEnd'] as num?)?.toInt() ?? d;
-    if (overdue) return '${toEnd.abs()} দিন পার হয়েছে';
-    if (inWindow) return toEnd <= 0 ? 'আজ শেষ দিন' : 'এখন করুন · $toEnd দিন বাকি';
-    if (d == 0) return 'আজ থেকে দেয়';
-    return '$d দিন বাকি';
+    if (overdue) return 'due_overdue_days'.trParams({'days': '${toEnd.abs()}'});
+    if (inWindow) {
+      return toEnd <= 0
+          ? 'due_last_day'.tr
+          : 'due_do_now_days_left'.trParams({'days': '$toEnd'});
+    }
+    if (d == 0) return 'due_from_today'.tr;
+    return 'due_days_left'.trParams({'days': '$d'});
   }
 
   IconData _kindIcon(String kind) => switch (kind) {
@@ -277,7 +281,7 @@ class _DueListScreenState extends State<DueListScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              const AppHeader(title: 'বকেয়া টিকা ও পরীক্ষা'),
+              AppHeader(title: 'due_screen_title'.tr),
               const SizedBox(height: 8),
               _searchField(),
               const SizedBox(height: 8),
@@ -296,13 +300,13 @@ class _DueListScreenState extends State<DueListScreen> {
                                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                                 children: [
                                   if (overdue.isNotEmpty) ...[
-                                    _sectionHeader('পার হয়ে গেছে', overdue.length,
+                                    _sectionHeader('due_section_overdue'.tr, overdue.length,
                                         AppColors.emergencyRed),
                                     ...overdue.map(_eventTile),
                                     const SizedBox(height: 12),
                                   ],
                                   if (dueSoon.isNotEmpty) ...[
-                                    _sectionHeader('আসন্ন', dueSoon.length,
+                                    _sectionHeader('due_section_upcoming'.tr, dueSoon.length,
                                         AppColors.warningYellow),
                                     ...dueSoon.map(_eventTile),
                                   ],
@@ -327,7 +331,7 @@ class _DueListScreenState extends State<DueListScreen> {
         style: AppTextStyles.body,
         decoration: InputDecoration(
           isDense: true,
-          hintText: 'রোগীর নাম খুঁজুন',
+          hintText: 'due_search_hint'.tr,
           prefixIcon: const Icon(Icons.search_rounded, size: 20, color: AppColors.primary),
           suffixIcon: _query.isEmpty
               ? null
@@ -351,13 +355,13 @@ class _DueListScreenState extends State<DueListScreen> {
   }
 
   Widget _filterBar() {
-    const filters = [
-      ('all', 'সব'),
-      ('vaccine', 'টিকা'),
+    final filters = [
+      ('all', 'due_filter_all'.tr),
+      ('vaccine', 'due_filter_vaccine'.tr),
       ('anc', 'ANC'),
       ('pnc', 'PNC'),
-      ('hbnc', 'নবজাতক'),
-      ('hbyc', 'শিশু যত্ন'),
+      ('hbnc', 'due_filter_newborn'.tr),
+      ('hbyc', 'due_filter_child_care'.tr),
     ];
     return SizedBox(
       height: 38,
@@ -395,9 +399,9 @@ class _DueListScreenState extends State<DueListScreen> {
           PopupMenuButton<String>(
             initialValue: _sort,
             onSelected: (v) => setState(() => _sort = v),
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'due', child: Text('তারিখ অনুযায়ী')),
-              PopupMenuItem(value: 'name', child: Text('নাম অনুযায়ী')),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'due', child: Text('due_sort_by_date'.tr)),
+              PopupMenuItem(value: 'name', child: Text('due_sort_by_name'.tr)),
             ],
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -410,7 +414,7 @@ class _DueListScreenState extends State<DueListScreen> {
                 children: [
                   const Icon(Icons.sort_rounded, size: 16, color: AppColors.primary),
                   const SizedBox(width: 6),
-                  Text(_sort == 'name' ? 'নাম অনুযায়ী' : 'তারিখ অনুযায়ী',
+                  Text(_sort == 'name' ? 'due_sort_by_name'.tr : 'due_sort_by_date'.tr,
                       style: AppTextStyles.label.copyWith(fontSize: 12)),
                 ],
               ),
@@ -418,7 +422,7 @@ class _DueListScreenState extends State<DueListScreen> {
           ),
           const SizedBox(width: 8),
           FilterChip(
-            label: const Text('শুধু বকেয়া'),
+            label: Text('due_chip_overdue_only'.tr),
             selected: _overdueOnly,
             showCheckmark: false,
             selectedColor: AppColors.emergencyRed,
@@ -430,7 +434,7 @@ class _DueListScreenState extends State<DueListScreen> {
           ),
           const SizedBox(width: 8),
           FilterChip(
-            label: const Text('মনে করানো হয়নি'),
+            label: Text('due_chip_not_reminded'.tr),
             selected: _notRemindedOnly,
             showCheckmark: false,
             selectedColor: AppColors.primary,
@@ -531,7 +535,7 @@ class _DueListScreenState extends State<DueListScreen> {
                             const Icon(Icons.edit_note_rounded,
                                 size: 13, color: AppColors.warningYellow),
                             const SizedBox(width: 3),
-                            Text('খসড়া',
+                            Text('due_draft'.tr,
                                 style: AppTextStyles.label.copyWith(
                                     color: AppColors.warningYellow,
                                     fontSize: 11,
@@ -579,13 +583,13 @@ class _DueListScreenState extends State<DueListScreen> {
             color: filtered ? AppColors.textSecondary : AppColors.safeGreen),
         const SizedBox(height: 14),
         Center(
-          child: Text(filtered ? 'কোনো মিল পাওয়া যায়নি' : 'আপাতত কোনো বকেয়া নেই',
+          child: Text(filtered ? 'due_empty_no_match'.tr : 'due_empty_none_title'.tr,
               style: AppTextStyles.h3.copyWith(color: AppColors.textSecondary)),
         ),
         const SizedBox(height: 6),
         Center(
           child: Text(
-              filtered ? 'ফিল্টার বা খোঁজ বদলে দেখুন' : 'সব টিকা ও পরীক্ষা সময়মতো আছে',
+              filtered ? 'due_empty_no_match_hint'.tr : 'due_empty_none_hint'.tr,
               style: AppTextStyles.label.copyWith(color: AppColors.textSecondary)),
         ),
       ],

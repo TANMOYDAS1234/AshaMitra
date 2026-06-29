@@ -119,11 +119,11 @@ class PatientProfileScreen extends StatelessWidget {
           child: Column(
             children: [
               AppHeader(
-                title: 'Patient Profile',
+                title: 'prof_patient_profile'.tr,
                 actions: [
                   HeaderActionPill(
                     icon: Icons.edit_outlined,
-                    label: 'Edit',
+                    label: 'prof_edit'.tr,
                     onTap: () {
                       // Resolve the live PatientModel from the controller so we
                       // get the current syncState + version, not a snapshot from
@@ -219,7 +219,7 @@ class PatientProfileScreen extends StatelessWidget {
                                   ),
                                   if (village.isNotEmpty && village != '—')
                                     Text(
-                                      'Village: $village',
+                                      'prof_village'.trParams({'village': village}),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: AppTextStyles.bodySm,
@@ -249,14 +249,16 @@ class PatientProfileScreen extends StatelessWidget {
                       // ── Info cards ───────────────────────────────────
                       Row(
                         children: [
-                          _InfoCard('${_caseIcon(type)} Case', type,
+                          _InfoCard(
+                              'prof_case'.trParams({'icon': _caseIcon(type)}),
+                              type,
                               Icons.assignment_rounded, AppColors.primary),
                           const SizedBox(width: 10),
-                          _InfoCard('Last Visit',
+                          _InfoCard('prof_last_visit'.tr,
                               lastVisit?.isNotEmpty == true ? lastVisit! : '—',
                               Icons.calendar_month_rounded, AppColors.sky),
                           const SizedBox(width: 10),
-                          _InfoCard('Status', risk.label,
+                          _InfoCard('prof_status'.tr, risk.label,
                               Icons.favorite_rounded,
                               risk == RiskLevel.emergency
                                   ? AppColors.emergencyRed
@@ -269,7 +271,7 @@ class PatientProfileScreen extends StatelessWidget {
                       AppButton(
                         // The checkup IS the structured MCP-card visit form
                         // (next due visit, dynamic per case) — not voice triage.
-                        label: 'চেকআপ শুরু করুন',
+                        label: 'prof_start_checkup'.tr,
                         onPressed: () => CheckupLauncher.start(
                             patientId: patientId, patientName: name),
                         icon: Icons.assignment_turned_in_outlined,
@@ -279,7 +281,7 @@ class PatientProfileScreen extends StatelessWidget {
                       // One-tap "মা ও শিশুর কার্ড" — compiles registration +
                       // captured visit records into a printable MCP-card report.
                       AppButton(
-                        label: 'মা ও শিশুর রিপোর্ট (PDF)',
+                        label: 'prof_mch_report_pdf'.tr,
                         outlined: true,
                         icon: Icons.picture_as_pdf_outlined,
                         width: double.infinity,
@@ -289,7 +291,8 @@ class PatientProfileScreen extends StatelessWidget {
                           final i = ctrl.patients
                               .indexWhere((p) => p.id == patientId);
                           if (i == -1) {
-                            Get.snackbar('রিপোর্ট', 'রোগীর তথ্য পাওয়া গেল না।',
+                            Get.snackbar('prof_report'.tr,
+                                'prof_patient_not_found'.tr,
                                 snackPosition: SnackPosition.BOTTOM,
                                 backgroundColor: AppColors.warningYellow,
                                 colorText: Colors.white,
@@ -319,7 +322,7 @@ class PatientProfileScreen extends StatelessWidget {
                           type.contains('গর্ভ')) ...[
                         const SizedBox(height: 10),
                         AppButton(
-                          label: 'গর্ভ-ইতিহাস (সব গর্ভ)',
+                          label: 'prof_pregnancy_history'.tr,
                           outlined: true,
                           icon: Icons.timeline_rounded,
                           width: double.infinity,
@@ -330,20 +333,20 @@ class PatientProfileScreen extends StatelessWidget {
                       const SizedBox(height: 24),
                       // ── Checkup timeline (schedule events, done + upcoming) ──
                       if (patientId.isNotEmpty) ...[
-                        const _SectionTitle('চেকআপ টাইমলাইন'),
+                        _SectionTitle('prof_checkup_timeline'.tr),
                         const SizedBox(height: 12),
                         _CheckupTimeline(patientId: patientId),
                         const SizedBox(height: 24),
                       ],
                       // ── Referrals for this patient (Form 3 + outcome) ──
                       if (patientId.isNotEmpty) ...[
-                        const _SectionTitle('রেফারেল'),
+                        _SectionTitle('prof_referral'.tr),
                         const SizedBox(height: 12),
                         _ProfileReferrals(patientId: patientId),
                         const SizedBox(height: 24),
                       ],
                       // ── Last assessment ──────────────────────────────
-                      const _SectionTitle('সর্বশেষ মূল্যায়ন'),
+                      _SectionTitle('prof_last_assessment'.tr),
                       const SizedBox(height: 12),
                       if (hasAssessment) ...[
                         if (outcome != null && outcome.isNotEmpty)
@@ -354,7 +357,7 @@ class PatientProfileScreen extends StatelessWidget {
                         if (situation.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _TextCard(
-                              title: 'জানানো পরিস্থিতি', body: situation),
+                              title: 'prof_reported_situation'.tr, body: situation),
                         ],
                         if (qaHistory.isNotEmpty) ...[
                           const SizedBox(height: 12),
@@ -367,7 +370,7 @@ class PatientProfileScreen extends StatelessWidget {
                         const _EmptyAssessment(),
                       if (history.isNotEmpty) ...[
                         const SizedBox(height: 24),
-                        const _SectionTitle('রিপোর্ট ইতিহাস'),
+                        _SectionTitle('prof_report_history'.tr),
                         const SizedBox(height: 12),
                         _ReportHistory(reports: history),
                       ],
@@ -385,10 +388,10 @@ class PatientProfileScreen extends StatelessWidget {
 
 extension on RiskLevel {
   String get label => switch (this) {
-        RiskLevel.safe => 'Safe',
-        RiskLevel.moderate => 'Moderate',
-        RiskLevel.high => 'High Risk',
-        RiskLevel.emergency => 'Emergency',
+        RiskLevel.safe => 'prof_risk_safe'.tr,
+        RiskLevel.moderate => 'prof_risk_moderate'.tr,
+        RiskLevel.high => 'prof_risk_high'.tr,
+        RiskLevel.emergency => 'prof_risk_emergency'.tr,
       };
 }
 
@@ -423,21 +426,21 @@ class _AssessmentCard extends StatelessWidget {
           const Color(0xFFFFEBEB),
           AppColors.emergencyRed,
           const Color(0xFF7F1D1D),
-          'Emergency',
+          'prof_outcome_emergency'.tr,
           Icons.emergency_rounded,
         ),
       'attention' => (
           const Color(0xFFFFFBEB),
           AppColors.warningYellow,
           const Color(0xFF78350F),
-          'Attention',
+          'prof_outcome_attention'.tr,
           Icons.warning_amber_rounded,
         ),
       _ => (
           const Color(0xFFECFDF5),
           AppColors.safeGreen,
           const Color(0xFF064E3B),
-          'Safe',
+          'prof_outcome_safe'.tr,
           Icons.check_circle_outline_rounded,
         ),
     };
@@ -704,11 +707,11 @@ class _CheckupAssessmentState extends State<_CheckupAssessment> {
             Icon(Icons.assignment_outlined,
                 size: 40, color: AppColors.primary.withValues(alpha: 0.4)),
             const SizedBox(height: 12),
-            Text('এখনও কোনো মূল্যায়ন হয়নি',
+            Text('prof_no_assessment_yet'.tr,
                 style: AppTextStyles.label
                     .copyWith(fontWeight: FontWeight.w700, color: AppColors.onBackground)),
             const SizedBox(height: 4),
-            Text('চেকআপ শুরু করলে এখানে শেষ অবস্থা দেখা যাবে',
+            Text('prof_no_assessment_checkup_hint'.tr,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
           ],
@@ -742,7 +745,10 @@ class _CheckupAssessmentState extends State<_CheckupAssessment> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  ok ? 'শেষ চেকআপ ঠিক আছে' : '${flags.length} টি বিপদচিহ্ন পাওয়া গেছে',
+                  ok
+                      ? 'prof_last_checkup_ok'.tr
+                      : 'prof_danger_signs_found'
+                          .trParams({'count': '${flags.length}'}),
                   style: AppTextStyles.label
                       .copyWith(color: color, fontWeight: FontWeight.w800),
                 ),
@@ -772,7 +778,7 @@ class _CheckupAssessmentState extends State<_CheckupAssessment> {
                   ),
                 )),
             const SizedBox(height: 8),
-            Text('পরামর্শ: নিকটতম স্বাস্থ্যকেন্দ্রে/PHC-তে পাঠান বা ফলো-আপ করুন।',
+            Text('prof_danger_advice'.tr,
                 style: AppTextStyles.caption
                     .copyWith(color: AppColors.emergencyRed, fontWeight: FontWeight.w600)),
           ],
@@ -825,9 +831,9 @@ class _ReportHistory extends StatelessWidget {
   Widget _row(Map<String, dynamic> r) {
     final outcome = (r['outcome'] ?? 'safe').toString();
     final (color, label) = switch (outcome) {
-      'emergency' => (AppColors.emergencyRed, 'Emergency'),
-      'attention' => (AppColors.warningYellow, 'Attention'),
-      _           => (AppColors.safeGreen, 'Safe'),
+      'emergency' => (AppColors.emergencyRed, 'prof_outcome_emergency'.tr),
+      'attention' => (AppColors.warningYellow, 'prof_outcome_attention'.tr),
+      _           => (AppColors.safeGreen, 'prof_outcome_safe'.tr),
     };
     final date = _formatDate((r['createdAt'] ?? '').toString());
     final caseLabel = (r['caseLabel'] ?? '').toString().trim();
@@ -941,20 +947,25 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
       final bits = <String>[
         if (r('bp').isNotEmpty) 'BP ${r('bp')}',
         if (r('hb').isNotEmpty) 'Hb ${r('hb')}',
-        if (r('weight').isNotEmpty) 'ওজন ${r('weight')}',
+        if (r('weight').isNotEmpty)
+          'prof_weight_value'.trParams({'value': r('weight')}),
       ];
-      return bits.isEmpty ? 'সম্পন্ন' : bits.join(' · ');
+      return bits.isEmpty ? 'prof_done'.tr : bits.join(' · ');
     }
     if (kind == 'vaccine') {
       final g = (rec['givenVaccines'] as List?)?.length ?? 0;
-      return g > 0 ? '$g টি টিকা দেওয়া হয়েছে' : 'সম্পন্ন';
+      return g > 0
+          ? 'prof_vaccines_given'.trParams({'count': '$g'})
+          : 'prof_done'.tr;
     }
     if (kind == 'hbyc') {
       final ms = r('muacStatus');
-      return ms.isNotEmpty ? 'MUAC: $ms' : 'সম্পন্ন';
+      return ms.isNotEmpty ? 'MUAC: $ms' : 'prof_done'.tr;
     }
     final flags = (rec['dangerFlags'] as List?)?.length ?? 0;
-    return flags > 0 ? '$flags টি বিপদচিহ্ন' : 'ঠিক আছে';
+    return flags > 0
+        ? 'prof_danger_signs_count'.trParams({'count': '$flags'})
+        : 'prof_ok'.tr;
   }
 
   @override
@@ -988,10 +999,10 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
           Icon(Icons.event_busy_rounded,
               size: 36, color: AppColors.primary.withValues(alpha: 0.4)),
           const SizedBox(height: 10),
-          Text('এখনও কোনো সূচি নেই',
+          Text('prof_no_schedule_yet'.tr,
               style: AppTextStyles.label.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 4),
-          Text('LMP / জন্ম তারিখ দিলে স্বয়ংক্রিয়ভাবে সূচি তৈরি হবে',
+          Text('prof_no_schedule_hint'.tr,
               textAlign: TextAlign.center,
               style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
         ]),
@@ -1010,7 +1021,7 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (pending.isNotEmpty) ...[
-            Text('আসন্ন / বকেয়া',
+            Text('prof_upcoming_overdue'.tr,
                 style: AppTextStyles.caption.copyWith(
                     color: AppColors.primary, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
             const SizedBox(height: 8),
@@ -1025,7 +1036,7 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
           if (pending.isNotEmpty && done.isNotEmpty)
             const Divider(height: 22, color: Color(0xFFE0E7FF)),
           if (done.isNotEmpty) ...[
-            Text('সম্পন্ন',
+            Text('prof_completed'.tr,
                 style: AppTextStyles.caption.copyWith(
                     color: AppColors.safeGreen, fontWeight: FontWeight.w800, letterSpacing: 0.4)),
             const SizedBox(height: 8),
@@ -1057,9 +1068,12 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
     final summary = _summary(e);
     final sub = done
         ? (recorded.isNotEmpty
-            ? 'সম্পন্ন $recorded · $summary'
+            ? 'prof_done_on'
+                .trParams({'date': recorded, 'summary': summary})
             : summary)
-        : (overdue ? 'বকেয়া হয়ে গেছে' : (inWindow ? 'এখন করুন' : 'আসন্ন'));
+        : (overdue
+            ? 'prof_overdue'.tr
+            : (inWindow ? 'prof_do_now'.tr : 'prof_upcoming'.tr));
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
@@ -1102,7 +1116,7 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
           // Per-checkup report download (any completed module — ANC/PNC/vaccine/HBNC/HBYC).
           if (done)
             IconButton(
-              tooltip: 'এই চেকআপের রিপোর্ট',
+              tooltip: 'prof_this_checkup_report'.tr,
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
@@ -1121,7 +1135,7 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
       final ctrl = Get.find<PatientController>();
       final i = ctrl.patients.indexWhere((p) => p.id == widget.patientId);
       if (i == -1) {
-        Get.snackbar('রিপোর্ট', 'রোগীর তথ্য পাওয়া গেল না।',
+        Get.snackbar('prof_report'.tr, 'prof_patient_not_found'.tr,
             snackPosition: SnackPosition.BOTTOM,
             backgroundColor: AppColors.warningYellow,
             colorText: Colors.white,
@@ -1143,7 +1157,7 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
         'facility': s(['subCentre', 'subcentre', 'facilityName', 'facility']),
       });
     } catch (_) {
-      Get.snackbar('রিপোর্ট', 'রিপোর্ট তৈরি করা গেল না।',
+      Get.snackbar('prof_report'.tr, 'prof_report_failed'.tr,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.emergencyRed,
           colorText: Colors.white,
@@ -1165,10 +1179,10 @@ class _ProfileReferrals extends StatelessWidget {
       : Get.put(ReferralController(), permanent: true);
 
   static (String, Color) _statusBn(String s) => switch (s) {
-        'reached' => ('কেন্দ্রে পৌঁছেছেন', AppColors.primary),
-        'completed' => ('সম্পন্ন', AppColors.safeGreen),
-        'cancelled' => ('বাতিল', AppColors.textSecondary),
-        _ => ('অপেক্ষমাণ', AppColors.warningYellow),
+        'reached' => ('prof_ref_reached'.tr, AppColors.primary),
+        'completed' => ('prof_ref_completed'.tr, AppColors.safeGreen),
+        'cancelled' => ('prof_ref_cancelled'.tr, AppColors.textSecondary),
+        _ => ('prof_ref_pending'.tr, AppColors.warningYellow),
       };
 
   void _newReferral() {
@@ -1212,7 +1226,7 @@ class _ProfileReferrals extends StatelessWidget {
             if (list.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Text('এই রোগীর কোনো রেফারেল নেই',
+                child: Text('prof_no_referrals'.tr,
                     style: AppTextStyles.caption
                         .copyWith(color: AppColors.textSecondary)),
               )
@@ -1220,7 +1234,7 @@ class _ProfileReferrals extends StatelessWidget {
               ...list.map(_referralRow),
             const SizedBox(height: 10),
             AppButton(
-              label: 'নতুন রেফারেল',
+              label: 'prof_new_referral'.tr,
               outlined: true,
               icon: Icons.add_circle_outline_rounded,
               width: double.infinity,
@@ -1254,7 +1268,7 @@ class _ProfileReferrals extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    r.referredTo.isNotEmpty ? r.referredTo : 'রেফারেল',
+                    r.referredTo.isNotEmpty ? r.referredTo : 'prof_referral'.tr,
                     maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.label.copyWith(fontWeight: FontWeight.w700),
                   ),
