@@ -302,7 +302,10 @@ class _VisitScreenState extends State<VisitScreen> {
   }
 
   bool get _hasDanger =>
-      _flags.isNotEmpty || _pncFlags.isNotEmpty || _muacStatus == 'SAM';
+      _flags.isNotEmpty ||
+      _pncFlags.isNotEmpty ||
+      _muacStatus == 'SAM' ||
+      _autoAncFlags().isNotEmpty;
 
   /// MUAC normalised to millimetres (accepts "11.5" cm or "115" mm).
   int? get _muacMm {
@@ -484,7 +487,9 @@ class _VisitScreenState extends State<VisitScreen> {
         'temp': _pncTemp.text.trim(),
         if (_pncFlags.isNotEmpty) 'pncFlags': _pncFlags.toList(),
       },
-      if (_flags.isNotEmpty) 'dangerFlags': _flags.toList(),
+      // Manual ticks + measurement-derived ANC flags (deduped).
+      if ({..._flags, ..._autoAncFlags()}.isNotEmpty)
+        'dangerFlags': {..._flags, ..._autoAncFlags()}.toList(),
       'completedAt': DateTime.now().toIso8601String(),
     };
     final ok = await ApiService.markScheduleEvent(_id, 'done', record: record);
@@ -801,6 +806,34 @@ class _VisitScreenState extends State<VisitScreen> {
       return _trendChip('⚠ উচ্চ রক্তচাপ (≥140/90) — মনোযোগ দিন', AppColors.emergencyRed);
     }
     return const SizedBox.shrink();
+  }
+
+  /// Danger signs auto-derived from the ANC measurements (so the 1st ANC visit
+  /// raises real flags even when the worker doesn't tick a checkbox). These are
+  /// merged with the manually-ticked [_flags] when the visit is saved.
+  List<String> _autoAncFlags() {
+    if (_kind != 'anc') return const [];
+    final out = <String>[];
+    final parts = _bp.text.split('/');
+    final sys = _leadNum(parts.isNotEmpty ? parts[0] : '');
+    final dia = _leadNum(parts.length > 1 ? parts[1] : '');
+    if ((sys != null && sys >= 140) || (dia != null && dia >= 90)) {
+      out.add('উচ্চ রক্তচাপ (≥১৪০/৯০)');
+    }
+    final hb = _leadNum(_hb.text);
+    if (hb != null) {
+      if (hb < 7) {
+        out.add('তীব্র রক্তাল্পতা (Hb < ৭)');
+      } else if (hb < 11) {
+        out.add('রক্তাল্পতা (Hb < ১১)');
+      }
+    }
+    final alb = _urineAlb.text.trim().toLowerCase();
+    const negatives = ['', 'nil', 'absent', 'negative', 'neg', '0', '-', 'নেই', 'অনুপস্থিত'];
+    if (!negatives.contains(alb)) {
+      out.add('মূত্রে অ্যালবুমিন (প্রি-এক্লাম্পসিয়া ঝুঁকি)');
+    }
+    return out;
   }
 
   List<Widget> _ancBody() {

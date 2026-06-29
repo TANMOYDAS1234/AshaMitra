@@ -342,10 +342,10 @@ class PatientProfileScreen extends StatelessWidget {
                         _ProfileReferrals(patientId: patientId),
                         const SizedBox(height: 24),
                       ],
-                      // ── Last assessment — real triage data ───────────
+                      // ── Last assessment ──────────────────────────────
+                      const _SectionTitle('সর্বশেষ মূল্যায়ন'),
+                      const SizedBox(height: 12),
                       if (hasAssessment) ...[
-                        const _SectionTitle('Last Assessment'),
-                        const SizedBox(height: 12),
                         if (outcome != null && outcome.isNotEmpty)
                           _AssessmentCard(
                               outcome: outcome,
@@ -354,17 +354,20 @@ class PatientProfileScreen extends StatelessWidget {
                         if (situation.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _TextCard(
-                              title: 'Reported Situation', body: situation),
+                              title: 'জানানো পরিস্থিতি', body: situation),
                         ],
                         if (qaHistory.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           _QaCard(qaHistory: qaHistory),
                         ],
-                      ] else
+                      ] else if (patientId.isNotEmpty)
+                        // No triage yet → derive from the latest checkup's flags.
+                        _CheckupAssessment(patientId: patientId)
+                      else
                         const _EmptyAssessment(),
                       if (history.isNotEmpty) ...[
                         const SizedBox(height: 24),
-                        const _SectionTitle('Report History'),
+                        const _SectionTitle('রিপোর্ট ইতিহাস'),
                         const SizedBox(height: 12),
                         _ReportHistory(reports: history),
                       ],
@@ -601,6 +604,182 @@ class _EmptyAssessment extends StatelessWidget {
           ],
         ),
       );
+}
+
+// ── Checkup-derived assessment (when no triage has been run) ───────────────
+// A patient may only ever get structured checkups (ANC/HBNC/…), never a separate
+// triage. The visit form still captures danger signs, so summarise the LATEST
+// completed checkup here: red if it flagged danger signs, green if it was clear.
+class _CheckupAssessment extends StatefulWidget {
+  final String patientId;
+  const _CheckupAssessment({required this.patientId});
+  @override
+  State<_CheckupAssessment> createState() => _CheckupAssessmentState();
+}
+
+class _CheckupAssessmentState extends State<_CheckupAssessment> {
+  bool _loading = true;
+  Map<String, dynamic>? _latest;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    List<dynamic> evs;
+    try {
+      evs = await ApiService.getScheduleForPatient(widget.patientId);
+    } catch (_) {
+      evs = const [];
+    }
+    final done = evs
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((e) => (e['status'] ?? '') == 'done')
+        .toList()
+      ..sort((a, b) {
+        final ra = (a['record'] is Map ? a['record']['completedAt'] : null) ??
+            a['doneDate'] ?? a['dueDate'] ?? '';
+        final rb = (b['record'] is Map ? b['record']['completedAt'] : null) ??
+            b['doneDate'] ?? b['dueDate'] ?? '';
+        return rb.toString().compareTo(ra.toString());
+      });
+    if (!mounted) return;
+    setState(() {
+      _latest = done.isNotEmpty ? done.first : null;
+      _loading = false;
+    });
+  }
+
+  List<String> _flags(Map rec) {
+    final out = <String>[];
+    void add(dynamic v) {
+      if (v is List) out.addAll(v.map((e) => e.toString()).where((s) => s.isNotEmpty));
+    }
+    add(rec['dangerFlags']);
+    add(rec['tbSymptoms']);
+    add(rec['pncFlags']);
+    if (rec['motherPnc'] is Map) add((rec['motherPnc'] as Map)['dangerFlags']);
+    return out;
+  }
+
+  String _fmt(dynamic iso) {
+    final d = DateTime.tryParse((iso ?? '').toString());
+    if (d == null) return '';
+    String p(int n) => n.toString().padLeft(2, '0');
+    return '${p(d.day)}/${p(d.month)}/${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE0E7FF)),
+        ),
+        child: const Center(
+            child: SizedBox(
+                width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2))),
+      );
+    }
+    final e = _latest;
+    if (e == null) {
+      // Never had a checkup or a triage.
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE0E7FF)),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.assignment_outlined,
+                size: 40, color: AppColors.primary.withValues(alpha: 0.4)),
+            const SizedBox(height: 12),
+            Text('এখনও কোনো মূল্যায়ন হয়নি',
+                style: AppTextStyles.label
+                    .copyWith(fontWeight: FontWeight.w700, color: AppColors.onBackground)),
+            const SizedBox(height: 4),
+            Text('চেকআপ শুরু করলে এখানে শেষ অবস্থা দেখা যাবে',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+          ],
+        ),
+      );
+    }
+    final rec = e['record'] is Map ? (e['record'] as Map) : const {};
+    final flags = _flags(rec);
+    final label = (e['label'] ?? '').toString();
+    final date = _fmt(rec['completedAt'] ?? e['doneDate'] ?? e['dueDate']);
+    final ok = flags.isEmpty;
+    final color = ok ? AppColors.safeGreen : AppColors.emergencyRed;
+    final bg = ok
+        ? AppColors.safeGreen.withValues(alpha: 0.08)
+        : AppColors.emergencyRed.withValues(alpha: 0.08);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(ok ? Icons.check_circle_rounded : Icons.warning_amber_rounded,
+                  color: color, size: 22),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  ok ? 'শেষ চেকআপ ঠিক আছে' : '${flags.length} টি বিপদচিহ্ন পাওয়া গেছে',
+                  style: AppTextStyles.label
+                      .copyWith(color: color, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            [if (label.isNotEmpty) label, if (date.isNotEmpty) date].join(' · '),
+            style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+          ),
+          if (!ok) ...[
+            const SizedBox(height: 8),
+            ...flags.map((f) => Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('• ',
+                          style: TextStyle(color: AppColors.emergencyRed, height: 1.4)),
+                      Expanded(
+                        child: Text(f,
+                            style: AppTextStyles.body.copyWith(
+                                color: AppColors.onBackground, height: 1.4)),
+                      ),
+                    ],
+                  ),
+                )),
+            const SizedBox(height: 8),
+            Text('পরামর্শ: নিকটতম স্বাস্থ্যকেন্দ্রে/PHC-তে পাঠান বা ফলো-আপ করুন।',
+                style: AppTextStyles.caption
+                    .copyWith(color: AppColors.emergencyRed, fontWeight: FontWeight.w600)),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 // ── Past triage reports linked to this patient ────────────────────────────
