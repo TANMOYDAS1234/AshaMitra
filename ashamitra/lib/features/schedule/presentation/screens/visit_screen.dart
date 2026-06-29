@@ -251,16 +251,20 @@ class _VisitScreenState extends State<VisitScreen> {
     if (d != null) _applyDraft(d);
   }
 
-  Future<void> _saveDraft() async {
-    if (_id.isEmpty) { Get.back(); return; }
-    await LocalStorageService.saveVisitDraft(_id, _draftMap());
-    if (!mounted) return;
-    Get.back(result: false); // event stays pending → reopen to resume
-    Get.snackbar('খসড়া সংরক্ষিত', 'পরে এই ভিজিট থেকে আবার শুরু করতে পারবেন।',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.warningYellow, colorText: Colors.white,
-        margin: const EdgeInsets.all(16), borderRadius: 12,
-        duration: const Duration(seconds: 2));
+  // Set once the visit is saved "done" — stops the exit auto-save from
+  // re-creating a draft for an already-completed visit.
+  bool _completed = false;
+
+  /// Silently persist a half-filled visit when the worker leaves the screen, so
+  /// it can be resumed later (replaces the old "save draft" button). Skips when
+  /// the visit is already done/saving or nothing has been entered.
+  Future<void> _autoSaveDraft() async {
+    if (_id.isEmpty || _completed || _saving) return;
+    final d = _draftMap();
+    final hasData = d.values.any((v) =>
+        (v is String && v.trim().isNotEmpty) || (v is List && v.isNotEmpty));
+    if (!hasData) return;
+    await LocalStorageService.saveVisitDraft(_id, d);
   }
 
   @override
@@ -541,6 +545,7 @@ class _VisitScreenState extends State<VisitScreen> {
           margin: const EdgeInsets.all(16), borderRadius: 12);
       return;
     }
+    _completed = true;
     await LocalStorageService.clearVisitDraft(_id); // visit done → drop the draft
     Get.back(result: true); // due list refreshes
     Get.snackbar('ভিজিট সম্পন্ন ✓', '${_e['patientName'] ?? ''} — $_label',
@@ -552,7 +557,12 @@ class _VisitScreenState extends State<VisitScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      // Leaving a half-filled visit auto-saves a draft so it can be resumed.
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) _autoSaveDraft();
+      },
+      child: Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: AppGradients.background),
         child: SafeArea(
@@ -600,15 +610,6 @@ class _VisitScreenState extends State<VisitScreen> {
                         width: double.infinity,
                         icon: Icons.check_circle_outline_rounded,
                       ),
-                      const SizedBox(height: 10),
-                      // Save a half-done visit and resume it later from the due list.
-                      AppButton(
-                        label: 'খসড়া সংরক্ষণ করুন (পরে শেষ করব)',
-                        onPressed: _saving ? null : _saveDraft,
-                        outlined: true,
-                        width: double.infinity,
-                        icon: Icons.save_outlined,
-                      ),
                     ],
                   ),
                 ),
@@ -616,6 +617,7 @@ class _VisitScreenState extends State<VisitScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
