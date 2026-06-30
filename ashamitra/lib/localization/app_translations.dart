@@ -1271,6 +1271,13 @@ class AppTranslations extends Translations {
     'visit_pnc_ppd_title': 'Mental-health check (last 2 weeks)',
     'visit_pnc_ppd_sad': 'Feeling down / hopeless',
     'visit_pnc_ppd_no_interest': 'Little interest in things',
+    'visit_vax_batch_label': 'Vaccine batch / lot no.',
+    'visit_vax_batch_hint': 'Batch number (optional)',
+    'visit_vax_aefi_title': 'Adverse events (AEFI) check',
+    'visit_vax_aefi_fever': 'Fever',
+    'visit_vax_aefi_swelling': 'Swelling / pain at injection site',
+    'visit_vax_aefi_rash': 'Mild rash',
+    'visit_vax_aefi_severe': 'Severe reaction (convulsion/breathing difficulty/fainting) — refer now',
   };
 
   static const _bn = {
@@ -2539,6 +2546,13 @@ class AppTranslations extends Translations {
     'visit_pnc_ppd_title': 'মানসিক অবস্থা যাচাই (গত ২ সপ্তাহ)',
     'visit_pnc_ppd_sad': 'মন খারাপ / আশাহীন লাগে',
     'visit_pnc_ppd_no_interest': 'কোনো কিছুতে আগ্রহ নেই',
+    'visit_vax_batch_label': 'টিকার ব্যাচ / লট নম্বর',
+    'visit_vax_batch_hint': 'ব্যাচ নম্বর (ঐচ্ছিক)',
+    'visit_vax_aefi_title': 'টিকা-পরবর্তী প্রতিক্রিয়া (AEFI) যাচাই',
+    'visit_vax_aefi_fever': 'জ্বর',
+    'visit_vax_aefi_swelling': 'ইনজেকশনের জায়গায় ফোলা / ব্যথা',
+    'visit_vax_aefi_rash': 'হালকা র‍্যাশ',
+    'visit_vax_aefi_severe': 'তীব্র প্রতিক্রিয়া (খিঁচুনি/শ্বাসকষ্ট/অজ্ঞান) — অবিলম্বে রেফার',
   };
 
   static const _hi = {
@@ -3807,6 +3821,13 @@ class AppTranslations extends Translations {
     'visit_pnc_ppd_title': 'मानसिक स्थिति जाँच (पिछले 2 सप्ताह)',
     'visit_pnc_ppd_sad': 'उदास / निराश महसूस',
     'visit_pnc_ppd_no_interest': 'किसी चीज़ में रुचि नहीं',
+    'visit_vax_batch_label': 'टीका बैच / लॉट नं.',
+    'visit_vax_batch_hint': 'बैच नंबर (वैकल्पिक)',
+    'visit_vax_aefi_title': 'टीकाकरण के बाद प्रतिक्रिया (AEFI) जाँच',
+    'visit_vax_aefi_fever': 'बुखार',
+    'visit_vax_aefi_swelling': 'इंजेक्शन स्थल पर सूजन / दर्द',
+    'visit_vax_aefi_rash': 'हल्के दाने',
+    'visit_vax_aefi_severe': 'गंभीर प्रतिक्रिया (दौरा/सांस की दिक्कत/बेहोशी) — तुरंत रेफर',
   };
 
   @override

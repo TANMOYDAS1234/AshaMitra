@@ -45,6 +45,15 @@ class _VisitScreenState extends State<VisitScreen> {
 
   // Vaccine: which of the milestone's vaccines were given (default: all).
   final Set<String> _given = {};
+  // Vaccine session: batch/lot (traceability) + AEFI (adverse events).
+  final _vaxBatch = TextEditingController();
+  final Set<String> _aefi = {};   // mild AEFI observed (fever / swelling / rash)
+  bool _aefiSevere = false;       // severe reaction → refer immediately
+  List<String> get _aefiSigns => [
+        'visit_vax_aefi_fever'.tr,
+        'visit_vax_aefi_swelling'.tr,
+        'visit_vax_aefi_rash'.tr,
+      ];
   // ANC vitals (matches the paper ANC register).
   final _bp = TextEditingController();
   final _weight = TextEditingController();
@@ -220,6 +229,7 @@ class _VisitScreenState extends State<VisitScreen> {
   /// Everything the worker entered, so a half-done visit can be reopened.
   Map<String, dynamic> _draftMap() => {
         'given': _given.toList(),
+        'vaxBatch': _vaxBatch.text, 'aefi': _aefi.toList(), 'aefiSevere': _aefiSevere,
         'ancGiven': _ancGiven.toList(),
         'flags': _flags.toList(),
         'tb': _tb.toList(),
@@ -252,12 +262,15 @@ class _VisitScreenState extends State<VisitScreen> {
     fill(_usg, 'usg'); fill(_notes, 'notes');
     fill(_hbWeight, 'hbWeight'); fill(_hbTemp, 'hbTemp');
     fill(_pncBp, 'pncBp'); fill(_pncTemp, 'pncTemp');
+    fill(_vaxBatch, 'vaxBatch');
     fill(_ycWeight, 'ycWeight'); fill(_ycMuac, 'ycMuac');
     void addAll(Set<String> s, String k) {
       final v = d[k];
       if (v is List) s.addAll(v.map((e) => e.toString()));
     }
     if (d['given'] is List) { _given.clear(); addAll(_given, 'given'); }
+    addAll(_aefi, 'aefi');
+    if (d['aefiSevere'] == true) _aefiSevere = true;
     addAll(_ancGiven, 'ancGiven');
     addAll(_flags, 'flags');
     addAll(_tb, 'tb');
@@ -314,6 +327,7 @@ class _VisitScreenState extends State<VisitScreen> {
     _hbTemp.dispose();
     _pncBp.dispose();
     _pncTemp.dispose();
+    _vaxBatch.dispose();
     _ycWeight.dispose();
     _ycMuac.dispose();
     super.dispose();
@@ -334,6 +348,7 @@ class _VisitScreenState extends State<VisitScreen> {
       _flags.isNotEmpty ||
       _pncFlags.isNotEmpty ||
       _pncPpd.isNotEmpty ||
+      _aefiSevere ||
       _muacStatus == 'SAM' ||
       _autoAncFlags().isNotEmpty;
 
@@ -518,6 +533,9 @@ class _VisitScreenState extends State<VisitScreen> {
       if (_kind == 'vaccine') ...{
         'givenVaccines': _given.toList(),
         'allGiven': _given.length == _vaccines.length,
+        if (_vaxBatch.text.trim().isNotEmpty) 'vaccineBatch': _vaxBatch.text.trim(),
+        if (_aefi.isNotEmpty) 'aefi': _aefi.toList(),
+        if (_aefiSevere) 'aefiSevere': true,
       },
       if (_kind == 'anc') ...{
         'gaWeeks': _ga.text.trim(),
@@ -880,6 +898,23 @@ class _VisitScreenState extends State<VisitScreen> {
             onChanged: (on) => setState(() =>
                 on == true ? _given.add(v) : _given.remove(v)),
           )),
+      const SizedBox(height: 10),
+      AppInput(
+        hint: 'visit_vax_batch_hint'.tr,
+        label: 'visit_vax_batch_label'.tr,
+        controller: _vaxBatch,
+      ),
+      const SizedBox(height: 8),
+      // AEFI — adverse events following immunization (safety monitoring).
+      ..._flagBody('visit_vax_aefi_title'.tr, _aefiSigns, target: _aefi),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        activeThumbColor: AppColors.emergencyRed,
+        title: Text('visit_vax_aefi_severe'.tr,
+            style: AppTextStyles.label.copyWith(color: AppColors.emergencyRed)),
+        value: _aefiSevere,
+        onChanged: (v) => setState(() => _aefiSevere = v),
+      ),
     ];
   }
 

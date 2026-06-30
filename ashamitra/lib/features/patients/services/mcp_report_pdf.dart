@@ -167,10 +167,18 @@ class McpReportPdf {
           flags.isEmpty ? '—' : flags.join(', '),
         ]);
       } else if (kind == 'vaccine') {
+        final status = <String>[rec['allGiven'] == true ? 'সম্পূর্ণ' : 'আংশিক'];
+        if (rec['aefiSevere'] == true) {
+          status.add('⚠ তীব্র AEFI');
+        } else if ((rec['aefi'] as List?)?.isNotEmpty ?? false) {
+          status.add('AEFI');
+        }
+        final batch = (rec['vaccineBatch'] ?? '').toString();
+        if (batch.isNotEmpty) status.add('ব্যাচ $batch');
         vac.add([
           label, date,
           ((rec['givenVaccines'] as List?)?.join(', ') ?? ''),
-          rec['allGiven'] == true ? 'সম্পূর্ণ' : 'আংশিক',
+          status.join(' · '),
         ]);
       } else if (kind == 'hbnc') {
         final parts = <String>[];
