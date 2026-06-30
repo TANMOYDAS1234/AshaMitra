@@ -853,18 +853,34 @@ class _VisitScreenState extends State<VisitScreen> {
         width: double.infinity,
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          // Soft tinted backdrop so the contained image's letterbox blends in.
-          color: const Color(0xFFFDEFE9),
+          // Soft sage backdrop matching the illustrations' background, so the
+          // contained image's letterbox blends in.
+          color: const Color(0xFFE6F0E7),
           borderRadius: BorderRadius.circular(16),
         ),
         // Show the FULL illustration (no cropping) — fit inside the banner.
         child: Image.asset(
-          'assets/illustrations/$_kind.png',
+          'assets/illustrations/${_illustrationKey()}.png',
           fit: BoxFit.contain,
           // No PNG dropped in → show the code-drawn illustration for this module.
           errorBuilder: (_, __, ___) => ModuleArt(kind: _kind, height: 200),
         ),
       );
+
+  /// Illustration asset key. ANC shows a per-trimester figure (growing belly)
+  /// keyed off the ANC stage; other kinds use their module illustration.
+  String _illustrationKey() {
+    if (_kind == 'anc') {
+      const byStage = {
+        'ANC1': 'anc_t1',
+        'ANC2': 'anc_t2',
+        'ANC3': 'anc_t3',
+        'ANC4': 'anc_t4',
+      };
+      return byStage[(_e['code'] ?? '').toString()] ?? 'anc';
+    }
+    return _kind;
+  }
 
   List<Widget> _body() {
     switch (_kind) {

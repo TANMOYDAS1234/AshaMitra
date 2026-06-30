@@ -14,16 +14,6 @@ class AuthForm extends StatelessWidget {
 
   const AuthForm({super.key, required this.onSubmit, required this.isLoading, this.errorMsg});
 
-  static const _cases = [
-    (icon: Icons.pregnant_woman_rounded,  labelKey: 'auth_case_pregnant',  color: AppColors.primary),
-    (icon: Icons.health_and_safety_rounded, labelKey: 'auth_case_postnatal', color: AppColors.purple),
-    (icon: Icons.child_care_rounded,      labelKey: 'auth_case_newborn',   color: Color(0xFF0891B2)),
-    (icon: Icons.baby_changing_station_rounded, labelKey: 'auth_case_infant', color: AppColors.safeGreen),
-    (icon: Icons.child_friendly_rounded,  labelKey: 'auth_case_child',     color: Color(0xFFF59E0B)),
-    (icon: Icons.vaccines_rounded,        labelKey: 'auth_case_vaccine',   color: Color(0xFF8B5CF6)),
-    (icon: Icons.emergency_rounded,       labelKey: 'auth_case_emergency', color: AppColors.emergencyRed),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final formKey = GlobalKey<FormState>();
@@ -36,25 +26,18 @@ class AuthForm extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              const SizedBox(height: 52),
+              const SizedBox(height: 24),
 
-              // ── Logo ─────────────────────────────────────────
-              Container(
-                width: 74, height: 74,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.purple],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(color: AppColors.primary.withValues(alpha: 0.35),
-                        blurRadius: 20, offset: const Offset(0, 6)),
-                  ],
+              // ── Hero photo ───────────────────────────────────
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  'assets/images/hero_asha.png',
+                  height: 196,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                 ),
-                child: const Icon(Icons.health_and_safety_rounded,
-                    color: Colors.white, size: 38),
               ),
               const SizedBox(height: 20),
               const Text('ASHA Mitra',
@@ -65,40 +48,7 @@ class AuthForm extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
 
-              const SizedBox(height: 24),
-
-              // ── 7 case chips ─────────────────────────────────
-              SizedBox(
-                height: 38,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _cases.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (_, i) {
-                    final c = _cases[i];
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: c.color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: c.color.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(c.icon, size: 14, color: c.color),
-                          const SizedBox(width: 5),
-                          Text(c.labelKey.tr,
-                              style: TextStyle(fontSize: 11,
-                                  fontWeight: FontWeight.w600, color: c.color)),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
 
               // ── Login form ───────────────────────────────────
               GlassCard(
