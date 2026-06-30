@@ -292,6 +292,8 @@ class _NcdCbacFormScreenState extends State<NcdCbacFormScreen> {
   bool _familyHistory = false;
   bool _knownHtn = false;
   bool _knownDiabetes = false;
+  bool _knownHeart = false;
+  bool _knownCopd = false;
   bool _referred = false;
   bool _closed = false;
   final _symptoms = <String>{};
@@ -324,6 +326,8 @@ class _NcdCbacFormScreenState extends State<NcdCbacFormScreen> {
       _familyHistory = a['familyHistory'] == true;
       _knownHtn = a['knownHtn'] == true;
       _knownDiabetes = a['knownDiabetes'] == true;
+      _knownHeart = a['knownHeart'] == true;
+      _knownCopd = a['knownCopd'] == true;
       _referred = a['referred'] == true;
       _closed = (a['status'] ?? 'active').toString() == 'closed';
       _symptoms.addAll(((a['symptoms'] as List?) ?? []).map((e) => e.toString()));
@@ -392,6 +396,8 @@ class _NcdCbacFormScreenState extends State<NcdCbacFormScreen> {
       'symptoms': _symptoms.toList(),
       'knownHtn': _knownHtn,
       'knownDiabetes': _knownDiabetes,
+      'knownHeart': _knownHeart,
+      'knownCopd': _knownCopd,
       'bp': _bp.text.trim(),
       'bloodSugar': _sugar.text.trim(),
       'referred': _referred,
@@ -534,6 +540,10 @@ class _NcdCbacFormScreenState extends State<NcdCbacFormScreen> {
                         _switch('nc_known_htn'.tr, _knownHtn, (v) => setState(() => _knownHtn = v)),
                         _switch('nc_known_diabetes'.tr, _knownDiabetes,
                             (v) => setState(() => _knownDiabetes = v)),
+                        _switch('nc_known_heart'.tr, _knownHeart,
+                            (v) => setState(() => _knownHeart = v)),
+                        _switch('nc_known_copd'.tr, _knownCopd,
+                            (v) => setState(() => _knownCopd = v)),
                         const SizedBox(height: 8),
                         Row(children: [
                           Expanded(

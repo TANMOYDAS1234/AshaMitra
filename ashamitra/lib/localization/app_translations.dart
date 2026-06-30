@@ -1510,6 +1510,8 @@ class AppTranslations extends Translations {
     'reg_summary_medicine': '@month — @count medicine line(s)',
     'reg_medicine_no_data': 'No medicine entries for this month',
     'common_pick_date': 'Pick date',
+    'nc_known_heart': 'Already diagnosed: heart disease / stroke',
+    'nc_known_copd': 'Already diagnosed: asthma / COPD',
   };
 
   static const _bn = {
@@ -3017,6 +3019,8 @@ class AppTranslations extends Translations {
     'reg_summary_medicine': '@month — @count টি ওষুধের লাইন',
     'reg_medicine_no_data': 'এই মাসের জন্য কোনো ওষুধের হিসেব নেই',
     'common_pick_date': 'তারিখ বেছে নিন',
+    'nc_known_heart': 'ইতিমধ্যে নির্ণীত: হৃদরোগ / স্ট্রোক',
+    'nc_known_copd': 'ইতিমধ্যে নির্ণীত: হাঁপানি / COPD',
   };
 
   static const _hi = {
@@ -4524,6 +4528,8 @@ class AppTranslations extends Translations {
     'reg_summary_medicine': '@month — @count दवा पंक्तियाँ',
     'reg_medicine_no_data': 'इस माह के लिए कोई दवा प्रविष्टि नहीं',
     'common_pick_date': 'तारीख चुनें',
+    'nc_known_heart': 'पहले से निदान: हृदय रोग / स्ट्रोक',
+    'nc_known_copd': 'पहले से निदान: दमा / COPD',
   };
 
   @override
