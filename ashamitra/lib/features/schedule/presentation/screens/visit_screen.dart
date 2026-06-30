@@ -69,6 +69,7 @@ class _VisitScreenState extends State<VisitScreen> {
   final _lie = TextEditingController();        // Lie / Presentation
   final _hiv = TextEditingController();        // HIV (R/NR)
   final _syphilis = TextEditingController();   // সিফিলিস (R/NR)
+  final _hbsag = TextEditingController();      // HBsAg / হেপাটাইটিস বি (R/NR)
   final _usg = TextEditingController();        // আল্ট্রাসোনোগ্রাফি (হ্যাঁ/না)
   final _notes = TextEditingController();      // অন্যান্য সমস্যা / মন্তব্য
   // Supplements / injections given this ANC visit.
@@ -238,7 +239,7 @@ class _VisitScreenState extends State<VisitScreen> {
         'urineSugar': _urineSugar.text, 'fundal': _fundal.text,
         'ga': _ga.text, 'pulse': _pulse.text, 'fhr': _fhr.text,
         'lie': _lie.text, 'hiv': _hiv.text, 'syphilis': _syphilis.text,
-        'usg': _usg.text, 'notes': _notes.text,
+        'hbsag': _hbsag.text, 'usg': _usg.text, 'notes': _notes.text,
         'hbWeight': _hbWeight.text, 'hbTemp': _hbTemp.text,
         'pncBp': _pncBp.text, 'pncTemp': _pncTemp.text,
         'pncFlags': _pncFlags.toList(),
@@ -259,7 +260,7 @@ class _VisitScreenState extends State<VisitScreen> {
     fill(_urineSugar, 'urineSugar'); fill(_fundal, 'fundal');
     fill(_ga, 'ga'); fill(_pulse, 'pulse'); fill(_fhr, 'fhr');
     fill(_lie, 'lie'); fill(_hiv, 'hiv'); fill(_syphilis, 'syphilis');
-    fill(_usg, 'usg'); fill(_notes, 'notes');
+    fill(_hbsag, 'hbsag'); fill(_usg, 'usg'); fill(_notes, 'notes');
     fill(_hbWeight, 'hbWeight'); fill(_hbTemp, 'hbTemp');
     fill(_pncBp, 'pncBp'); fill(_pncTemp, 'pncTemp');
     fill(_vaxBatch, 'vaxBatch');
@@ -321,6 +322,7 @@ class _VisitScreenState extends State<VisitScreen> {
     _lie.dispose();
     _hiv.dispose();
     _syphilis.dispose();
+    _hbsag.dispose();
     _usg.dispose();
     _notes.dispose();
     _hbWeight.dispose();
@@ -551,6 +553,7 @@ class _VisitScreenState extends State<VisitScreen> {
         'lie': _lie.text.trim(),
         'hiv': _hiv.text.trim(),
         'syphilis': _syphilis.text.trim(),
+        'hbsag': _hbsag.text.trim(),
         'usg': _usg.text.trim(),
         'notes': _notes.text.trim(),
         'supplementsGiven': _ancGiven.toList(),
@@ -1184,6 +1187,15 @@ class _VisitScreenState extends State<VisitScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: AppInput(hint: 'R / NR', label: 'visit_label_syphilis'.tr, controller: _syphilis),
+          ),
+        ],
+      ),
+      const SizedBox(height: 14),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: AppInput(hint: 'R / NR', label: 'HBsAg', controller: _hbsag),
           ),
           const SizedBox(width: 12),
           Expanded(
