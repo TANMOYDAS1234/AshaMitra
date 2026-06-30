@@ -1512,6 +1512,14 @@ class AppTranslations extends Translations {
     'common_pick_date': 'Pick date',
     'nc_known_heart': 'Already diagnosed: heart disease / stroke',
     'nc_known_copd': 'Already diagnosed: asthma / COPD',
+    'admin_modules': 'Field modules',
+    'admin_mod_ncd': 'CBAC screened',
+    'admin_mod_ncd_high': 'CBAC high-risk',
+    'admin_mod_tb_treatment': 'TB on treatment',
+    'admin_mod_tb_presumptive': 'TB presumptive',
+    'admin_mod_med_low': 'Medicines low',
+    'admin_mod_referral_open': 'Referrals open',
+    'admin_mod_vital_pending': 'Births/deaths pending CRS',
   };
 
   static const _bn = {
@@ -3021,6 +3029,14 @@ class AppTranslations extends Translations {
     'common_pick_date': 'তারিখ বেছে নিন',
     'nc_known_heart': 'ইতিমধ্যে নির্ণীত: হৃদরোগ / স্ট্রোক',
     'nc_known_copd': 'ইতিমধ্যে নির্ণীত: হাঁপানি / COPD',
+    'admin_modules': 'ফিল্ড মডিউল',
+    'admin_mod_ncd': 'CBAC স্ক্রিনড',
+    'admin_mod_ncd_high': 'CBAC উচ্চ-ঝুঁকি',
+    'admin_mod_tb_treatment': 'যক্ষ্মা চিকিৎসাধীন',
+    'admin_mod_tb_presumptive': 'যক্ষ্মা সম্ভাব্য',
+    'admin_mod_med_low': 'ওষুধ কম',
+    'admin_mod_referral_open': 'রেফারেল বাকি',
+    'admin_mod_vital_pending': 'জন্ম/মৃত্যু CRS বাকি',
   };
 
   static const _hi = {
@@ -4530,6 +4546,14 @@ class AppTranslations extends Translations {
     'common_pick_date': 'तारीख चुनें',
     'nc_known_heart': 'पहले से निदान: हृदय रोग / स्ट्रोक',
     'nc_known_copd': 'पहले से निदान: दमा / COPD',
+    'admin_modules': 'फील्ड मॉड्यूल',
+    'admin_mod_ncd': 'CBAC जाँचे गए',
+    'admin_mod_ncd_high': 'CBAC उच्च जोखिम',
+    'admin_mod_tb_treatment': 'टीबी उपचाराधीन',
+    'admin_mod_tb_presumptive': 'टीबी संभावित',
+    'admin_mod_med_low': 'दवाएँ कम',
+    'admin_mod_referral_open': 'रेफरल लंबित',
+    'admin_mod_vital_pending': 'जन्म/मृत्यु CRS लंबित',
   };
 
   @override

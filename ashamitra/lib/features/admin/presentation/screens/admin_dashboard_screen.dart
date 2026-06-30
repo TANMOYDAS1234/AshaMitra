@@ -164,6 +164,84 @@ class AdminDashboardScreen extends StatelessWidget {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 28),
+
+                          // ── Field-module aggregates (across all ASHAs) ───
+                          Row(
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'admin_modules'.tr,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.2,
+                                  color: AppColors.onBackground,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          GridView.count(
+                            crossAxisCount: 2,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1.55,
+                            children: [
+                              _StatTile(
+                                label: 'admin_mod_ncd'.tr,
+                                value: '${ctrl.ncdScreened}',
+                                icon: Icons.health_and_safety_rounded,
+                                color: const Color(0xFF0D9488),
+                              ),
+                              _StatTile(
+                                label: 'admin_mod_ncd_high'.tr,
+                                value: '${ctrl.ncdHighRisk}',
+                                icon: Icons.warning_amber_rounded,
+                                color: AppColors.emergencyRed,
+                              ),
+                              _StatTile(
+                                label: 'admin_mod_tb_treatment'.tr,
+                                value: '${ctrl.tbOnTreatment}',
+                                icon: Icons.coronavirus_rounded,
+                                color: const Color(0xFFEA580C),
+                              ),
+                              _StatTile(
+                                label: 'admin_mod_tb_presumptive'.tr,
+                                value: '${ctrl.tbPresumptive}',
+                                icon: Icons.biotech_rounded,
+                                color: const Color(0xFFEA580C),
+                              ),
+                              _StatTile(
+                                label: 'admin_mod_med_low'.tr,
+                                value: '${ctrl.medLowStock}',
+                                icon: Icons.inventory_2_rounded,
+                                color: const Color(0xFF7C3AED),
+                              ),
+                              _StatTile(
+                                label: 'admin_mod_referral_open'.tr,
+                                value: '${ctrl.referralOpen}',
+                                icon: Icons.local_hospital_rounded,
+                                color: AppColors.emergencyRed,
+                              ),
+                              _StatTile(
+                                label: 'admin_mod_vital_pending'.tr,
+                                value: '${ctrl.vitalPendingCrs}',
+                                icon: Icons.menu_book_rounded,
+                                color: AppColors.sky,
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 32),
 
                           // ── Management Actions Header ────────────────────

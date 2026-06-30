@@ -25,6 +25,15 @@ class AdminController extends GetxController {
   final yellowReports = 0.obs;
   final greenReports  = 0.obs;
 
+  // ── Module aggregates (across all ASHAs) ──
+  final ncdScreened     = 0.obs;
+  final ncdHighRisk     = 0.obs;
+  final tbPresumptive   = 0.obs;
+  final tbOnTreatment   = 0.obs;
+  final medLowStock     = 0.obs;
+  final vitalPendingCrs = 0.obs;
+  final referralOpen    = 0.obs;
+
   final filterMode = 'all'.obs;
   final filterDate = Rxn<DateTime>();
 
@@ -63,6 +72,15 @@ class AdminController extends GetxController {
         redReports.value    = (d['redReports']    as num?)?.toInt() ?? 0;
         yellowReports.value = (d['yellowReports'] as num?)?.toInt() ?? 0;
         greenReports.value  = (d['greenReports']  as num?)?.toInt() ?? 0;
+        final m = (d['modules'] as Map?)?.cast<String, dynamic>() ?? const {};
+        int mi(String k) => (m[k] as num?)?.toInt() ?? 0;
+        ncdScreened.value     = mi('ncdScreened');
+        ncdHighRisk.value     = mi('ncdHighRisk');
+        tbPresumptive.value   = mi('tbPresumptive');
+        tbOnTreatment.value   = mi('tbOnTreatment');
+        medLowStock.value     = mi('medLowStock');
+        vitalPendingCrs.value = mi('vitalPendingCrs');
+        referralOpen.value    = mi('referralOpen');
       }
     } on UnauthorizedException {
       _handleUnauth();
