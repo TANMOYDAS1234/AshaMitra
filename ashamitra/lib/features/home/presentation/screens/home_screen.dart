@@ -198,6 +198,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'home_record_tb'.tr,
                 route: AppRoutes.tbCases,
               ),
+              _recordTile(
+                icon: Icons.inventory_2_rounded,
+                color: const Color(0xFF7C3AED), // violet
+                title: 'home_record_medicine_stock'.tr,
+                route: AppRoutes.medicineStock,
+              ),
             ],
           ),
         ],

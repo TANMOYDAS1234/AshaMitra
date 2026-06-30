@@ -21,6 +21,7 @@ import '../features/eligible_couples/presentation/screens/eligible_couple_screen
 import '../features/vital_events/presentation/screens/vital_event_screen.dart';
 import '../features/ncd_cbac/presentation/screens/ncd_cbac_screen.dart';
 import '../features/tb_cases/presentation/screens/tb_case_screen.dart';
+import '../features/medicine_stock/presentation/screens/medicine_stock_screen.dart';
 import '../features/emergency/presentation/screens/emergency_screen.dart';
 import '../features/emergency/presentation/screens/nearby_facilities_screen.dart';
 import '../features/reports/presentation/screens/checkup_log_screen.dart';
@@ -71,6 +72,7 @@ class AppRoutes {
   static const vitalEvents     = '/vital-events';
   static const ncdCbac         = '/ncd-cbac';
   static const tbCases         = '/tb-cases';
+  static const medicineStock   = '/medicine-stock';
   static const development      = '/development';
   // Admin
   static const adminDashboard  = '/admin';
@@ -227,6 +229,13 @@ class AppRoutes {
     GetPage(
       name: tbCases,
       page: () => const TbCaseListScreen(),
+      transition: Transition.rightToLeftWithFade,
+      transitionDuration: _medium,
+      curve: Curves.easeOutCubic,
+    ),
+    GetPage(
+      name: medicineStock,
+      page: () => const MedicineStockListScreen(),
       transition: Transition.rightToLeftWithFade,
       transitionDuration: _medium,
       curve: Curves.easeOutCubic,

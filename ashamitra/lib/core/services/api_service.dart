@@ -402,6 +402,14 @@ class ApiService {
       _updateSynced('tb-cases', id, d);
   static Future<bool> deleteTbCase(String id) => _deleteSynced('tb-cases', id);
 
+  // Medicine stock (ASHA monthly drug account — Form 2)
+  static Future<List<dynamic>> getMedicineStock() => _listSynced('medicine-stock');
+  static Future<Map<String, dynamic>?> createMedicineStock(Map<String, dynamic> d) =>
+      _createSynced('medicine-stock', d);
+  static Future<Map<String, dynamic>> updateMedicineStock(String id, Map<String, dynamic> d) =>
+      _updateSynced('medicine-stock', id, d);
+  static Future<bool> deleteMedicineStock(String id) => _deleteSynced('medicine-stock', id);
+
   // ── Reports ────────────────────────────────────────────────────────────────
 
   /// Returns the server-created report doc (with the real Mongo `_id` mapped
