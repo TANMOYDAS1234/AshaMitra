@@ -204,6 +204,22 @@ class McpReportPdf {
         if (bp.isNotEmpty) parts.add('BP $bp');
         final tp = rec['temp']?.toString() ?? '';
         if (tp.isNotEmpty) parts.add('তাপ $tp°F');
+        // Lochia / bleeding (only flag the abnormal states).
+        final lochia = rec['lochia']?.toString() ?? '';
+        if (lochia == 'heavy') parts.add('বেশি রক্তস্রাব');
+        if (lochia == 'foul') parts.add('দুর্গন্ধযুক্ত স্রাব');
+        final bf = switch (rec['breastfeeding']?.toString() ?? '') {
+          'exclusive' => 'শুধু বুকের দুধ',
+          'partial' => 'আংশিক দুধ',
+          'none' => 'স্তন্যপান হচ্ছে না',
+          _ => '',
+        };
+        if (bf.isNotEmpty) parts.add(bf);
+        if (rec['ifaGiven'] == true) parts.add('IFA ✓');
+        if (rec['fpCounselled'] == true) parts.add('পরিবার পরিকল্পনা পরামর্শ ✓');
+        if ((rec['depressionScreen'] as List?)?.isNotEmpty ?? false) {
+          parts.add('মানসিক ঝুঁকি');
+        }
         final pf = (rec['pncFlags'] as List?)?.map((e) => e.toString()).toList() ?? const [];
         if (pf.isNotEmpty) parts.add(pf.join(', '));
         pnc.add([label, date, parts.isEmpty ? 'ঠিক আছে' : parts.join(' · ')]);

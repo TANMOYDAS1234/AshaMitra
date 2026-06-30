@@ -125,6 +125,14 @@ class _VisitScreenState extends State<VisitScreen> {
         'visit_pnc_ds_stitch_infection'.tr,
         'visit_pnc_ds_depression'.tr,
       ];
+  // Extra MCP-card PNC fields (mother postnatal care).
+  String _pncLochia = 'normal';          // normal | heavy | foul
+  String _pncBreastfeeding = 'exclusive'; // exclusive | partial | none
+  bool _pncIfa = false;                   // postpartum IFA tablets given
+  bool _pncFpCounselled = false;          // family-planning counselling done
+  final Set<String> _pncPpd = {};         // PHQ-2 postpartum-depression screen
+  List<String> get _pncPpdItems =>
+      ['visit_pnc_ppd_sad'.tr, 'visit_pnc_ppd_no_interest'.tr];
 
   // ── HBYC: growth (weight + MUAC → SAM/MAM) + services given ──────────────
   final _ycWeight = TextEditingController(); // ওজন (কেজি)
@@ -224,6 +232,9 @@ class _VisitScreenState extends State<VisitScreen> {
         'hbWeight': _hbWeight.text, 'hbTemp': _hbTemp.text,
         'pncBp': _pncBp.text, 'pncTemp': _pncTemp.text,
         'pncFlags': _pncFlags.toList(),
+        'pncLochia': _pncLochia, 'pncBreastfeeding': _pncBreastfeeding,
+        'pncIfa': _pncIfa, 'pncFpCounselled': _pncFpCounselled,
+        'pncPpd': _pncPpd.toList(),
         'ycWeight': _ycWeight.text, 'ycMuac': _ycMuac.text,
         'hbycGiven': _hbycGiven.toList(),
       };
@@ -251,7 +262,12 @@ class _VisitScreenState extends State<VisitScreen> {
     addAll(_flags, 'flags');
     addAll(_tb, 'tb');
     addAll(_pncFlags, 'pncFlags');
+    addAll(_pncPpd, 'pncPpd');
     addAll(_hbycGiven, 'hbycGiven');
+    if (d['pncLochia'] != null) _pncLochia = d['pncLochia'].toString();
+    if (d['pncBreastfeeding'] != null) _pncBreastfeeding = d['pncBreastfeeding'].toString();
+    if (d['pncIfa'] == true) _pncIfa = true;
+    if (d['pncFpCounselled'] == true) _pncFpCounselled = true;
   }
 
   void _loadDraft() {
@@ -317,6 +333,7 @@ class _VisitScreenState extends State<VisitScreen> {
   bool get _hasDanger =>
       _flags.isNotEmpty ||
       _pncFlags.isNotEmpty ||
+      _pncPpd.isNotEmpty ||
       _muacStatus == 'SAM' ||
       _autoAncFlags().isNotEmpty;
 
@@ -542,6 +559,11 @@ class _VisitScreenState extends State<VisitScreen> {
       if (_kind == 'pnc') ...{
         'bp': _pncBp.text.trim(),
         'temp': _pncTemp.text.trim(),
+        'lochia': _pncLochia,
+        'breastfeeding': _pncBreastfeeding,
+        'ifaGiven': _pncIfa,
+        'fpCounselled': _pncFpCounselled,
+        if (_pncPpd.isNotEmpty) 'depressionScreen': _pncPpd.toList(),
         if (_pncFlags.isNotEmpty) 'pncFlags': _pncFlags.toList(),
       },
       // Manual ticks + measurement-derived ANC flags (deduped).
@@ -1204,9 +1226,59 @@ class _VisitScreenState extends State<VisitScreen> {
         ],
       ),
       const SizedBox(height: 14),
+      _dropdownField('visit_pnc_lochia_label'.tr, _pncLochia, {
+        'normal': 'visit_pnc_lochia_normal'.tr,
+        'heavy': 'visit_pnc_lochia_heavy'.tr,
+        'foul': 'visit_pnc_lochia_foul'.tr,
+      }, (v) => setState(() => _pncLochia = v)),
+      const SizedBox(height: 14),
+      _dropdownField('visit_pnc_bf_label'.tr, _pncBreastfeeding, {
+        'exclusive': 'visit_pnc_bf_exclusive'.tr,
+        'partial': 'visit_pnc_bf_partial'.tr,
+        'none': 'visit_pnc_bf_none'.tr,
+      }, (v) => setState(() => _pncBreastfeeding = v)),
+      const SizedBox(height: 6),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        activeThumbColor: AppColors.primary,
+        title: Text('visit_pnc_ifa'.tr, style: AppTextStyles.label),
+        value: _pncIfa,
+        onChanged: (v) => setState(() => _pncIfa = v),
+      ),
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        activeThumbColor: AppColors.primary,
+        title: Text('visit_pnc_fp'.tr, style: AppTextStyles.label),
+        value: _pncFpCounselled,
+        onChanged: (v) => setState(() => _pncFpCounselled = v),
+      ),
+      const SizedBox(height: 8),
       ..._flagBody('visit_check_mother_danger_signs'.tr, _pncDangerSigns, target: _pncFlags),
+      const SizedBox(height: 8),
+      // PHQ-2 postpartum-depression quick screen — any tick = a danger flag.
+      ..._flagBody('visit_pnc_ppd_title'.tr, _pncPpdItems, target: _pncPpd),
     ];
   }
+
+  /// Labelled dropdown over a {storedValue: displayLabel} map.
+  Widget _dropdownField(String label, String value, Map<String, String> opts,
+          ValueChanged<String> onChanged) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppTextStyles.label),
+          const SizedBox(height: 6),
+          DropdownButtonFormField<String>(
+            initialValue: value,
+            isExpanded: true,
+            style: AppTextStyles.body,
+            onChanged: (v) => onChanged(v ?? value),
+            items: opts.entries
+                .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                .toList(),
+          ),
+        ],
+      );
 
   // ── HBNC: postnatal home visit — mother PNC + newborn (MCP card pg 7) ─────
   List<Widget> _hbncBody() {

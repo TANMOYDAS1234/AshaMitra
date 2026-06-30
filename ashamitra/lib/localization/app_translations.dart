@@ -1258,6 +1258,19 @@ class AppTranslations extends Translations {
     'clog_summary_vaccines': '@count vaccine(s)',
     'clog_pdf_all': 'All PDF',
     'clog_pdf_one': 'This checkup\'s report',
+    'visit_pnc_lochia_label': 'Bleeding / lochia',
+    'visit_pnc_lochia_normal': 'Normal',
+    'visit_pnc_lochia_heavy': 'Heavy bleeding',
+    'visit_pnc_lochia_foul': 'Foul-smelling',
+    'visit_pnc_bf_label': 'Breastfeeding',
+    'visit_pnc_bf_exclusive': 'Exclusive',
+    'visit_pnc_bf_partial': 'Partial',
+    'visit_pnc_bf_none': 'Not breastfeeding',
+    'visit_pnc_ifa': 'Postpartum IFA tablets given',
+    'visit_pnc_fp': 'Family-planning counselling done',
+    'visit_pnc_ppd_title': 'Mental-health check (last 2 weeks)',
+    'visit_pnc_ppd_sad': 'Feeling down / hopeless',
+    'visit_pnc_ppd_no_interest': 'Little interest in things',
   };
 
   static const _bn = {
@@ -2513,6 +2526,19 @@ class AppTranslations extends Translations {
     'clog_summary_vaccines': '@count টি টিকা',
     'clog_pdf_all': 'সব PDF',
     'clog_pdf_one': 'এই চেকআপের রিপোর্ট',
+    'visit_pnc_lochia_label': 'রক্তস্রাব / লোকিয়া',
+    'visit_pnc_lochia_normal': 'স্বাভাবিক',
+    'visit_pnc_lochia_heavy': 'বেশি রক্তস্রাব',
+    'visit_pnc_lochia_foul': 'দুর্গন্ধযুক্ত',
+    'visit_pnc_bf_label': 'স্তন্যপান',
+    'visit_pnc_bf_exclusive': 'শুধু বুকের দুধ',
+    'visit_pnc_bf_partial': 'আংশিক',
+    'visit_pnc_bf_none': 'হচ্ছে না',
+    'visit_pnc_ifa': 'প্রসব-পরবর্তী আয়রন বড়ি দেওয়া হয়েছে',
+    'visit_pnc_fp': 'পরিবার পরিকল্পনা পরামর্শ দেওয়া হয়েছে',
+    'visit_pnc_ppd_title': 'মানসিক অবস্থা যাচাই (গত ২ সপ্তাহ)',
+    'visit_pnc_ppd_sad': 'মন খারাপ / আশাহীন লাগে',
+    'visit_pnc_ppd_no_interest': 'কোনো কিছুতে আগ্রহ নেই',
   };
 
   static const _hi = {
@@ -3768,6 +3794,19 @@ class AppTranslations extends Translations {
     'clog_summary_vaccines': '@count टीके',
     'clog_pdf_all': 'सभी PDF',
     'clog_pdf_one': 'इस चेकअप की रिपोर्ट',
+    'visit_pnc_lochia_label': 'रक्तस्राव / लोकिया',
+    'visit_pnc_lochia_normal': 'सामान्य',
+    'visit_pnc_lochia_heavy': 'अधिक रक्तस्राव',
+    'visit_pnc_lochia_foul': 'दुर्गंधयुक्त',
+    'visit_pnc_bf_label': 'स्तनपान',
+    'visit_pnc_bf_exclusive': 'केवल स्तनपान',
+    'visit_pnc_bf_partial': 'आंशिक',
+    'visit_pnc_bf_none': 'नहीं हो रहा',
+    'visit_pnc_ifa': 'प्रसवोत्तर आयरन गोली दी गई',
+    'visit_pnc_fp': 'परिवार नियोजन परामर्श दिया गया',
+    'visit_pnc_ppd_title': 'मानसिक स्थिति जाँच (पिछले 2 सप्ताह)',
+    'visit_pnc_ppd_sad': 'उदास / निराश महसूस',
+    'visit_pnc_ppd_no_interest': 'किसी चीज़ में रुचि नहीं',
   };
 
   @override
