@@ -1,26 +1,28 @@
 import 'package:flutter/material.dart';
 
 class AppGradients {
+  // Purple → magenta — the app's hero gradient (banners, splash brand).
   static const primary = LinearGradient(
-    colors: [Color(0xFF4F46E5), Color(0xFF8B5CF6)],
+    colors: [Color(0xFF791C87), Color(0xFFBD3773)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const primaryVertical = LinearGradient(
-    colors: [Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFF06B6D4)],
+    colors: [Color(0xFF791C87), Color(0xFFA8277E), Color(0xFFBD3773)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
+  // Soft sage-green page background.
   static const background = LinearGradient(
-    colors: [Color(0xFFF7F8FF), Color(0xFFEEF2FF), Color(0xFFF0FEFF)],
+    colors: [Color(0xFFEAF3EC), Color(0xFFE3F0E8), Color(0xFFF1F8F3)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const splash = LinearGradient(
-    colors: [Color(0xFF312E81), Color(0xFF4F46E5), Color(0xFF0E7490)],
+    colors: [Color(0xFF5B0F69), Color(0xFF791C87), Color(0xFFBD3773)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -44,7 +46,7 @@ class AppGradients {
   );
 
   static const orb = RadialGradient(
-    colors: [Color(0xFFA5B4FC), Color(0xFF4F46E5), Color(0xFF06B6D4)],
+    colors: [Color(0xFFD98FE0), Color(0xFF791C87), Color(0xFFBD3773)],
     center: Alignment.center,
     radius: 0.85,
   );

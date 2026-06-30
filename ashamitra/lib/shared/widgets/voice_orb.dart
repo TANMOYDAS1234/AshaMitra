@@ -60,7 +60,7 @@ class _VoiceOrbState extends State<VoiceOrb> with TickerProviderStateMixin {
   Color get _orbColor => switch (widget.state) {
         OrbState.listening => const Color(0xFF22C55E),
         OrbState.processing => const Color(0xFF06B6D4),
-        OrbState.idle => const Color(0xFF4F46E5),
+        OrbState.idle => const Color(0xFF791C87),
         OrbState.paused => const Color(0xFF6B7280),
       };
 
