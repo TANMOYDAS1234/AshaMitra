@@ -1505,6 +1505,10 @@ class AppTranslations extends Translations {
     'ms_drug_chlorhexidine': 'Chlorhexidine gel',
     'ms_drug_povidone': 'Povidone iodine',
     'ms_drug_gauze': 'Gauze / bandage',
+    'reg_mode_medicine': 'Medicine (Form 2)',
+    'reg_section_which_month': 'Which month?',
+    'reg_summary_medicine': '@month — @count medicine line(s)',
+    'reg_medicine_no_data': 'No medicine entries for this month',
   };
 
   static const _bn = {
@@ -3007,6 +3011,10 @@ class AppTranslations extends Translations {
     'ms_drug_chlorhexidine': 'ক্লোরহেক্সিডিন জেল',
     'ms_drug_povidone': 'পোভিডোন আয়োডিন',
     'ms_drug_gauze': 'গজ / ব্যান্ডেজ',
+    'reg_mode_medicine': 'ওষুধ (ফর্ম ২)',
+    'reg_section_which_month': 'কোন মাস?',
+    'reg_summary_medicine': '@month — @count টি ওষুধের লাইন',
+    'reg_medicine_no_data': 'এই মাসের জন্য কোনো ওষুধের হিসেব নেই',
   };
 
   static const _hi = {
@@ -4509,6 +4517,10 @@ class AppTranslations extends Translations {
     'ms_drug_chlorhexidine': 'क्लोरहेक्सिडिन जेल',
     'ms_drug_povidone': 'पोविडोन आयोडीन',
     'ms_drug_gauze': 'गॉज़ / पट्टी',
+    'reg_mode_medicine': 'दवा (फॉर्म 2)',
+    'reg_section_which_month': 'कौन सा माह?',
+    'reg_summary_medicine': '@month — @count दवा पंक्तियाँ',
+    'reg_medicine_no_data': 'इस माह के लिए कोई दवा प्रविष्टि नहीं',
   };
 
   @override

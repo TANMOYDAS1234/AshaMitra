@@ -29,7 +29,9 @@ class DueRegisterService {
   static const kindsAll = ['anc', 'vaccine', 'hbnc', 'hbyc'];
 
   /// The cumulative full-register types (the actual paper notebooks).
-  static const kindsFull = ['maternal', 'immunization', 'eligible', 'vital', 'diary'];
+  /// Eligible-couple & birth/death registers moved to their own home tiles, so
+  /// the generator focuses on the registers nothing else produces.
+  static const kindsFull = ['maternal', 'immunization', 'diary'];
 
   static String kindLabel(String k) => switch (k) {
         'anc' => 'ANC (গর্ভকালীন)',
