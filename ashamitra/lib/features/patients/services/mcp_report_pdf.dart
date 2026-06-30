@@ -1,15 +1,14 @@
-import 'dart:isolate';
-import 'dart:typed_data';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
 import '../../../core/services/api_service.dart';
-import '../../../core/utils/pdf_helper.dart';
+import '../../../core/utils/pdf_html.dart';
 import '../data/models/patient_model.dart';
 
 /// Generates a one-/two-page "মা ও শিশুর সুরক্ষা কার্ড — সারসংক্ষেপ" (MCP-card
 /// summary / ANC report) for a single patient: identity + pregnancy summary,
 /// a high-risk banner, the ANC visit table (from captured visit records), the
-/// immunization table, and upcoming due items. Reuses the Bengali PDF pipeline.
+/// immunization table, and upcoming due items.
+///
+/// Rendered via the platform HTML→PDF pipeline ([PdfHtml]) so Bengali shapes
+/// correctly (the `pdf` package doesn't shape Indic scripts).
 class McpReportPdf {
   static Future<void> generate(
     PatientModel p, {
@@ -19,18 +18,7 @@ class McpReportPdf {
     // record captured at each completed visit). Empty for a not-yet-synced row.
     final events = await ApiService.getScheduleForPatient(p.id);
     final data = _data(p, events, header);
-    final regular = await PdfHelper.loadFontBytes(bold: false);
-    final bold = await PdfHelper.loadFontBytes(bold: true);
-    List<int> bytes;
-    try {
-      bytes = await Isolate.run(() => buildMcpReportPdf((regular, bold, data)))
-          .timeout(const Duration(seconds: 60));
-    } catch (_) {
-      bytes = await buildMcpReportPdf((regular, bold, data))
-          .timeout(const Duration(seconds: 45));
-    }
-    await PdfHelper.saveAndOpen(bytes, data['fileName']!.toString())
-        .timeout(const Duration(seconds: 15));
+    await PdfHtml.render(body: _html(data), fileName: data['fileName']!.toString());
   }
 
   /// Generates a focused report for a **single completed checkup** (any module —
@@ -50,18 +38,7 @@ class McpReportPdf {
     final datePart = dd.length >= 10 ? dd.substring(0, 10).replaceAll('-', '') : '';
     data['fileName'] =
         'checkup_${kind.isEmpty ? 'visit' : kind}${datePart.isNotEmpty ? '_$datePart' : ''}.pdf';
-    final regular = await PdfHelper.loadFontBytes(bold: false);
-    final bold = await PdfHelper.loadFontBytes(bold: true);
-    List<int> bytes;
-    try {
-      bytes = await Isolate.run(() => buildMcpReportPdf((regular, bold, data)))
-          .timeout(const Duration(seconds: 60));
-    } catch (_) {
-      bytes = await buildMcpReportPdf((regular, bold, data))
-          .timeout(const Duration(seconds: 45));
-    }
-    await PdfHelper.saveAndOpen(bytes, data['fileName']!.toString())
-        .timeout(const Duration(seconds: 15));
+    await PdfHtml.render(body: _html(data), fileName: data['fileName']!.toString());
   }
 
   static String _fmt(dynamic iso) {
@@ -262,195 +239,75 @@ class McpReportPdf {
       'due': due,
     };
   }
-}
 
-/// Isolate-safe builder. Receives font bytes + a plain data map.
-Future<List<int>> buildMcpReportPdf(
-    (Uint8List, Uint8List, Map<String, dynamic>) args) async {
-  final (regularBytes, boldBytes, data) = args;
-  pw.Font makeFont(Uint8List b) =>
-      b.isNotEmpty ? pw.Font.ttf(b.buffer.asByteData()) : pw.Font.helvetica();
-  final theme = pw.ThemeData.withFont(
-    base: makeFont(regularBytes),
-    bold: makeFont(boldBytes),
-    italic: makeFont(regularBytes),
-    boldItalic: makeFont(boldBytes),
-  );
-  final doc = pw.Document(theme: theme);
+  /// Builds the report body HTML from the prepared [data] map.
+  static String _html(Map<String, dynamic> data) {
+    List<List<String>> rows(dynamic src) => ((src as List?) ?? const [])
+        .map((r) => (r as List).map((c) => c.toString()).toList())
+        .toList();
+    final idRows = rows(data['idRows']);
+    final anc = rows(data['anc']);
+    final pnc = rows(data['pnc']);
+    final vac = rows(data['vac']);
+    final hbnc = rows(data['hbnc']);
+    final hbyc = rows(data['hbyc']);
+    final due = rows(data['due']);
+    final header = ((data['header'] as Map?) ?? const {})
+        .map((k, v) => MapEntry(k.toString(), v.toString()));
 
-  final header = (data['header'] as Map?)?.cast<String, dynamic>() ?? {};
-  final idRows = (data['idRows'] as List?) ?? const [];
-  final anc = (data['anc'] as List?) ?? const [];
-  final vac = (data['vac'] as List?) ?? const [];
-  final hbnc = (data['hbnc'] as List?) ?? const [];
-  final hbyc = (data['hbyc'] as List?) ?? const [];
-  final pnc = (data['pnc'] as List?) ?? const [];
-  final due = (data['due'] as List?) ?? const [];
+    final b = StringBuffer();
+    b.write(PdfHtml.reportHeader(
+      title: (data['title'] ?? '').toString(),
+      generatedAt: (data['generatedAt'] ?? '').toString(),
+      header: header,
+    ));
+    if (data['highRisk'] == true) {
+      final reason = (data['highRiskReason'] ?? '').toString();
+      b.write(PdfHtml.band('উচ্চ ঝুঁকি: ${reason.isNotEmpty ? reason : 'হ্যাঁ'}'));
+    }
+    b.write(PdfHtml.section('পরিচয় ও গর্ভাবস্থার তথ্য'));
+    b.write(PdfHtml.kvGrid(idRows));
 
-  List<List<String>> rows(List src) =>
-      src.map((r) => (r as List).map((c) => c.toString()).toList()).toList();
-
-  pw.Widget table(List<String> cols, List<List<String>> data) =>
-      pw.TableHelper.fromTextArray(
-        headers: cols,
-        data: data,
-        border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.4),
-        headerStyle: pw.TextStyle(
-            fontSize: 7.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-        headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey600),
-        cellStyle: const pw.TextStyle(fontSize: 7.5),
-        cellAlignment: pw.Alignment.centerLeft,
-        cellPadding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 2.5),
-        oddRowDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey50),
-      );
-
-  pw.Widget sectionTitle(String t) => pw.Padding(
-        padding: const pw.EdgeInsets.only(top: 12, bottom: 4),
-        child: pw.Text(t,
-            style: pw.TextStyle(
-                fontSize: 11,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.blueGrey800)),
-      );
-
-  doc.addPage(
-    pw.MultiPage(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(24),
-      footer: (ctx) => pw.Align(
-        alignment: pw.Alignment.centerRight,
-        child: pw.Text('পৃষ্ঠা ${ctx.pageNumber}/${ctx.pagesCount}',
-            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
-      ),
-      build: (ctx) => [
-        // Header
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text((data['title'] ?? '').toString(),
-                    style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
-                pw.Text('AshaMitra', style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey700)),
-              ],
-            ),
-            pw.Text('তৈরি: ${(data['generatedAt'] ?? '').toString()}',
-                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
-          ],
-        ),
-        if ([header['asha'], header['block'], header['district'], header['facility']]
-            .any((e) => (e ?? '').toString().isNotEmpty)) ...[
-          pw.SizedBox(height: 4),
-          pw.Text(
-            [
-              if ((header['asha'] ?? '').toString().isNotEmpty) 'আশা: ${header['asha']}',
-              if ((header['facility'] ?? '').toString().isNotEmpty) 'কেন্দ্র: ${header['facility']}',
-              if ((header['block'] ?? '').toString().isNotEmpty) 'ব্লক: ${header['block']}',
-              if ((header['district'] ?? '').toString().isNotEmpty) 'জেলা: ${header['district']}',
-            ].join('   |   '),
-            style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
-          ),
-        ],
-        pw.Divider(height: 10, thickness: 0.6),
-
-        // High-risk banner
-        if (data['highRisk'] == true)
-          pw.Container(
-            width: double.infinity,
-            margin: const pw.EdgeInsets.only(bottom: 6),
-            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: pw.BoxDecoration(
-                color: PdfColors.red50,
-                border: pw.Border.all(color: PdfColors.red400, width: 0.8),
-                borderRadius: pw.BorderRadius.circular(4)),
-            child: pw.Text(
-                'উচ্চ ঝুঁকি: ${(data['highRiskReason'] ?? '').toString().isNotEmpty ? data['highRiskReason'] : 'হ্যাঁ'}',
-                style: pw.TextStyle(
-                    fontSize: 10, fontWeight: pw.FontWeight.bold, color: PdfColors.red800)),
-          ),
-
-        // Identity
-        sectionTitle('পরিচয় ও গর্ভাবস্থার তথ্য'),
-        pw.Wrap(
-          spacing: 18,
-          runSpacing: 3,
-          children: rows(idRows)
-              .map((r) => pw.SizedBox(
-                    width: 250,
-                    child: pw.Row(children: [
-                      pw.SizedBox(
-                          width: 90,
-                          child: pw.Text('${r[0]}:',
-                              style: pw.TextStyle(
-                                  fontSize: 9, fontWeight: pw.FontWeight.bold))),
-                      pw.Expanded(
-                          child: pw.Text(r.length > 1 ? r[1] : '',
-                              style: const pw.TextStyle(fontSize: 9))),
-                    ]),
-                  ))
-              .toList(),
-        ),
-
-        // ANC visits
-        if (anc.isNotEmpty) ...[
-          sectionTitle('ANC ভিজিট (পরিমাপ)'),
-          table(const ['ভিজিট', 'তারিখ', 'ওজন', 'BP', 'Hb', 'মূত্র(A/S)', 'জরায়ু', 'দেওয়া হয়েছে', 'বিপদ/TB'], rows(anc)),
-          if ((data['weightGain'] ?? '').toString().isNotEmpty)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(top: 4),
-              child: pw.Text(data['weightGain'].toString(),
-                  style: pw.TextStyle(
-                      fontSize: 9,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.blueGrey700)),
-            ),
-        ],
-
-        // PNC (mother postnatal)
-        if (pnc.isNotEmpty) ...[
-          sectionTitle('প্রসব-পরবর্তী পরিচর্যা (PNC)'),
-          table(const ['ভিজিট', 'তারিখ', 'পর্যবেক্ষণ'], rows(pnc)),
-        ],
-
-        // Immunization
-        if (vac.isNotEmpty) ...[
-          sectionTitle('টিকাকরণ'),
-          table(const ['ভিজিট', 'তারিখ', 'যে টিকা দেওয়া হয়েছে', 'অবস্থা'], rows(vac)),
-        ],
-
-        // Newborn home visits (HBNC)
-        if (hbnc.isNotEmpty) ...[
-          sectionTitle('নবজাতক গৃহ পরিদর্শন (HBNC)'),
-          table(const ['ভিজিট', 'তারিখ', 'পর্যবেক্ষণ'], rows(hbnc)),
-        ],
-
-        // Young-child home visits (HBYC)
-        if (hbyc.isNotEmpty) ...[
-          sectionTitle('শিশু গৃহ পরিদর্শন (HBYC)'),
-          table(const ['ভিজিট', 'তারিখ', 'পর্যবেক্ষণ'], rows(hbyc)),
-        ],
-
-        // Upcoming
-        if (due.isNotEmpty) ...[
-          sectionTitle('আসন্ন / বকেয়া (টিকা ও পরীক্ষা)'),
-          table(const ['কাজ', 'ধরন', 'তারিখ', 'অবস্থা'], rows(due)),
-        ],
-
-        if (anc.isEmpty && pnc.isEmpty && vac.isEmpty && hbnc.isEmpty && hbyc.isEmpty && due.isEmpty)
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(vertical: 10),
-            child: pw.Text('— এখনও কোনো ভিজিট/সূচি নেই —',
-                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
-          ),
-
-        pw.SizedBox(height: 14),
-        pw.Text('AshaMitra দ্বারা স্বয়ংক্রিয়ভাবে তৈরি — তথ্য মিলিয়ে নিন।  আশা স্বাক্ষর: ____________________',
-            style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
-      ],
-    ),
-  );
-
-  return doc.save();
+    if (anc.isNotEmpty) {
+      b.write(PdfHtml.section('ANC ভিজিট (পরিমাপ)'));
+      b.write(PdfHtml.table(
+        const ['ভিজিট', 'তারিখ', 'ওজন', 'BP', 'Hb', 'মূত্র(A/S)', 'জরায়ু', 'দেওয়া হয়েছে', 'বিপদ/TB'],
+        anc,
+        weights: const [14, 12, 7, 9, 7, 9, 8, 18, 16],
+      ));
+      final wg = (data['weightGain'] ?? '').toString();
+      if (wg.isNotEmpty) b.write('<div class="note">${PdfHtml.esc(wg)}</div>');
+    }
+    if (pnc.isNotEmpty) {
+      b.write(PdfHtml.section('প্রসব-পরবর্তী পরিচর্যা (PNC)'));
+      b.write(PdfHtml.table(const ['ভিজিট', 'তারিখ', 'পর্যবেক্ষণ'], pnc,
+          weights: const [22, 18, 60]));
+    }
+    if (vac.isNotEmpty) {
+      b.write(PdfHtml.section('টিকাকরণ'));
+      b.write(PdfHtml.table(const ['ভিজিট', 'তারিখ', 'যে টিকা দেওয়া হয়েছে', 'অবস্থা'], vac,
+          weights: const [20, 16, 40, 24]));
+    }
+    if (hbnc.isNotEmpty) {
+      b.write(PdfHtml.section('নবজাতক গৃহ পরিদর্শন (HBNC)'));
+      b.write(PdfHtml.table(const ['ভিজিট', 'তারিখ', 'পর্যবেক্ষণ'], hbnc,
+          weights: const [22, 18, 60]));
+    }
+    if (hbyc.isNotEmpty) {
+      b.write(PdfHtml.section('শিশু গৃহ পরিদর্শন (HBYC)'));
+      b.write(PdfHtml.table(const ['ভিজিট', 'তারিখ', 'পর্যবেক্ষণ'], hbyc,
+          weights: const [22, 18, 60]));
+    }
+    if (due.isNotEmpty) {
+      b.write(PdfHtml.section('আসন্ন / বকেয়া (টিকা ও পরীক্ষা)'));
+      b.write(PdfHtml.table(const ['কাজ', 'ধরন', 'তারিখ', 'অবস্থা'], due,
+          weights: const [40, 18, 22, 20]));
+    }
+    if (anc.isEmpty && pnc.isEmpty && vac.isEmpty && hbnc.isEmpty && hbyc.isEmpty && due.isEmpty) {
+      b.write('<div class="foot">— এখনও কোনো ভিজিট/সূচি নেই —</div>');
+    }
+    b.write(PdfHtml.footer(
+        'AshaMitra দ্বারা স্বয়ংক্রিয়ভাবে তৈরি — তথ্য মিলিয়ে নিন।  আশা স্বাক্ষর: ____________________'));
+    return b.toString();
+  }
 }

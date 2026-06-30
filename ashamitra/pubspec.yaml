@@ -19,6 +19,7 @@ dependencies:
   url_launcher: ^6.3.0
   image_picker: ^1.1.2
   pdf: ^3.11.1
+  printing: ^5.13.4
   path_provider: ^2.1.4
   open_file: ^3.3.2
   speech_to_text: ^7.0.0
