@@ -1421,6 +1421,34 @@ class _VisitScreenState extends State<VisitScreen> {
       ),
       const SizedBox(height: 18),
       ..._flagBody('visit_check_child_care_danger'.tr, _hbycSigns),
+      const SizedBox(height: 12),
+      // Quick link to the milestone screening for this age band — keeps
+      // development on the young-child visit instead of a separate detour.
+      Material(
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => Get.toNamed(AppRoutes.development),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            child: Row(
+              children: [
+                const Icon(Icons.emoji_people_rounded,
+                    color: AppColors.primary, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('visit_open_development'.tr,
+                      style: AppTextStyles.label
+                          .copyWith(fontWeight: FontWeight.w700)),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: AppColors.primary),
+              ],
+            ),
+          ),
+        ),
+      ),
     ];
   }
 

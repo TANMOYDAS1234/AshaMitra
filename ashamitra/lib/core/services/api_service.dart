@@ -386,6 +386,22 @@ class ApiService {
       _updateSynced('vital-events', id, d);
   static Future<bool> deleteVitalEvent(String id) => _deleteSynced('vital-events', id);
 
+  // NCD / CBAC (30+ screening register)
+  static Future<List<dynamic>> getNcdCbac() => _listSynced('ncd-cbac');
+  static Future<Map<String, dynamic>?> createNcdCbac(Map<String, dynamic> d) =>
+      _createSynced('ncd-cbac', d);
+  static Future<Map<String, dynamic>> updateNcdCbac(String id, Map<String, dynamic> d) =>
+      _updateSynced('ncd-cbac', id, d);
+  static Future<bool> deleteNcdCbac(String id) => _deleteSynced('ncd-cbac', id);
+
+  // TB cases (presumptive + DOTS register)
+  static Future<List<dynamic>> getTbCases() => _listSynced('tb-cases');
+  static Future<Map<String, dynamic>?> createTbCase(Map<String, dynamic> d) =>
+      _createSynced('tb-cases', d);
+  static Future<Map<String, dynamic>> updateTbCase(String id, Map<String, dynamic> d) =>
+      _updateSynced('tb-cases', id, d);
+  static Future<bool> deleteTbCase(String id) => _deleteSynced('tb-cases', id);
+
   // ── Reports ────────────────────────────────────────────────────────────────
 
   /// Returns the server-created report doc (with the real Mongo `_id` mapped

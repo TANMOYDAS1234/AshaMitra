@@ -186,6 +186,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 title: 'home_record_vital_events'.tr,
                 route: AppRoutes.vitalEvents,
               ),
+              _recordTile(
+                icon: Icons.health_and_safety_rounded,
+                color: const Color(0xFF0D9488), // teal
+                title: 'home_record_ncd_cbac'.tr,
+                route: AppRoutes.ncdCbac,
+              ),
+              _recordTile(
+                icon: Icons.coronavirus_rounded,
+                color: const Color(0xFFEA580C), // orange
+                title: 'home_record_tb'.tr,
+                route: AppRoutes.tbCases,
+              ),
             ],
           ),
         ],
