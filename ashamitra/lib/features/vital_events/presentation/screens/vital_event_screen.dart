@@ -11,8 +11,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../controller/vital_event_controller.dart';
 import '../../../patients/controller/patient_controller.dart';
 import '../../../patients/data/models/patient_model.dart';
-import '../../../eligible_couples/presentation/screens/eligible_couple_screen.dart'
-    show DatePickField;
+import '../../../../shared/widgets/date_pick_field.dart';
 
 Map<String, String> get _sexes => {
       'Female': 've_sex_female'.tr,

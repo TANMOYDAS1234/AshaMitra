@@ -1509,6 +1509,7 @@ class AppTranslations extends Translations {
     'reg_section_which_month': 'Which month?',
     'reg_summary_medicine': '@month — @count medicine line(s)',
     'reg_medicine_no_data': 'No medicine entries for this month',
+    'common_pick_date': 'Pick date',
   };
 
   static const _bn = {
@@ -3015,6 +3016,7 @@ class AppTranslations extends Translations {
     'reg_section_which_month': 'কোন মাস?',
     'reg_summary_medicine': '@month — @count টি ওষুধের লাইন',
     'reg_medicine_no_data': 'এই মাসের জন্য কোনো ওষুধের হিসেব নেই',
+    'common_pick_date': 'তারিখ বেছে নিন',
   };
 
   static const _hi = {
@@ -4521,6 +4523,7 @@ class AppTranslations extends Translations {
     'reg_section_which_month': 'कौन सा माह?',
     'reg_summary_medicine': '@month — @count दवा पंक्तियाँ',
     'reg_medicine_no_data': 'इस माह के लिए कोई दवा प्रविष्टि नहीं',
+    'common_pick_date': 'तारीख चुनें',
   };
 
   @override

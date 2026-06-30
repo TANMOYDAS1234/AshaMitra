@@ -370,14 +370,6 @@ class ApiService {
     }
   }
 
-  // Eligible couples (family-planning register)
-  static Future<List<dynamic>> getEligibleCouples() => _listSynced('eligible-couples');
-  static Future<Map<String, dynamic>?> createEligibleCouple(Map<String, dynamic> d) =>
-      _createSynced('eligible-couples', d);
-  static Future<Map<String, dynamic>> updateEligibleCouple(String id, Map<String, dynamic> d) =>
-      _updateSynced('eligible-couples', id, d);
-  static Future<bool> deleteEligibleCouple(String id) => _deleteSynced('eligible-couples', id);
-
   // Vital events (birth & death register)
   static Future<List<dynamic>> getVitalEvents() => _listSynced('vital-events');
   static Future<Map<String, dynamic>?> createVitalEvent(Map<String, dynamic> d) =>

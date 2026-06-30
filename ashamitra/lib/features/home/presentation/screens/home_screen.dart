@@ -175,12 +175,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     badge: refCtrl.openCount,
                   )),
               _recordTile(
-                icon: Icons.favorite_rounded,
-                color: AppColors.purple,
-                title: 'home_record_eligible_couples'.tr,
-                route: AppRoutes.eligibleCouples,
-              ),
-              _recordTile(
                 icon: Icons.menu_book_rounded,
                 color: AppColors.sky,
                 title: 'home_record_vital_events'.tr,

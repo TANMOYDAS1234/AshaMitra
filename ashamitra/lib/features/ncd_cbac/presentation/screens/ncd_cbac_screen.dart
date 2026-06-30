@@ -8,8 +8,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../../../eligible_couples/presentation/screens/eligible_couple_screen.dart'
-    show DatePickField;
+import '../../../../shared/widgets/date_pick_field.dart';
 import '../../controller/ncd_cbac_controller.dart';
 import '../../../patients/controller/patient_controller.dart';
 import '../../../patients/data/models/patient_model.dart';

@@ -17,7 +17,6 @@ import '../features/patients/presentation/screens/patient_profile_screen.dart';
 import '../features/registers/presentation/screens/registers_screen.dart';
 import '../features/referrals/presentation/screens/referral_list_screen.dart';
 import '../features/referrals/presentation/screens/referral_form_screen.dart';
-import '../features/eligible_couples/presentation/screens/eligible_couple_screen.dart';
 import '../features/vital_events/presentation/screens/vital_event_screen.dart';
 import '../features/ncd_cbac/presentation/screens/ncd_cbac_screen.dart';
 import '../features/tb_cases/presentation/screens/tb_case_screen.dart';
@@ -68,7 +67,6 @@ class AppRoutes {
   static const registers       = '/registers';
   static const referralList    = '/referrals';
   static const referralForm    = '/referrals/form';
-  static const eligibleCouples = '/eligible-couples';
   static const vitalEvents     = '/vital-events';
   static const ncdCbac         = '/ncd-cbac';
   static const tbCases         = '/tb-cases';
@@ -201,13 +199,6 @@ class AppRoutes {
     GetPage(
       name: referralForm,
       page: () => const ReferralFormScreen(),
-      transition: Transition.rightToLeftWithFade,
-      transitionDuration: _medium,
-      curve: Curves.easeOutCubic,
-    ),
-    GetPage(
-      name: eligibleCouples,
-      page: () => const EligibleCoupleListScreen(),
       transition: Transition.rightToLeftWithFade,
       transitionDuration: _medium,
       curve: Curves.easeOutCubic,

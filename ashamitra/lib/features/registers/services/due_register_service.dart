@@ -50,16 +50,6 @@ class DueRegisterService {
         _ => k,
       };
 
-  static const _fpMethodBn = {
-    'none': 'নেই',
-    'condom': 'কন্ডোম',
-    'ocp': 'বড়ি',
-    'iucd': 'IUCD',
-    'injectable': 'অন্তরা',
-    'female_sterilization': 'মহিলা বন্ধ্যাকরণ',
-    'male_sterilization': 'NSV',
-    'other': 'অন্যান্য',
-  };
   static const _placeBn = {
     'home': 'বাড়ি',
     'institution': 'প্রতিষ্ঠান',
@@ -275,7 +265,6 @@ class DueRegisterService {
     required List<Map<String, dynamic>> events,
     required List<PatientModel> patients,
     required List<String> registers,
-    List<Map<String, dynamic>> couples = const [],
     List<Map<String, dynamic>> vitals = const [],
     Map<String, String> header = const {},
   }) {
@@ -288,7 +277,6 @@ class DueRegisterService {
     final sections = <Map<String, dynamic>>[];
     if (registers.contains('maternal')) sections.add(_maternalSection(patients, byPatient));
     if (registers.contains('immunization')) sections.add(_immunizationSection(patients, byPatient));
-    if (registers.contains('eligible')) sections.add(_eligibleSection(couples));
     if (registers.contains('vital')) sections.add(_vitalSection(vitals));
     if (registers.contains('diary')) sections.add(_diarySection(patients, events));
     return {
@@ -438,42 +426,6 @@ class DueRegisterService {
       'columns': const ['তারিখ', 'উপভোক্তা', 'পরিষেবা', 'মন্তব্য'],
       'rows': rows,
       'note': '',
-    };
-  }
-
-  // ── Eligible-couple (family-planning) register ────────────────────────────
-  static Map<String, dynamic> _eligibleSection(List<Map<String, dynamic>> couples) {
-    final active = couples
-        .where((c) => (c['status'] ?? 'active').toString() != 'closed')
-        .toList()
-      ..sort((a, b) => (a['wifeName'] ?? '').toString().compareTo((b['wifeName'] ?? '').toString()));
-    final rows = <List<String>>[];
-    for (var i = 0; i < active.length; i++) {
-      final c = active[i];
-      String g(String k) => (c[k] ?? '').toString().trim();
-      rows.add([
-        '${i + 1}',
-        g('wifeName'),
-        g('husbandName'),
-        g('wifeAadhaar'),
-        _village0(g('village')),
-        g('wifeAge'),
-        g('sons'),
-        g('daughters'),
-        _fpMethodBn[g('fpMethod')] ?? 'নেই',
-        _diso(c['followUpDate']),
-        c['highRisk'] == true ? 'উচ্চ' : '',
-        g('mobile'),
-      ]);
-    }
-    return {
-      'title': 'যোগ্য দম্পতি রেজিস্টার — সক্রিয় (${active.length})',
-      'columns': const [
-        '#', 'স্ত্রী', 'স্বামী', 'আধার', 'গ্রাম', 'স্ত্রীর বয়স', 'ছেলে', 'মেয়ে',
-        'বর্তমান পদ্ধতি', 'ফলো-আপ', 'ঝুঁকি', 'মোবাইল',
-      ],
-      'rows': rows,
-      'note': 'প্রজনন বয়সের (১৫–৪৯) দম্পতি। পদ্ধতি ও পরবর্তী ফলো-আপ তারিখ সহ।',
     };
   }
 
