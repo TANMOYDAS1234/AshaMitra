@@ -1,31 +1,15 @@
-import 'dart:isolate';
-import 'dart:typed_data';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import '../../../core/utils/pdf_helper.dart';
+import '../../../core/utils/pdf_html.dart';
 import '../data/models/referral_model.dart';
 
-/// Renders + opens the ASHA "Form 3" referral slip PDF for one referral.
-/// Mirrors the register PDF pipeline: load font bytes on the UI isolate, build
-/// the document in a background isolate from plain data, then save + open.
+/// Renders + opens the ASHA "Form 3" referral slip PDF for one referral, via the
+/// platform HTML→PDF pipeline so Bengali shapes correctly.
 class ReferralPdf {
   static Future<void> generate(
     ReferralModel r, {
     Map<String, String> header = const {},
   }) async {
     final data = _data(r, header);
-    final regular = await PdfHelper.loadFontBytes(bold: false);
-    final bold = await PdfHelper.loadFontBytes(bold: true);
-    List<int> bytes;
-    try {
-      bytes = await Isolate.run(() => buildReferralSlipPdf((regular, bold, data)))
-          .timeout(const Duration(seconds: 60));
-    } catch (_) {
-      bytes = await buildReferralSlipPdf((regular, bold, data))
-          .timeout(const Duration(seconds: 45));
-    }
-    await PdfHelper.saveAndOpen(bytes, data['fileName']!.toString())
-        .timeout(const Duration(seconds: 15));
+    await PdfHtml.render(body: _html(data), fileName: data['fileName']!.toString());
   }
 
   static String _fmtDate(DateTime? d) {
@@ -62,7 +46,6 @@ class ReferralPdf {
         r.caseType == 'newborn';
     return {
       'fileName': 'referral_${DateTime.now().millisecondsSinceEpoch}.pdf',
-      'generatedAt': _fmtDate(DateTime.now()),
       'createdDate': _fmtDate(r.createdAt),
       'band': r.band,
       'header': {
@@ -71,7 +54,6 @@ class ReferralPdf {
         'district': header['district'] ?? '',
         'facility': header['facility'] ?? '',
       },
-      // রোগীর তথ্য — label/value rows
       'patientRows': [
         ['নাম', r.patientName],
         ['বয়স', r.age],
@@ -88,7 +70,6 @@ class ReferralPdf {
       'imnci': r.imnci,
       'medicinesGiven': r.medicinesGiven,
       'referredTo': r.referredTo,
-      // স্বাস্থ্যকেন্দ্র পূরণ করবেন — outcome (filled when known)
       'status': r.status,
       'statusLabel': _statusLabel(r.status),
       'reachedDate': _fmtDate(r.reachedDate),
@@ -98,236 +79,79 @@ class ReferralPdf {
       'facilityNotes': r.facilityNotes,
     };
   }
-}
 
-/// Isolate-safe builder. Receives only font bytes + a plain data map.
-Future<List<int>> buildReferralSlipPdf(
-    (Uint8List, Uint8List, Map<String, dynamic>) args) async {
-  final (regularBytes, boldBytes, data) = args;
-  pw.Font makeFont(Uint8List b) =>
-      b.isNotEmpty ? pw.Font.ttf(b.buffer.asByteData()) : pw.Font.helvetica();
-  final theme = pw.ThemeData.withFont(
-    base: makeFont(regularBytes),
-    bold: makeFont(boldBytes),
-    italic: makeFont(regularBytes),
-    boldItalic: makeFont(boldBytes),
-  );
-  final doc = pw.Document(theme: theme);
+  static String _html(Map<String, dynamic> data) {
+    String g(String k) => (data[k] ?? '').toString();
+    final header = ((data['header'] as Map?) ?? const {})
+        .map((k, v) => MapEntry(k.toString(), v.toString()));
+    final band = g('band');
+    final isRed = band == 'RED';
+    final bandColor = isRed ? '#b91c1c' : (band == 'YELLOW' ? '#c2410c' : '#791C87');
+    final bandText = isRed
+        ? 'জরুরি রেফার (RED) — ৩০ মিনিটের মধ্যে স্থানান্তর করুন'
+        : (band == 'YELLOW' ? 'রেফার (YELLOW) — ২৪ ঘণ্টার মধ্যে' : 'রেফার');
+    final patientRows = ((data['patientRows'] as List?) ?? const [])
+        .map((row) => (row as List).map((e) => e.toString()).toList())
+        .toList();
+    final isChild = data['isChild'] == true;
+    final hasOutcome = g('status') != 'pending' ||
+        g('admittedBy').isNotEmpty ||
+        g('outcome').isNotEmpty;
 
-  final header = (data['header'] as Map?)?.cast<String, dynamic>() ?? {};
-  final band = (data['band'] ?? '').toString();
-  final isRed = band == 'RED';
-  final bandColor = isRed ? PdfColors.red700 : PdfColors.orange700;
-  final bandText = isRed
-      ? 'জরুরি রেফার (RED) — ৩০ মিনিটের মধ্যে স্থানান্তর করুন'
-      : (band == 'YELLOW'
-          ? 'রেফার (YELLOW) — ২৪ ঘণ্টার মধ্যে'
-          : 'রেফার');
+    final b = StringBuffer();
+    b.write(PdfHtml.reportHeader(
+        title: 'আশা রেফারেল স্লিপ (Form 3)',
+        generatedAt: g('createdDate'),
+        header: header));
+    b.write(
+        '<div style="background:$bandColor;color:#fff;font-weight:700;font-size:11px;'
+        'padding:8px 11px;border-radius:6px;margin:2px 0 6px;">${PdfHtml.esc(bandText)}</div>');
 
-  pw.Widget labelValue(String label, String value, {bool underline = false}) =>
-      pw.Padding(
-        padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
-        child: pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.SizedBox(
-              width: 95,
-              child: pw.Text('$label:',
-                  style: pw.TextStyle(
-                      fontSize: 10, fontWeight: pw.FontWeight.bold)),
-            ),
-            pw.Expanded(
-              child: pw.Container(
-                decoration: underline
-                    ? const pw.BoxDecoration(
-                        border: pw.Border(
-                            bottom: pw.BorderSide(
-                                color: PdfColors.grey500, width: 0.5)))
-                    : null,
-                child: pw.Text(value.isEmpty ? ' ' : value,
-                    style: const pw.TextStyle(fontSize: 10)),
-              ),
-            ),
-          ],
-        ),
-      );
+    b.write(PdfHtml.section('রোগীর তথ্য'));
+    b.write(PdfHtml.kvGrid(patientRows));
 
-  pw.Widget sectionTitle(String t) => pw.Padding(
-        padding: const pw.EdgeInsets.only(top: 10, bottom: 4),
-        child: pw.Text(t,
-            style: pw.TextStyle(
-                fontSize: 11,
-                fontWeight: pw.FontWeight.bold,
-                color: PdfColors.blueGrey800)),
-      );
+    b.write(PdfHtml.section('অসুস্থতার লক্ষণ ও কারণ'));
+    if (g('symptoms').isNotEmpty) b.write('<div>${PdfHtml.cell(g('symptoms'))}</div>');
+    if (g('reason').isNotEmpty) b.write('<div class="note">${PdfHtml.esc(g('reason'))}</div>');
 
-  final patientRows = (data['patientRows'] as List?) ?? const [];
-  final isChild = data['isChild'] == true;
-  final hasOutcome = (data['status']?.toString() ?? 'pending') != 'pending' ||
-      (data['admittedBy']?.toString() ?? '').isNotEmpty ||
-      (data['outcome']?.toString() ?? '').isNotEmpty;
+    if (isChild && (g('currentWeight').isNotEmpty || g('imnci').isNotEmpty)) {
+      b.write(PdfHtml.kvGrid([
+        if (g('currentWeight').isNotEmpty) ['বর্তমান ওজন', '${g('currentWeight')} কেজি'],
+        if (g('imnci').isNotEmpty) ['IMNCI শ্রেণি', g('imnci')],
+      ]));
+    }
 
-  doc.addPage(
-    pw.Page(
-      pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(28),
-      build: (ctx) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          // Header
-          pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text('আশা রেফারেল স্লিপ',
-                      style: pw.TextStyle(
-                          fontSize: 16, fontWeight: pw.FontWeight.bold)),
-                  pw.Text('Form 3 • AshaMitra',
-                      style: const pw.TextStyle(
-                          fontSize: 9, color: PdfColors.grey700)),
-                ],
-              ),
-              pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.end,
-                children: [
-                  pw.Text('তারিখ: ${(data['createdDate'] ?? '').toString()}',
-                      style: const pw.TextStyle(fontSize: 9)),
-                ],
-              ),
-            ],
-          ),
-          pw.SizedBox(height: 6),
-          // Band banner
-          pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: pw.BoxDecoration(
-                color: bandColor, borderRadius: pw.BorderRadius.circular(4)),
-            child: pw.Text(bandText,
-                style: pw.TextStyle(
-                    fontSize: 11,
-                    fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.white)),
-          ),
-          // ASHA / facility line
-          if ([
-            header['asha'],
-            header['block'],
-            header['district'],
-            header['facility']
-          ].any((e) => (e ?? '').toString().isNotEmpty)) ...[
-            pw.SizedBox(height: 6),
-            pw.Text(
-              [
-                if ((header['asha'] ?? '').toString().isNotEmpty)
-                  'আশা: ${header['asha']}',
-                if ((header['facility'] ?? '').toString().isNotEmpty)
-                  'কেন্দ্র: ${header['facility']}',
-                if ((header['block'] ?? '').toString().isNotEmpty)
-                  'ব্লক: ${header['block']}',
-                if ((header['district'] ?? '').toString().isNotEmpty)
-                  'জেলা: ${header['district']}',
-              ].join('   |   '),
-              style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey800),
-            ),
-          ],
-          pw.Divider(height: 12, thickness: 0.6),
+    if (g('medicinesGiven').isNotEmpty) {
+      b.write(PdfHtml.section('ওষুধ দেওয়া হয়েছে'));
+      b.write('<div>${PdfHtml.cell(g('medicinesGiven'))}</div>');
+    }
 
-          // রোগীর তথ্য
-          sectionTitle('রোগীর তথ্য'),
-          ...patientRows.map((row) {
-            final r = (row as List).map((e) => e.toString()).toList();
-            return labelValue(r[0], r.length > 1 ? r[1] : '');
-          }),
+    b.write(PdfHtml.section('রেফার করা হয়েছে'));
+    b.write('<div><b>স্বাস্থ্যকেন্দ্র:</b> ${PdfHtml.esc(g('referredTo'))}</div>');
+    b.write('<div style="margin-top:12px;font-size:10px;">আশা কর্মীর স্বাক্ষর: ____________________</div>');
 
-          // অসুস্থতার লক্ষণ / কারণ
-          sectionTitle('অসুস্থতার লক্ষণ ও কারণ'),
-          if ((data['symptoms'] ?? '').toString().isNotEmpty)
-            pw.Text(data['symptoms'].toString(),
-                style: const pw.TextStyle(fontSize: 10)),
-          if ((data['reason'] ?? '').toString().isNotEmpty)
-            pw.Padding(
-              padding: const pw.EdgeInsets.only(top: 2),
-              child: pw.Text(data['reason'].toString(),
-                  style: const pw.TextStyle(
-                      fontSize: 9, color: PdfColors.grey700)),
-            ),
+    // Facility-fills-in outcome box.
+    final ob = StringBuffer();
+    ob.write('<div style="font-weight:700;font-size:11px;color:#241726;">স্বাস্থ্যকেন্দ্র পূরণ করবেন (Outcome)</div>');
+    if (hasOutcome) {
+      ob.write(PdfHtml.kvGrid([
+        ['অবস্থা', g('statusLabel')],
+        if (g('reachedDate').isNotEmpty) ['পৌঁছানোর তারিখ', g('reachedDate')],
+        if (g('admittedBy').isNotEmpty) ['কে ভর্তি করেছেন', g('admittedBy')],
+        if (g('relation').isNotEmpty) ['সম্পর্ক', g('relation')],
+        if (g('outcome').isNotEmpty) ['ফলাফল', g('outcome')],
+        if (g('facilityNotes').isNotEmpty) ['মন্তব্য', g('facilityNotes')],
+      ]));
+    } else {
+      ob.write('<div style="font-size:10px;line-height:2.4;">ভর্তির তারিখ ও সময়: '
+          '________________<br>কে ভর্তি করেছেন: ________________<br>'
+          'সম্পর্ক: ________________<br>ফলাফল: ________________</div>');
+    }
+    ob.write('<div style="margin-top:8px;font-size:10px;">কর্মকর্তার স্বাক্ষর ও স্ট্যাম্প: ____________________</div>');
+    b.write('<div style="border:0.6px solid #888;border-radius:6px;padding:10px;margin-top:12px;">$ob</div>');
 
-          // Child-only: weight + IMNCI
-          if (isChild &&
-              ((data['currentWeight'] ?? '').toString().isNotEmpty ||
-                  (data['imnci'] ?? '').toString().isNotEmpty)) ...[
-            pw.SizedBox(height: 4),
-            if ((data['currentWeight'] ?? '').toString().isNotEmpty)
-              labelValue('বর্তমান ওজন', '${data['currentWeight']} কেজি'),
-            if ((data['imnci'] ?? '').toString().isNotEmpty)
-              labelValue('IMNCI শ্রেণি', data['imnci'].toString()),
-          ],
-
-          // ওষুধ ও রেফার
-          if ((data['medicinesGiven'] ?? '').toString().isNotEmpty) ...[
-            sectionTitle('ওষুধ দেওয়া হয়েছে'),
-            pw.Text(data['medicinesGiven'].toString(),
-                style: const pw.TextStyle(fontSize: 10)),
-          ],
-          sectionTitle('রেফার করা হয়েছে'),
-          labelValue('স্বাস্থ্যকেন্দ্র', (data['referredTo'] ?? '').toString(),
-              underline: true),
-
-          pw.SizedBox(height: 14),
-          pw.Text('আশা কর্মীর স্বাক্ষর: ____________________',
-              style: const pw.TextStyle(fontSize: 10)),
-
-          // স্বাস্থ্যকেন্দ্র পূরণ করবেন (outcome)
-          pw.SizedBox(height: 12),
-          pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.all(10),
-            decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey500, width: 0.6),
-                borderRadius: pw.BorderRadius.circular(4)),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text('স্বাস্থ্যকেন্দ্র পূরণ করবেন (Outcome)',
-                    style: pw.TextStyle(
-                        fontSize: 11, fontWeight: pw.FontWeight.bold)),
-                pw.SizedBox(height: 4),
-                if (hasOutcome) ...[
-                  labelValue('অবস্থা', (data['statusLabel'] ?? '').toString()),
-                  if ((data['reachedDate'] ?? '').toString().isNotEmpty)
-                    labelValue('পৌঁছানোর তারিখ', data['reachedDate'].toString()),
-                  if ((data['admittedBy'] ?? '').toString().isNotEmpty)
-                    labelValue('কে ভর্তি করেছেন', data['admittedBy'].toString()),
-                  if ((data['relation'] ?? '').toString().isNotEmpty)
-                    labelValue('সম্পর্ক', data['relation'].toString()),
-                  if ((data['outcome'] ?? '').toString().isNotEmpty)
-                    labelValue('ফলাফল', data['outcome'].toString()),
-                  if ((data['facilityNotes'] ?? '').toString().isNotEmpty)
-                    labelValue('মন্তব্য', data['facilityNotes'].toString()),
-                ] else ...[
-                  labelValue('ভর্তির তারিখ ও সময়', '', underline: true),
-                  labelValue('কে ভর্তি করেছেন', '', underline: true),
-                  labelValue('সম্পর্ক', '', underline: true),
-                  labelValue('ফলাফল', '', underline: true),
-                ],
-                pw.SizedBox(height: 10),
-                pw.Text('কর্মকর্তার স্বাক্ষর ও স্ট্যাম্প: ____________________',
-                    style: const pw.TextStyle(fontSize: 10)),
-              ],
-            ),
-          ),
-          pw.Spacer(),
-          pw.Text(
-              'AshaMitra দ্বারা তৈরি — তিনটি কপি: আশা ১টি রাখবেন, ২টি রোগীর সঙ্গে যাবে।',
-              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
-        ],
-      ),
-    ),
-  );
-
-  return doc.save();
+    b.write(PdfHtml.footer(
+        'AshaMitra দ্বারা তৈরি — তিনটি কপি: আশা ১টি রাখবেন, ২টি রোগীর সঙ্গে যাবে।'));
+    return b.toString();
+  }
 }

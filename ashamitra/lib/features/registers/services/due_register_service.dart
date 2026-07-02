@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:open_file/open_file.dart';
@@ -8,9 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../core/utils/pdf_helper.dart';
+import '../../../core/utils/pdf_html.dart';
 import '../../patients/data/models/patient_model.dart';
-import 'due_register_builder.dart';
 
 /// Result of fetching due events — [fromCache] true when the live call returned
 /// nothing and we fell back to the last saved snapshot (offline).
@@ -512,19 +510,47 @@ class DueRegisterService {
 
   // ── Output ────────────────────────────────────────────────────────────────
   static Future<void> generatePdf(Map<String, dynamic> data) async {
-    final regular = await PdfHelper.loadFontBytes(bold: false);
-    final bold = await PdfHelper.loadFontBytes(bold: true);
-    List<int> bytes;
-    try {
-      bytes = await Isolate.run(() => buildDueRegisterPdf((regular, bold, data)))
-          .timeout(const Duration(seconds: 90));
-    } catch (_) {
-      // Isolate failed (some devices) → build on the UI thread as a fallback.
-      bytes = await buildDueRegisterPdf((regular, bold, data))
-          .timeout(const Duration(seconds: 60));
+    final header = (data['header'] as Map?)?.cast<String, dynamic>() ?? {};
+    final sections = (data['sections'] as List?) ?? const [];
+    final b = StringBuffer();
+    b.write(PdfHtml.reportHeader(
+      title: (data['title'] ?? 'মাসিক বকেয়া রেজিস্টার').toString(),
+      generatedAt: (data['generatedAt'] ?? '').toString(),
+      header: {
+        'asha': (header['asha'] ?? '').toString(),
+        'facility': (header['facility'] ?? '').toString(),
+        'block': (header['block'] ?? '').toString(),
+        'district': (header['district'] ?? '').toString(),
+      },
+    ));
+    final monthLabel = (data['monthLabel'] ?? '').toString();
+    final horizon = (header['horizon'] ?? '').toString();
+    final subParts = [
+      if (monthLabel.isNotEmpty) monthLabel,
+      if (horizon.isNotEmpty) 'আগামী $horizon',
+    ];
+    if (subParts.isNotEmpty) {
+      b.write('<div class="sub">${PdfHtml.esc(subParts.join('  •  '))}</div>');
     }
-    await PdfHelper.saveAndOpen(bytes, data['fileName']?.toString() ?? 'due_register.pdf')
-        .timeout(const Duration(seconds: 15));
+    for (final s0 in sections) {
+      final s = (s0 as Map).cast<String, dynamic>();
+      final columns =
+          (s['columns'] as List?)?.map((e) => e.toString()).toList() ?? const [];
+      final rows = (s['rows'] as List?)
+              ?.map((r) => (r as List).map((c) => c.toString()).toList())
+              .toList() ??
+          const [];
+      b.write(PdfHtml.section(s['title']?.toString() ?? ''));
+      b.write(PdfHtml.table(columns, rows));
+      final note = (s['note'] ?? '').toString();
+      if (note.isNotEmpty) b.write('<div class="note">${PdfHtml.esc(note)}</div>');
+    }
+    b.write(PdfHtml.footer(
+        'AshaMitra দ্বারা স্বয়ংক্রিয়ভাবে তৈরি — তথ্য মিলিয়ে নিন। স্বাক্ষর: ____________________'));
+    await PdfHtml.render(
+        body: b.toString(),
+        fileName: data['fileName']?.toString() ?? 'due_register.pdf',
+        landscape: true);
   }
 
   static Future<void> generateCsv(Map<String, dynamic> data) async {

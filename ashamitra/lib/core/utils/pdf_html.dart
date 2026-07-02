@@ -73,13 +73,33 @@ class PdfHtml {
 
   static String section(String t) => '<div class="sec">${esc(t)}</div>';
 
+  /// A row of coloured stat chips: each entry is (label, value, hexColor).
+  static String statChips(List<(String, String, String)> stats) {
+    final chips = stats
+        .map((s) =>
+            '<div class="stat" style="background:${s.$3}">'
+            '<div class="v">${esc(s.$2)}</div>'
+            '<div class="l">${esc(s.$1)}</div></div>')
+        .join();
+    return '<div class="stats">$chips</div>';
+  }
+
+  /// A signature block (ASHA / ANM lines) for register-style forms.
+  static String signatures(List<String> labels) {
+    final cells = labels
+        .map((l) => '<div class="sign"><div class="line"></div>'
+            '<div class="lbl">${esc(l)}</div></div>')
+        .join();
+    return '<div class="signs">$cells</div>';
+  }
+
   static String band(String text) => '<div class="band">${esc(text)}</div>';
 
   static String footer(String text) => '<div class="foot">${esc(text)}</div>';
 
   static const _css = '''
 <style>
-  @page { size: A4; margin: 14mm 10mm; }
+  @page { margin: 12mm 9mm; }
   * { font-family: "Noto Sans Bengali","Noto Serif Bengali","Hind Siliguri","HindSiliguri",sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { color:#241726; font-size:12px; margin:0; }
   .hd { display:flex; justify-content:space-between; align-items:flex-start; }
@@ -100,17 +120,33 @@ class PdfHtml {
   .note { font-size:9.5px; font-weight:700; color:#5b0f69; margin-top:4px; }
   .empty { color:#6b7280; text-align:center; font-style:italic; }
   .foot { font-size:8.5px; color:#6b7280; margin-top:16px; }
+  .stats { width:100%; margin:10px 0; }
+  .stat { display:inline-block; width:31%; box-sizing:border-box; margin-right:1.5%; border-radius:8px; padding:8px 4px; text-align:center; color:#fff; vertical-align:top; }
+  .stat .v { font-size:16px; font-weight:800; }
+  .stat .l { font-size:8px; }
+  .signs { width:100%; margin-top:34px; }
+  .sign { display:inline-block; width:48%; text-align:center; }
+  .sign .line { border-top:0.8px solid #555; margin:0 12px 4px; }
+  .sign .lbl { font-size:9px; color:#333; }
 </style>''';
 
-  /// Wrap a HTML [body] in the document shell and render to a PDF, then save+open.
-  static Future<void> render({required String body, required String fileName}) async {
+  /// Wrap a HTML [body] in the document shell and render to a PDF, then
+  /// save+open. Set [landscape] for wide tables (e.g. the Form-2 register).
+  static Future<void> render({
+    required String body,
+    required String fileName,
+    bool landscape = false,
+  }) async {
     final html =
         '<!doctype html><html><head><meta charset="utf-8">$_css</head><body>$body</body></html>';
     // convertHtml is deprecated cross-platform but on Android routes through the
     // native WebView/print pipeline — which is exactly what shapes Bengali
     // correctly. The app is Android-only, so this is the intended path.
     // ignore: deprecated_member_use
-    final bytes = await Printing.convertHtml(format: PdfPageFormat.a4, html: html);
+    final bytes = await Printing.convertHtml(
+      format: landscape ? PdfPageFormat.a4.landscape : PdfPageFormat.a4,
+      html: html,
+    );
     await PdfHelper.saveAndOpen(bytes, fileName);
   }
 }
