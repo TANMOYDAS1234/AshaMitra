@@ -621,8 +621,16 @@ class _NcdCbacFormScreenState extends State<NcdCbacFormScreen> {
 
   Widget _sectionTitle(String t) => Padding(
         padding: const EdgeInsets.only(top: 22, bottom: 8),
-        child: Text(t,
-            style: AppTextStyles.h3.copyWith(color: AppColors.primary, fontSize: 16)),
+        child: Row(children: [
+          Container(
+            width: 4, height: 16,
+            decoration: BoxDecoration(
+                color: AppColors.purple, borderRadius: BorderRadius.circular(2)),
+          ),
+          const SizedBox(width: 8),
+          Text(t,
+              style: AppTextStyles.h3.copyWith(color: AppColors.purple, fontSize: 16)),
+        ]),
       );
 
   Widget _sexDropdown() {

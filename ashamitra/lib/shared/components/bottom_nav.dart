@@ -72,7 +72,8 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? AppColors.primary : const Color(0xFF9CA3AF);
+    // Active tab is magenta (secondary) to match the reference bottom-nav.
+    final color = selected ? AppColors.purple : const Color(0xFF9CA3AF);
 
     return Expanded(
       child: Material(
@@ -95,7 +96,7 @@ class _NavItem extends StatelessWidget {
                     gradient: selected
                         ? LinearGradient(
                             colors: [
-                              AppColors.primary.withValues(alpha: 0.14),
+                              AppColors.purple.withValues(alpha: 0.16),
                               AppColors.accent.withValues(alpha: 0.10),
                             ],
                           )
