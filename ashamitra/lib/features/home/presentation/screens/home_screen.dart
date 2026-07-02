@@ -9,6 +9,11 @@ import '../../../../core/services/case_detection_service.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../shared/components/bottom_nav.dart';
 import '../../../referrals/controller/referral_controller.dart';
+import '../../../patients/controller/patient_controller.dart';
+import '../../../ncd_cbac/controller/ncd_cbac_controller.dart';
+import '../../../tb_cases/controller/tb_case_controller.dart';
+import '../../../medicine_stock/controller/medicine_stock_controller.dart';
+import '../../../vital_events/controller/vital_event_controller.dart';
 import '../widgets/greeting_header.dart';
 import '../widgets/dashboard_card.dart';
 import '../widgets/patient_context_sheet.dart';
@@ -164,6 +169,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final refCtrl = Get.isRegistered<ReferralController>()
         ? Get.find<ReferralController>()
         : Get.put(ReferralController(), permanent: true);
+    final patientCtrl = Get.isRegistered<PatientController>()
+        ? Get.find<PatientController>()
+        : Get.put(PatientController(), permanent: true);
+    final ncdCtrl = Get.isRegistered<NcdCbacController>()
+        ? Get.find<NcdCbacController>()
+        : Get.put(NcdCbacController(), permanent: true);
+    final tbCtrl = Get.isRegistered<TbCaseController>()
+        ? Get.find<TbCaseController>()
+        : Get.put(TbCaseController(), permanent: true);
+    final msCtrl = Get.isRegistered<MedicineStockController>()
+        ? Get.find<MedicineStockController>()
+        : Get.put(MedicineStockController(), permanent: true);
+    final vitalCtrl = Get.isRegistered<VitalEventController>()
+        ? Get.find<VitalEventController>()
+        : Get.put(VitalEventController(), permanent: true);
     return Padding(
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
@@ -183,43 +203,51 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisSpacing: 12,
             childAspectRatio: 2.3,
             children: [
-              _recordTile(
-                icon: Icons.auto_stories_rounded,
-                color: AppColors.primary,
-                title: 'home_record_registers'.tr,
-                route: AppRoutes.registers,
-              ),
+              Obx(() => _recordTile(
+                    icon: Icons.auto_stories_rounded,
+                    color: AppColors.primary,
+                    title: 'home_record_registers'.tr,
+                    route: AppRoutes.registers,
+                    count: patientCtrl.patients.length,
+                  )),
               Obx(() => _recordTile(
                     icon: Icons.local_hospital_rounded,
                     color: AppColors.emergencyRed,
                     title: 'home_record_referrals'.tr,
                     route: AppRoutes.referralList,
-                    badge: refCtrl.openCount,
+                    count: refCtrl.openCount,
+                    countColor: AppColors.emergencyRed,
                   )),
-              _recordTile(
-                icon: Icons.menu_book_rounded,
-                color: AppColors.sky,
-                title: 'home_record_vital_events'.tr,
-                route: AppRoutes.vitalEvents,
-              ),
-              _recordTile(
-                icon: Icons.health_and_safety_rounded,
-                color: const Color(0xFF0D9488), // teal
-                title: 'home_record_ncd_cbac'.tr,
-                route: AppRoutes.ncdCbac,
-              ),
-              _recordTile(
-                icon: Icons.coronavirus_rounded,
-                color: const Color(0xFFEA580C), // orange
-                title: 'home_record_tb'.tr,
-                route: AppRoutes.tbCases,
-              ),
-              _recordTile(
-                icon: Icons.inventory_2_rounded,
-                color: const Color(0xFF7C3AED), // violet
-                title: 'home_record_medicine_stock'.tr,
-                route: AppRoutes.medicineStock,
-              ),
+              Obx(() => _recordTile(
+                    icon: Icons.menu_book_rounded,
+                    color: AppColors.sky,
+                    title: 'home_record_vital_events'.tr,
+                    route: AppRoutes.vitalEvents,
+                    count: vitalCtrl.items.length,
+                  )),
+              Obx(() => _recordTile(
+                    icon: Icons.health_and_safety_rounded,
+                    color: const Color(0xFF0D9488), // teal
+                    title: 'home_record_ncd_cbac'.tr,
+                    route: AppRoutes.ncdCbac,
+                    count: ncdCtrl.items.length,
+                  )),
+              Obx(() => _recordTile(
+                    icon: Icons.coronavirus_rounded,
+                    color: const Color(0xFFEA580C), // orange
+                    title: 'home_record_tb'.tr,
+                    route: AppRoutes.tbCases,
+                    count: tbCtrl.items.length,
+                  )),
+              Obx(() => _recordTile(
+                    icon: Icons.inventory_2_rounded,
+                    color: const Color(0xFF7C3AED), // violet
+                    title: 'home_record_medicine_stock'.tr,
+                    route: AppRoutes.medicineStock,
+                    count: msCtrl.items.length,
+                    // Low-stock lines flag red; otherwise the module colour.
+                    countColor: msCtrl.lowStockCount > 0 ? AppColors.emergencyRed : null,
+                  )),
             ],
           ),
         ],
@@ -232,8 +260,10 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color color,
     required String title,
     required String route,
-    int badge = 0,
+    int count = 0,
+    Color? countColor,
   }) {
+    final badgeColor = countColor ?? color;
     return Material(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(16),
@@ -262,18 +292,18 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: Icon(icon, color: color, size: 20),
                     ),
-                    if (badge > 0)
+                    if (count > 0)
                       Positioned(
                         right: -4, top: -4,
                         child: Container(
                           constraints: const BoxConstraints(minWidth: 18),
                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                           decoration: BoxDecoration(
-                            color: AppColors.emergencyRed,
+                            color: badgeColor,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(color: AppColors.surface, width: 1.5),
                           ),
-                          child: Text('$badge',
+                          child: Text('$count',
                               textAlign: TextAlign.center,
                               style: AppTextStyles.caption.copyWith(
                                   color: Colors.white,

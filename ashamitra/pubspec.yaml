@@ -23,6 +23,7 @@ dependencies:
   path_provider: ^2.1.4
   open_file: ^3.3.2
   speech_to_text: ^7.0.0
+  video_player: ^2.9.2
   flutter_tts: ^4.2.0
   audioplayers: ^6.1.0
   crypto: ^3.0.3
@@ -69,6 +70,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/video/
     - assets/illustrations/
     - assets/data/
     - assets/guidelines/
