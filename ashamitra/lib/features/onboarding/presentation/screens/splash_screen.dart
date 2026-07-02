@@ -39,8 +39,8 @@ class _SplashScreenState extends State<SplashScreen> {
       // Video failed → show the still image and move on shortly.
       Timer(const Duration(milliseconds: 2600), _go);
     });
-    // Safety: never get stuck on the splash.
-    Timer(const Duration(milliseconds: 6300), _go);
+    // Safety: never get stuck on the splash (just after the 3.5s clip ends).
+    Timer(const Duration(milliseconds: 4200), _go);
   }
 
   void _watchEnd() {

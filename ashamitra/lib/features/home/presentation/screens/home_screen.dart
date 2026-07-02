@@ -15,7 +15,6 @@ import '../../../tb_cases/controller/tb_case_controller.dart';
 import '../../../medicine_stock/controller/medicine_stock_controller.dart';
 import '../../../vital_events/controller/vital_event_controller.dart';
 import '../widgets/greeting_header.dart';
-import '../widgets/dashboard_card.dart';
 import '../widgets/patient_context_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -201,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 2.3,
+            childAspectRatio: 1.15,
             children: [
               Obx(() => _recordTile(
                     icon: Icons.auto_stories_rounded,
@@ -278,52 +277,88 @@ class _HomeScreenState extends State<HomeScreen> {
             border: Border.all(color: color.withValues(alpha: 0.18)),
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      width: 38, height: 38,
+                      width: 54, height: 54,
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.10),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(icon, color: color, size: 20),
+                      child: Icon(icon, color: color, size: 27),
                     ),
                     if (count > 0)
                       Positioned(
-                        right: -4, top: -4,
+                        right: -6, top: -6,
                         child: Container(
-                          constraints: const BoxConstraints(minWidth: 18),
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          constraints: const BoxConstraints(minWidth: 22),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: badgeColor,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: AppColors.surface, width: 1.5),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.surface, width: 2),
                           ),
                           child: Text('$count',
                               textAlign: TextAlign.center,
                               style: AppTextStyles.caption.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w800,
-                                  fontSize: 10)),
+                                  fontSize: 11)),
                         ),
                       ),
                   ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.label.copyWith(
-                          fontWeight: FontWeight.w700, height: 1.15)),
-                ),
+                const SizedBox(height: 12),
+                Text(title,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.label.copyWith(
+                        fontWeight: FontWeight.w700, height: 1.2)),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// One circular case chip (icon + short label) for the compact case strip.
+  Widget _caseChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: 80,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 54, height: 54,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 26),
+            ),
+            const SizedBox(height: 6),
+            Text(label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption
+                    .copyWith(fontWeight: FontWeight.w600, height: 1.1)),
+          ],
         ),
       ),
     );
@@ -373,9 +408,6 @@ class _HomeScreenState extends State<HomeScreen> {
       (Icons.emergency_rounded,              'case_emergency_title'.tr,           'case_emergency_sub'.tr,     AppColors.emergencyRed,    'emergency'),
     ];
 
-    final width = MediaQuery.of(context).size.width;
-    final crossAxisCount = width >= 600 ? 3 : 2;
-
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: AppGradients.background),
@@ -414,31 +446,35 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                          childAspectRatio: 1.05,
+                      // Compact case row — circular chips in a soft container
+                      // (matches the reference "আজকের স্বাস্থ্য কার্যক্রম" strip).
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceMuted,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
-                        itemCount: cards.length,
-                        itemBuilder: (_, i) {
-                          final (icon, title, desc, color, caseId) = cards[i];
-                          return DashboardCard(
-                            icon: icon,
-                            title: title,
-                            description: desc,
-                            color: color,
-                            index: i,
-                            // Development screening is a standalone flow (not a
-                            // triage case), so it skips the patient-context sheet.
-                            onTap: caseId == 'development'
-                                ? () => Get.toNamed(AppRoutes.development)
-                                : () => _openCase(caseId, title, icon: icon, color: color),
-                          );
-                        },
+                        child: SizedBox(
+                          height: 92,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            itemCount: cards.length,
+                            separatorBuilder: (_, __) => const SizedBox(width: 4),
+                            itemBuilder: (_, i) {
+                              final (icon, title, _, color, caseId) = cards[i];
+                              return _caseChip(
+                                icon: icon,
+                                label: title,
+                                color: color,
+                                onTap: caseId == 'development'
+                                    ? () => Get.toNamed(AppRoutes.development)
+                                    : () => _openCase(caseId, title, icon: icon, color: color),
+                              );
+                            },
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 20),
                     ],
