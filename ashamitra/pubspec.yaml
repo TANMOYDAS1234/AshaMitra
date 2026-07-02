@@ -73,6 +73,8 @@ flutter:
     - assets/video/
     - assets/illustrations/
     - assets/data/
-    - assets/guidelines/
+    # assets/guidelines/ — 121 MB of reference PDFs, NOT referenced anywhere in
+    # the app. Unbundled to keep the APK small (files kept in repo for a future
+    # download-on-demand guidelines library). Re-add this line to bundle them.
     - assets/voices/
     - assets/fonts/
