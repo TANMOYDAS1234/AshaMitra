@@ -1523,6 +1523,14 @@ class AppTranslations extends Translations {
     'home_due_chip': 'Important list',
     'home_due_cta': 'View list',
     'home_due_people': 'on the list',
+    'home_chip_pregnancy': 'Pregnancy',
+    'home_chip_postpartum': 'Postpartum',
+    'home_chip_newborn': 'Newborn',
+    'home_chip_infant': 'Infant',
+    'home_chip_child': 'Child',
+    'home_chip_immunization': 'Vaccine',
+    'home_chip_development': 'Development',
+    'home_chip_emergency': 'Emergency',
   };
 
   static const _bn = {
@@ -3043,6 +3051,14 @@ class AppTranslations extends Translations {
     'home_due_chip': 'গুরুত্বপূর্ণ তালিকা',
     'home_due_cta': 'তালিকা দেখুন',
     'home_due_people': 'জন তালিকাভুক্ত',
+    'home_chip_pregnancy': 'গর্ভবতী',
+    'home_chip_postpartum': 'প্রসব-পরবর্তী',
+    'home_chip_newborn': 'নবজাতক',
+    'home_chip_infant': 'শিশু (০-১)',
+    'home_chip_child': 'শিশু',
+    'home_chip_immunization': 'টিকা',
+    'home_chip_development': 'বিকাশ',
+    'home_chip_emergency': 'জরুরি',
   };
 
   static const _hi = {
@@ -4563,6 +4579,14 @@ class AppTranslations extends Translations {
     'home_due_chip': 'महत्वपूर्ण सूची',
     'home_due_cta': 'सूची देखें',
     'home_due_people': 'सूची में',
+    'home_chip_pregnancy': 'गर्भवती',
+    'home_chip_postpartum': 'प्रसवोत्तर',
+    'home_chip_newborn': 'नवजात',
+    'home_chip_infant': 'शिशु',
+    'home_chip_child': 'बच्चा',
+    'home_chip_immunization': 'टीका',
+    'home_chip_development': 'विकास',
+    'home_chip_emergency': 'आपातकाल',
   };
 
   @override

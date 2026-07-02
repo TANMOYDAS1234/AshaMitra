@@ -15,7 +15,6 @@ import '../../../tb_cases/controller/tb_case_controller.dart';
 import '../../../medicine_stock/controller/medicine_stock_controller.dart';
 import '../../../vital_events/controller/vital_event_controller.dart';
 import '../widgets/greeting_header.dart';
-import '../widgets/dashboard_card.dart';
 import '../widgets/patient_context_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -129,7 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     fontWeight: FontWeight.w900,
                                     height: 1.0)),
                             const SizedBox(width: 8),
-                            Flexible(
+                            Expanded(
                               child: Text(
                                 hasDue
                                     ? 'home_due_people'.tr
@@ -214,7 +213,7 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.15,
+            childAspectRatio: 1.5,
             children: [
               Obx(() => _recordTile(
                     icon: Icons.auto_stories_rounded,
@@ -291,7 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
             border: Border.all(color: color.withValues(alpha: 0.18)),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -299,12 +298,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      width: 54, height: 54,
+                      width: 46, height: 46,
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.10),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(icon, color: color, size: 27),
+                      child: Icon(icon, color: color, size: 23),
                     ),
                     if (count > 0)
                       Positioned(
@@ -327,13 +326,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
                 Text(title,
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: AppTextStyles.label.copyWith(
-                        fontWeight: FontWeight.w700, height: 1.2)),
+                        fontWeight: FontWeight.w700, height: 1.15)),
               ],
             ),
           ),
@@ -341,6 +340,50 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
+  /// One small circular case chip (icon + short label) for the vertical grid.
+  Widget _caseChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 26),
+          ),
+          const SizedBox(height: 6),
+          Text(label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.caption.copyWith(
+                  fontWeight: FontWeight.w600, height: 1.1, fontSize: 10.5)),
+        ],
+      ),
+    );
+  }
+
+  /// Short single-word case label for the chip (language-aware).
+  String _shortLabel(String caseId) => switch (caseId) {
+        'pregnancy' => 'home_chip_pregnancy'.tr,
+        'postpartum' => 'home_chip_postpartum'.tr,
+        'newborn' => 'home_chip_newborn'.tr,
+        'infant' => 'home_chip_infant'.tr,
+        'child' => 'home_chip_child'.tr,
+        'immunization' => 'home_chip_immunization'.tr,
+        'development' => 'home_chip_development'.tr,
+        'emergency' => 'home_chip_emergency'.tr,
+        _ => caseId,
+      };
 
   /// Emergency goes straight through — urgency overrides patient context.
   /// Every other case opens the [PatientContextSheet] which nudges the
@@ -424,28 +467,26 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      // Case cards — a vertical grid (scrolls with the page).
-                      // Driven by the [cards] list so the count is dynamic and
+                      // Case chips — small circular icons in a vertical-scrolling
+                      // grid (reference style). Count is dynamic (list-driven) and
                       // every label follows the selected language (.tr).
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate:
                             const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                          childAspectRatio: 1.05,
+                          crossAxisCount: 4,
+                          crossAxisSpacing: 6,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.74,
                         ),
                         itemCount: cards.length,
                         itemBuilder: (_, i) {
-                          final (icon, title, desc, color, caseId) = cards[i];
-                          return DashboardCard(
+                          final (icon, title, _, color, caseId) = cards[i];
+                          return _caseChip(
                             icon: icon,
-                            title: title,
-                            description: desc,
+                            label: _shortLabel(caseId),
                             color: color,
-                            index: i,
                             onTap: caseId == 'development'
                                 ? () => Get.toNamed(AppRoutes.development)
                                 : () => _openCase(caseId, title, icon: icon, color: color),

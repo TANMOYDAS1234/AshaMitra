@@ -120,11 +120,18 @@ class GreetingHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Obx(() => Text(
-                      'greeting'.trParams({'name': auth.user.value?.name ?? 'Didi'}),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.h1,
+                // Scale-to-fit so ANY name length shows in full (never "…"),
+                // rendering as large as the available width allows.
+                Obx(() => FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'greeting'.trParams(
+                            {'name': auth.user.value?.name ?? 'Didi'}),
+                        maxLines: 1,
+                        softWrap: false,
+                        style: AppTextStyles.h1,
+                      ),
                     )),
                 const SizedBox(height: 2),
                 Text('todays_tasks'.tr, style: AppTextStyles.bodySm),
