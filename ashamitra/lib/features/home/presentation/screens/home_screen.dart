@@ -15,6 +15,7 @@ import '../../../tb_cases/controller/tb_case_controller.dart';
 import '../../../medicine_stock/controller/medicine_stock_controller.dart';
 import '../../../vital_events/controller/vital_event_controller.dart';
 import '../widgets/greeting_header.dart';
+import '../widgets/dashboard_card.dart';
 import '../widgets/patient_context_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -66,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _loadDueCount(); // refresh after returning (items may be done)
           },
           child: Container(
+            height: 160,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               boxShadow: AppShadows.tinted(AppColors.primary, strength: 2),
@@ -73,79 +75,91 @@ class _HomeScreenState extends State<HomeScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(22),
               child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  // Faint hero photo behind a purple→orange scrim (text stays legible).
-                  Positioned.fill(
-                    child: Image.asset('assets/images/hero_asha.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-                  ),
-                  Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppColors.primary.withValues(alpha: 0.93),
-                            AppColors.accent.withValues(alpha: 0.80),
-                          ],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
-                        ),
+                  // Hero photo — kept visible on the right; the scrim fades so the
+                  // ASHA image shows while the left text stays legible.
+                  Image.asset('assets/images/hero_asha.png',
+                      fit: BoxFit.cover,
+                      alignment: Alignment.centerRight,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppColors.primary.withValues(alpha: 0.96),
+                          AppColors.primary.withValues(alpha: 0.84),
+                          AppColors.accent.withValues(alpha: 0.38),
+                        ],
+                        stops: const [0.0, 0.55, 1.0],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
                       ),
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                children: [
-                  Container(
-                    width: 50, height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.22),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.35)),
-                    ),
-                    child: const Icon(Icons.notifications_active_rounded,
-                        color: Colors.white, size: 26),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text('home_due_banner_title'.tr,
-                            style: AppTextStyles.h3.copyWith(
-                                color: Colors.white, fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 3),
-                        Text(
-                          hasDue
-                              ? 'home_due_banner_count'.trParams({'count': '$_dueCount'})
-                              : 'home_due_banner_empty'.tr,
-                          style: AppTextStyles.bodySm
-                              .copyWith(color: Colors.white.withValues(alpha: 0.92)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.22),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text('home_due_chip'.tr,
+                              style: AppTextStyles.caption.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700)),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  if (hasDue)
-                    Container(
-                      constraints: const BoxConstraints(minWidth: 38),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text('$_dueCount',
-                          textAlign: TextAlign.center,
-                          style: AppTextStyles.h3.copyWith(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w800)),
-                    )
-                  else
-                    const Icon(Icons.chevron_right_rounded,
-                        color: Colors.white, size: 26),
+                        const SizedBox(height: 8),
+                        Text('home_due_banner_title'.tr,
+                            style: AppTextStyles.h2.copyWith(
+                                color: Colors.white, fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Text('$_dueCount',
+                                style: AppTextStyles.display.copyWith(
+                                    color: Colors.white,
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.0)),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                hasDue
+                                    ? 'home_due_people'.tr
+                                    : 'home_due_banner_empty'.tr,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.bodySm.copyWith(
+                                    color: Colors.white.withValues(alpha: 0.92)),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 9),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                Text('home_due_cta'.tr,
+                                    style: AppTextStyles.label.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w800)),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.arrow_forward_rounded,
+                                    color: AppColors.primary, size: 16),
+                              ]),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -328,42 +342,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// One circular case chip (icon + short label) for the compact case strip.
-  Widget _caseChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        width: 80,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 54, height: 54,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 26),
-            ),
-            const SizedBox(height: 6),
-            Text(label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.caption
-                    .copyWith(fontWeight: FontWeight.w600, height: 1.1)),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// Emergency goes straight through — urgency overrides patient context.
   /// Every other case opens the [PatientContextSheet] which nudges the
   /// worker to pick / add a patient first (or proceed anonymously).
@@ -446,35 +424,33 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
-                      // Compact case row — circular chips in a soft container
-                      // (matches the reference "আজকের স্বাস্থ্য কার্যক্রম" strip).
-                      Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceMuted,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.cardBorder),
+                      // Case cards — a vertical grid (scrolls with the page).
+                      // Driven by the [cards] list so the count is dynamic and
+                      // every label follows the selected language (.tr).
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                          childAspectRatio: 1.05,
                         ),
-                        child: SizedBox(
-                          height: 92,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            itemCount: cards.length,
-                            separatorBuilder: (_, __) => const SizedBox(width: 4),
-                            itemBuilder: (_, i) {
-                              final (icon, title, _, color, caseId) = cards[i];
-                              return _caseChip(
-                                icon: icon,
-                                label: title,
-                                color: color,
-                                onTap: caseId == 'development'
-                                    ? () => Get.toNamed(AppRoutes.development)
-                                    : () => _openCase(caseId, title, icon: icon, color: color),
-                              );
-                            },
-                          ),
-                        ),
+                        itemCount: cards.length,
+                        itemBuilder: (_, i) {
+                          final (icon, title, desc, color, caseId) = cards[i];
+                          return DashboardCard(
+                            icon: icon,
+                            title: title,
+                            description: desc,
+                            color: color,
+                            index: i,
+                            onTap: caseId == 'development'
+                                ? () => Get.toNamed(AppRoutes.development)
+                                : () => _openCase(caseId, title, icon: icon, color: color),
+                          );
+                        },
                       ),
                       const SizedBox(height: 20),
                     ],

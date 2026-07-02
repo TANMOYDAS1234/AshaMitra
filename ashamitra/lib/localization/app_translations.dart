@@ -1520,6 +1520,9 @@ class AppTranslations extends Translations {
     'admin_mod_med_low': 'Medicines low',
     'admin_mod_referral_open': 'Referrals open',
     'admin_mod_vital_pending': 'Births/deaths pending CRS',
+    'home_due_chip': 'Important list',
+    'home_due_cta': 'View list',
+    'home_due_people': 'on the list',
   };
 
   static const _bn = {
@@ -3037,6 +3040,9 @@ class AppTranslations extends Translations {
     'admin_mod_med_low': 'ওষুধ কম',
     'admin_mod_referral_open': 'রেফারেল বাকি',
     'admin_mod_vital_pending': 'জন্ম/মৃত্যু CRS বাকি',
+    'home_due_chip': 'গুরুত্বপূর্ণ তালিকা',
+    'home_due_cta': 'তালিকা দেখুন',
+    'home_due_people': 'জন তালিকাভুক্ত',
   };
 
   static const _hi = {
@@ -4554,6 +4560,9 @@ class AppTranslations extends Translations {
     'admin_mod_med_low': 'दवाएँ कम',
     'admin_mod_referral_open': 'रेफरल लंबित',
     'admin_mod_vital_pending': 'जन्म/मृत्यु CRS लंबित',
+    'home_due_chip': 'महत्वपूर्ण सूची',
+    'home_due_cta': 'सूची देखें',
+    'home_due_people': 'सूची में',
   };
 
   @override

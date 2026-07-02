@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../../../app/routes.dart';
 import '../../../auth/controller/auth_controller.dart';
 import '../../../notifications/controller/notification_controller.dart';
 import '../../../notifications/data/notification_model.dart';
@@ -96,21 +97,25 @@ class GreetingHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
       child: Row(
         children: [
-          Obx(() => Container(
-                width: 48, height: 48,
-                margin: const EdgeInsets.only(right: 12),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.25), width: 2),
-                ),
-                child: UserAvatar(
-                  user: auth.user.value,
-                  size: 48,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                  textColor: AppColors.primary,
-                ),
-              )),
+          // Tappable avatar → opens the worker's profile.
+          GestureDetector(
+            onTap: () => Get.toNamed(AppRoutes.profile),
+            child: Obx(() => Container(
+                  width: 48, height: 48,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.25), width: 2),
+                  ),
+                  child: UserAvatar(
+                    user: auth.user.value,
+                    size: 48,
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.12),
+                    textColor: AppColors.primary,
+                  ),
+                )),
+          ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
