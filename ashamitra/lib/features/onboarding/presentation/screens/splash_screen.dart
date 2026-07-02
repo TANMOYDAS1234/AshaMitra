@@ -2,12 +2,14 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../app/routes.dart';
-import '../../../../shared/widgets/voice_orb.dart';
 import '../../../../features/auth/controller/auth_controller.dart';
 
+/// Warm, meaningful maternal splash: a full-screen mother-and-newborn photo with
+/// a slow Ken-Burns zoom, a plum scrim, gentle rising light-motes, and the brand
+/// name fading up. (When a splash video is available, swap the image layer for a
+/// VideoPlayer — the rest can stay.)
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -15,26 +17,52 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
+  // Slow zoom (Ken Burns) on the photo.
+  late final AnimationController _zoom = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 3400))
+    ..forward();
+  late final Animation<double> _scale =
+      Tween(begin: 1.0, end: 1.10).animate(
+          CurvedAnimation(parent: _zoom, curve: Curves.easeOut));
+  // Continuous drift for the light-motes.
+  late final AnimationController _motes = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 3600))
+    ..repeat();
+  late final List<_Mote> _moteList;
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(
-      const Duration(milliseconds: 2800),
-      () {
-        final auth = Get.find<AuthController>();
-        final hasSession = auth.restoreSession();
-        if (hasSession) {
-          if (auth.user.value?.isAdmin == true) {
-            Get.offAllNamed(AppRoutes.adminDashboard);
-          } else {
-            Get.offAllNamed(AppRoutes.home);
-          }
-        } else {
-          Get.offNamed(AppRoutes.language);
-        }
-      },
+    final r = math.Random(11);
+    _moteList = List.generate(
+      12,
+      (_) => _Mote(
+        x: r.nextDouble(),
+        y: r.nextDouble(),
+        rad: 1.5 + r.nextDouble() * 3.0,
+        speed: 0.2 + r.nextDouble() * 0.4,
+        phase: r.nextDouble(),
+      ),
     );
+    Future.delayed(const Duration(milliseconds: 2900), () {
+      final auth = Get.find<AuthController>();
+      final hasSession = auth.restoreSession();
+      if (hasSession) {
+        Get.offAllNamed(
+            auth.user.value?.isAdmin == true ? AppRoutes.adminDashboard : AppRoutes.home);
+      } else {
+        Get.offNamed(AppRoutes.language);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _zoom.dispose();
+    _motes.dispose();
+    super.dispose();
   }
 
   @override
@@ -46,65 +74,85 @@ class _SplashScreenState extends State<SplashScreen> {
     ));
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.splash),
-        child: Stack(
-          children: [
-            // Animated backdrop: heartbeat ripple rings + drifting particles.
-            const Positioned.fill(child: _SplashBackdrop()),
-            SafeArea(
-              child: Center(
+      backgroundColor: const Color(0xFF2A0E33),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ── Photo with slow Ken-Burns zoom ──
+          ScaleTransition(
+            scale: _scale,
+            child: Image.asset(
+              'assets/images/splash_mother.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const DecoratedBox(
+                decoration: BoxDecoration(gradient: LinearGradient(
+                  colors: [Color(0xFF5B0F69), Color(0xFFBD3773)],
+                  begin: Alignment.topLeft, end: Alignment.bottomRight)),
+              ),
+            ),
+          ),
+
+          // ── Plum scrim: darken top (status bar) + bottom (title) ──
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0x66300E3A),
+                  Color(0x00000000),
+                  Color(0x11000000),
+                  Color(0xE6260C30),
+                ],
+                stops: [0.0, 0.32, 0.55, 1.0],
+              ),
+            ),
+          ),
+
+          // ── Gentle rising light-motes ──
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _motes,
+              builder: (_, __) =>
+                  CustomPaint(painter: _MotePainter(_motes.value, _moteList)),
+            ),
+          ),
+
+          // ── Brand name + tagline, fading up from the bottom ──
+          SafeArea(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 54),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Spacer(),
-
-                    // Orb — elastic pop-in, then a continuous breathing pulse.
                     _Reveal(
-                      delay: const Duration(milliseconds: 0),
-                      scaleIn: true,
-                      child: const _BreathingOrb(child: VoiceOrb(size: 160)),
-                    ),
-                    const SizedBox(height: 40),
-
-                    // Title — slides up after orb settles
-                    _Reveal(
-                      delay: const Duration(milliseconds: 400),
+                      delay: const Duration(milliseconds: 500),
                       child: Text(
-                        'ASHA Mitra',
+                        'আশামিত্র',
                         style: AppTextStyles.display.copyWith(
-                          fontSize: 38,
+                          fontSize: 40,
                           color: Colors.white,
                           letterSpacing: 1.0,
+                          shadows: const [
+                            Shadow(color: Colors.black45, blurRadius: 12),
+                          ],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-
-                    // Subtitle — lags title slightly
+                    const SizedBox(height: 8),
                     _Reveal(
-                      delay: const Duration(milliseconds: 650),
+                      delay: const Duration(milliseconds: 850),
                       child: Text(
                         'splash_subtitle'.tr,
+                        textAlign: TextAlign.center,
                         style: AppTextStyles.bodyLg.copyWith(
-                          color: Colors.white.withValues(alpha: 0.85),
+                          color: Colors.white.withValues(alpha: 0.92),
                           letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-
-                    const Spacer(),
-
-                    // Tagline — appears last
-                    _Reveal(
-                      delay: const Duration(milliseconds: 1050),
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 32),
-                        child: Text(
-                          'splash_tagline'.tr,
-                          style: AppTextStyles.caption.copyWith(
-                            color: Colors.white.withValues(alpha: 0.55),
-                          ),
+                          shadows: const [
+                            Shadow(color: Colors.black45, blurRadius: 10),
+                          ],
                         ),
                       ),
                     ),
@@ -112,150 +160,52 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-/// Full-bleed animated backdrop — expanding heartbeat rings from the centre
-/// plus a field of slowly drifting light particles. One controller drives both.
-class _SplashBackdrop extends StatefulWidget {
-  const _SplashBackdrop();
-  @override
-  State<_SplashBackdrop> createState() => _SplashBackdropState();
-}
-
-class _SplashBackdropState extends State<_SplashBackdrop>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 3200))
-    ..repeat();
-  late final List<_Particle> _particles;
-
-  @override
-  void initState() {
-    super.initState();
-    final r = math.Random(7);
-    _particles = List.generate(
-      16,
-      (_) => _Particle(
-        x: r.nextDouble(),
-        y: r.nextDouble(),
-        r: 1.5 + r.nextDouble() * 3.5,
-        speed: 0.25 + r.nextDouble() * 0.55,
-        drift: (r.nextDouble() - 0.5) * 0.05,
-        phase: r.nextDouble(),
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _c,
-        builder: (_, __) =>
-            CustomPaint(painter: _BackdropPainter(_c.value, _particles)),
-      );
-}
-
-class _Particle {
-  final double x, y, r, speed, drift, phase;
-  const _Particle({
+class _Mote {
+  final double x, y, rad, speed, phase;
+  const _Mote({
     required this.x,
     required this.y,
-    required this.r,
+    required this.rad,
     required this.speed,
-    required this.drift,
     required this.phase,
   });
 }
 
-class _BackdropPainter extends CustomPainter {
-  final double t; // 0..1 repeating
-  final List<_Particle> particles;
-  _BackdropPainter(this.t, this.particles);
+class _MotePainter extends CustomPainter {
+  final double t;
+  final List<_Mote> motes;
+  _MotePainter(this.t, this.motes);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width, h = size.height;
-    final centre = Offset(w * 0.5, h * 0.40);
-    final maxR = math.max(w, h) * 0.55;
-
-    // Heartbeat ripple rings — 3 rings staggered by 1/3 phase.
-    for (int i = 0; i < 3; i++) {
-      final p = (t + i / 3) % 1.0;
-      final radius = maxR * (0.15 + p * 0.85);
-      final alpha = (1.0 - p) * 0.22;
-      if (alpha <= 0) continue;
+    for (final m in motes) {
+      final prog = (m.phase + t * m.speed) % 1.0;
+      final py = (m.y - prog) % 1.0; // drift upward, wrap
+      final fade = math.sin(prog * math.pi).clamp(0.0, 1.0);
       canvas.drawCircle(
-        centre,
-        radius,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.0
-          ..color = Colors.white.withValues(alpha: alpha),
-      );
-    }
-
-    // Drifting light particles (wrap vertically).
-    for (final pt in particles) {
-      final prog = (pt.phase + t * pt.speed) % 1.0;
-      final py = (pt.y - prog) % 1.0; // upward drift, wraps
-      final px = (pt.x + math.sin((t + pt.phase) * math.pi * 2) * pt.drift) % 1.0;
-      final fade = (math.sin(prog * math.pi)).clamp(0.0, 1.0); // fade in/out over life
-      canvas.drawCircle(
-        Offset(px * w, py * h),
-        pt.r,
-        Paint()..color = Colors.white.withValues(alpha: 0.10 + fade * 0.28),
+        Offset(m.x * size.width, py * size.height),
+        m.rad,
+        Paint()..color = const Color(0xFFFCE7F3).withValues(alpha: 0.06 + fade * 0.26),
       );
     }
   }
 
   @override
-  bool shouldRepaint(covariant _BackdropPainter old) => old.t != t;
+  bool shouldRepaint(covariant _MotePainter old) => old.t != t;
 }
 
-/// Continuous gentle "breathing" pulse (scale) — gives the splash orb life.
-class _BreathingOrb extends StatefulWidget {
-  final Widget child;
-  const _BreathingOrb({required this.child});
-  @override
-  State<_BreathingOrb> createState() => _BreathingOrbState();
-}
-
-class _BreathingOrbState extends State<_BreathingOrb>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 1800))
-    ..repeat(reverse: true);
-  late final Animation<double> _scale = Tween(begin: 0.94, end: 1.06)
-      .animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut));
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) =>
-      ScaleTransition(scale: _scale, child: widget.child);
-}
-
-/// Internal helper — fades + slides (and optionally elastically scales) its
-/// child in after `delay` ms.
+/// Fades + slides its child up after `delay` ms.
 class _Reveal extends StatefulWidget {
   final Widget child;
   final Duration delay;
-  final bool scaleIn;
-  const _Reveal({required this.child, required this.delay, this.scaleIn = false});
+  const _Reveal({required this.child, required this.delay});
 
   @override
   State<_Reveal> createState() => _RevealState();
@@ -274,24 +224,15 @@ class _RevealState extends State<_Reveal> {
 
   @override
   Widget build(BuildContext context) {
-    Widget child = widget.child;
-    if (widget.scaleIn) {
-      child = AnimatedScale(
-        scale: _visible ? 1.0 : 0.5,
-        duration: const Duration(milliseconds: 750),
-        curve: Curves.elasticOut,
-        child: child,
-      );
-    }
     return AnimatedOpacity(
       opacity: _visible ? 1.0 : 0.0,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 700),
       curve: Curves.easeOutCubic,
       child: AnimatedSlide(
-        offset: _visible ? Offset.zero : const Offset(0, 0.15),
-        duration: const Duration(milliseconds: 600),
+        offset: _visible ? Offset.zero : const Offset(0, 0.4),
+        duration: const Duration(milliseconds: 700),
         curve: Curves.easeOutCubic,
-        child: child,
+        child: widget.child,
       ),
     );
   }
