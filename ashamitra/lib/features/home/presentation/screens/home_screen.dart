@@ -61,19 +61,38 @@ class _HomeScreenState extends State<HomeScreen> {
             await Get.toNamed(AppRoutes.dueList);
             _loadDueCount(); // refresh after returning (items may be done)
           },
-          child: Ink(
+          child: Container(
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.accent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
               borderRadius: BorderRadius.circular(22),
               boxShadow: AppShadows.tinted(AppColors.primary, strength: 2),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(22),
+              child: Stack(
+                children: [
+                  // Faint hero photo behind a purple→orange scrim (text stays legible).
+                  Positioned.fill(
+                    child: Image.asset('assets/images/hero_asha.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                  ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            AppColors.primary.withValues(alpha: 0.93),
+                            AppColors.accent.withValues(alpha: 0.80),
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
                 children: [
                   Container(
                     width: 50, height: 50,
@@ -123,6 +142,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   else
                     const Icon(Icons.chevron_right_rounded,
                         color: Colors.white, size: 26),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),

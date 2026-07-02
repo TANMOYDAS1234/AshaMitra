@@ -96,15 +96,25 @@ class _OtpScreenState extends State<OtpScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.10),
-                    shape: BoxShape.circle,
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: Image.asset(
+                    'assets/images/hero_asha.png',
+                    height: 170,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.10),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.sms_rounded,
+                          size: 34, color: AppColors.primary),
+                    ),
                   ),
-                  child: const Icon(Icons.sms_rounded, size: 34, color: AppColors.primary),
                 ),
                 const SizedBox(height: 18),
                 Text('otp_title'.tr, style: AppTextStyles.h1),

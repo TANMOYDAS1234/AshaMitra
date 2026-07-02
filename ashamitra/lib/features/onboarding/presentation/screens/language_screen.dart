@@ -45,7 +45,14 @@ class LanguageScreen extends StatelessWidget {
                   'select_language'.tr,
                   style: AppTextStyles.display.copyWith(fontSize: 30),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 20),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Image.asset('assets/images/hero_asha.png',
+                      height: 160, width: double.infinity, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                ),
+                const SizedBox(height: 28),
                 Obx(() => Column(
                       children: List.generate(_languages.length, (i) {
                         final (name, subName) = _languages[i];

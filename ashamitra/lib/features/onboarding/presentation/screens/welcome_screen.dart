@@ -48,6 +48,13 @@ class WelcomeScreen extends StatelessWidget {
                     style: AppTextStyles.label.copyWith(color: AppColors.primary),
                   ),
                 ),
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Image.asset('assets/images/hero_asha.png',
+                      height: 148, width: double.infinity, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                ),
                 const SizedBox(height: 16),
 
                 // ── 7 case list ──────────────────────────────

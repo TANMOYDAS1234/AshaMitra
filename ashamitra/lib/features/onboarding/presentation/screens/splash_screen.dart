@@ -54,10 +54,10 @@ class _SplashScreenState extends State<SplashScreen> {
               children: [
                 const Spacer(),
 
-                // Orb — scales + fades in immediately
+                // Orb — fades in, then gently breathes (continuous pulse)
                 _Reveal(
                   delay: const Duration(milliseconds: 0),
-                  child: const VoiceOrb(size: 160),
+                  child: const _BreathingOrb(child: VoiceOrb(size: 160)),
                 ),
                 const SizedBox(height: 40),
 
@@ -109,6 +109,34 @@ class _SplashScreenState extends State<SplashScreen> {
       ),
     );
   }
+}
+
+/// Continuous gentle "breathing" pulse (scale) — gives the splash orb life.
+class _BreathingOrb extends StatefulWidget {
+  final Widget child;
+  const _BreathingOrb({required this.child});
+  @override
+  State<_BreathingOrb> createState() => _BreathingOrbState();
+}
+
+class _BreathingOrbState extends State<_BreathingOrb>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1800))
+    ..repeat(reverse: true);
+  late final Animation<double> _scale =
+      Tween(begin: 0.94, end: 1.06).animate(
+          CurvedAnimation(parent: _c, curve: Curves.easeInOut));
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      ScaleTransition(scale: _scale, child: widget.child);
 }
 
 /// Internal helper — fades + slides its child in after `delay` ms.
