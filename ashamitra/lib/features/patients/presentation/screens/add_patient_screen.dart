@@ -1752,6 +1752,96 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
         _ => 'case_other'.tr,
       };
 
+  static const _casePhoto = {
+    'Pregnancy': 'pregnancy',
+    'Newborn': 'newborn',
+    'Child': 'child',
+    'Other': 'other',
+  };
+
+  IconData _caseFallbackIcon(String c) => switch (c) {
+        'Pregnancy' => Icons.pregnant_woman_rounded,
+        'Newborn' => Icons.child_care_rounded,
+        'Child' => Icons.child_friendly_rounded,
+        _ => Icons.person_rounded,
+      };
+
+  /// A tappable case-type card: a real photo + label, purple ring + check when
+  /// selected. Selecting also re-derives the age unit / DOB (unchanged logic).
+  Widget _caseCard(String c) {
+    final sel = c == _caseType;
+    return GestureDetector(
+      onTap: () => setState(() {
+        _caseType = c;
+        // Age unit follows the case type dynamically (newborn→days, child→
+        // months, pregnancy/other→years). Worker can still override.
+        _ageUnit = _defaultAgeUnit(c);
+        final d = _dobFromAge();
+        if (d != null) _dob = d;
+      }),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: sel ? AppColors.primary : AppColors.cardBorder,
+              width: sel ? 2 : 1),
+          boxShadow: sel
+              ? AppShadows.tinted(AppColors.primary, strength: 2)
+              : AppShadows.low,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: Image.asset(
+                      'assets/images/cases/${_casePhoto[c]}.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppColors.primarySoft,
+                        alignment: Alignment.center,
+                        child: Icon(_caseFallbackIcon(c),
+                            color: AppColors.primary, size: 28),
+                      ),
+                    ),
+                  ),
+                ),
+                if (sel)
+                  Positioned(
+                    top: 4, right: 4,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                          color: AppColors.primary, shape: BoxShape.circle),
+                      child: const Icon(Icons.check_rounded,
+                          color: Colors.white, size: 13),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _caseLabel(c),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.caption.copyWith(
+                color: sel ? AppColors.primary : AppColors.textSecondary,
+                fontWeight: sel ? FontWeight.w800 : FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1889,46 +1979,16 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                           children: [
                             Text('case_type'.tr, style: AppTextStyles.label),
                             const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 10,
-                              runSpacing: 8,
-                              children: ['Pregnancy', 'Newborn', 'Child', 'Other'].map((c) {
-                                final sel = c == _caseType;
-                                return Material(
-                                  color: sel ? AppColors.primary : AppColors.surface,
-                                  borderRadius: AppRadius.pillR,
-                                  child: InkWell(
-                                    onTap: () => setState(() {
-                                      _caseType = c;
-                                      // Age unit follows the case type dynamically:
-                                      // newborn→days, child→months, pregnancy/other→
-                                      // years. Worker can still override the dropdown.
-                                      _ageUnit = _defaultAgeUnit(c);
-                                      // Re-derive DOB from age for the new unit.
-                                      final d = _dobFromAge();
-                                      if (d != null) _dob = d;
-                                    }),
-                                    borderRadius: AppRadius.pillR,
-                                    child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 180),
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                                      decoration: BoxDecoration(
-                                        color: sel ? AppColors.primary : AppColors.surface,
-                                        borderRadius: AppRadius.pillR,
-                                        boxShadow: sel
-                                            ? AppShadows.tinted(AppColors.primary, strength: 2)
-                                            : AppShadows.low,
-                                      ),
-                                      child: Text(
-                                        _caseLabel(c),
-                                        style: AppTextStyles.label.copyWith(
-                                          color: sel ? AppColors.onPrimary : AppColors.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const ['Pregnancy', 'Newborn', 'Child', 'Other']
+                                  .asMap()
+                                  .entries
+                                  .expand((e) => [
+                                        Expanded(child: _caseCard(e.value)),
+                                        if (e.key < 3) const SizedBox(width: 10),
+                                      ])
+                                  .toList(),
                             ),
                           ],
                         ),
