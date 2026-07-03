@@ -400,11 +400,11 @@ class ExplainableOutput {
     final steps = <String>[
       ...referral.referralActions,
       if (adaptive.escalated)
-        ...adaptive.adjustments.map((a) => '⚠️ ${a.reason}'),
+        ...adaptive.adjustments.map((a) => '${a.reason}'),
       if (vitalCheck.hasMissing)
-        ...vitalCheck.missing.map((v) => '📋 ${v.message}'),
+        ...vitalCheck.missing.map((v) => '${v.message}'),
       if (safety.signOffPending)
-        '⚠️ এই নিয়মটি চূড়ান্ত অনুমোদনের অপেক্ষায় আছে। ANM/MO-এর সাথে নিশ্চিত করুন।',
+        'এই নিয়মটি চূড়ান্ত অনুমোদনের অপেক্ষায় আছে। ANM/MO-এর সাথে নিশ্চিত করুন।',
     ];
 
     return ActionCard(
@@ -434,7 +434,7 @@ class ExplainableOutput {
       case 'RED':
         final actionBn = winningRule?.actionBn ?? '';
         return (
-          '🔴 জরুরি',
+          'জরুরি',
           actionBn.isNotEmpty
               ? actionBn
               : 'গুরুতর বিপদচিহ্ন শনাক্ত হয়েছে। এখনই রেফার করুন।',
@@ -443,7 +443,7 @@ class ExplainableOutput {
       case 'YELLOW':
         final actionBn = winningRule?.actionBn ?? '';
         return (
-          '🟡 সতর্কতা',
+          'সতর্কতা',
           actionBn.isNotEmpty
               ? actionBn
               : 'কিছু বিপদচিহ্ন পাওয়া গেছে। ২৪ ঘণ্টার মধ্যে PHC-তে রেফার করুন।',
@@ -451,7 +451,7 @@ class ExplainableOutput {
         );
       default:
         return (
-          '🟢 স্বাভাবিক',
+          'স্বাভাবিক',
           'কোনো বিপদচিহ্ন পাওয়া যায়নি। বাড়িতে যত্ন নিন।',
           'No danger signs found. Home care.',
         );

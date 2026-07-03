@@ -1645,7 +1645,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     if (!mounted) return;
 
     // ADD mode — Atlas-first: await the server write, then confirm where it
-    // landed (Atlas ✓ / offline-queued / sent-to-login).
+    // landed (Atlas / offline-queued / sent-to-login).
     final name = _nameCtrl.text.trim();
     setState(() => _saving = true);
     final result = await _ctrl.addPatient(

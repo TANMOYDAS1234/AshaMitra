@@ -524,7 +524,7 @@ class PatientController extends GetxController {
     // patient stays pendingCreate and syncs after re-login). Offline → stays
     // pendingCreate and the next syncFromServer cycle retries. We cap the
     // FOREGROUND wait at 20s so a healthy (even slow-mobile) save still
-    // confirms "Atlas ✓", while a truly stuck server doesn't freeze the
+    // confirms "Atlas", while a truly stuck server doesn't freeze the
     // worker forever — the underlying POST keeps running in the background
     // and still swaps the id when it lands.
     final saveOutcome = await _syncOnePendingCreate(patient.id).timeout(

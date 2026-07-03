@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
-import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/date_pick_field.dart';
+import '../../../../shared/widgets/module_list_card.dart';
 import '../../controller/tb_case_controller.dart';
 
 // Presumptive-TB symptom checklist. Any "yes" → refer for sputum/CBNAAT.
@@ -122,64 +121,25 @@ class _TbCard extends StatelessWidget {
       'completed' => AppColors.safeGreen,
       _ => AppColors.emergencyRed,
     };
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: AppRadius.lgR,
-        child: InkWell(
-          borderRadius: AppRadius.lgR,
-          onTap: () => Get.to(() => const TbCaseFormScreen(), arguments: data),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: AppRadius.lgR,
-              boxShadow: AppShadows.low,
-              border: Border(left: BorderSide(color: color, width: 4)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text((data['personName'] ?? '').toString(),
-                          style: AppTextStyles.h3,
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text((_stages[stage] ?? 'tb_stage_presumptive').tr,
-                          style: AppTextStyles.caption
-                              .copyWith(color: color, fontWeight: FontWeight.w700)),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  [
-                    if ((data['village'] ?? '').toString().isNotEmpty) data['village'],
-                    if (stage == 'presumptive' && symCount > 0)
-                      'tb_symptoms_short'.trParams({'count': '$symCount'}),
-                    if (stage == 'presumptive' &&
-                        (data['testResult'] ?? '').toString().isNotEmpty)
-                      (_testResults[(data['testResult']).toString()] ?? '').tr,
-                    if (stage != 'presumptive' &&
-                        (data['regimen'] ?? '').toString().isNotEmpty)
-                      data['regimen'],
-                  ].where((e) => e.toString().isNotEmpty).join('  ·  '),
-                  style: AppTextStyles.label.copyWith(color: AppColors.textSecondary),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    final subtitle = [
+      if ((data['village'] ?? '').toString().isNotEmpty) data['village'],
+      if (stage == 'presumptive' && symCount > 0)
+        'tb_symptoms_short'.trParams({'count': '$symCount'}),
+      if (stage == 'presumptive' &&
+          (data['testResult'] ?? '').toString().isNotEmpty)
+        (_testResults[(data['testResult']).toString()] ?? '').tr,
+      if (stage != 'presumptive' &&
+          (data['regimen'] ?? '').toString().isNotEmpty)
+        data['regimen'],
+    ].where((e) => e.toString().isNotEmpty).join('  ·  ');
+    return ModuleListCard(
+      icon: Icons.coronavirus_rounded,
+      title: (data['personName'] ?? '').toString(),
+      subtitle: subtitle,
+      accent: color,
+      badge: (_stages[stage] ?? 'tb_stage_presumptive').tr,
+      danger: stage == 'presumptive',
+      onTap: () => Get.to(() => const TbCaseFormScreen(), arguments: data),
     );
   }
 }

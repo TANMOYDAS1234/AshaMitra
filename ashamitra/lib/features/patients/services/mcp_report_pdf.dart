@@ -146,7 +146,7 @@ class McpReportPdf {
       } else if (kind == 'vaccine') {
         final status = <String>[rec['allGiven'] == true ? 'সম্পূর্ণ' : 'আংশিক'];
         if (rec['aefiSevere'] == true) {
-          status.add('⚠ তীব্র AEFI');
+          status.add('তীব্র AEFI');
         } else if ((rec['aefi'] as List?)?.isNotEmpty ?? false) {
           status.add('AEFI');
         }
@@ -200,8 +200,8 @@ class McpReportPdf {
           _ => '',
         };
         if (bf.isNotEmpty) parts.add(bf);
-        if (rec['ifaGiven'] == true) parts.add('IFA ✓');
-        if (rec['fpCounselled'] == true) parts.add('পরিবার পরিকল্পনা পরামর্শ ✓');
+        if (rec['ifaGiven'] == true) parts.add('IFA');
+        if (rec['fpCounselled'] == true) parts.add('পরিবার পরিকল্পনা পরামর্শ');
         if ((rec['depressionScreen'] as List?)?.isNotEmpty ?? false) {
           parts.add('মানসিক ঝুঁকি');
         }

@@ -18,7 +18,7 @@ class ReferralSaveResult {
 
 /// Offline-first store for ASHA referrals (Form 3 + outcome tracking).
 /// Same contract as [PatientController]: local-first write, then a foreground
-/// POST (capped at 20 s) so the caller can confirm "Atlas ✓"; anything that
+/// POST (capped at 20 s) so the caller can confirm "Atlas"; anything that
 /// doesn't land stays queued and the next [syncFromServer] retries it.
 class ReferralController extends GetxController {
   final isLoading = false.obs;

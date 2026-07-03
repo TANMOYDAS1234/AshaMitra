@@ -125,7 +125,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
     final args = Get.arguments;
     final map = args is Map<String, dynamic> ? args : <String, dynamic>{};
     _caseType  = map['caseId']    as String? ?? 'pregnancy';
-    _caseTitle = map['caseTitle'] as String? ?? '🤰 গর্ভবতী মায়ের চেকআপ';
+    _caseTitle = map['caseTitle'] as String? ?? 'গর্ভবতী মায়ের চেকআপ';
     _moduleId  = _toModuleId(_caseType);
     _patientId   = map['patientId']   as String?;
     _patientName = map['patientName'] as String?;
@@ -329,7 +329,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       _isListening = true;
       _transcript = '';
       _orbState = OrbState.listening;
-      _statusText = _isOffline ? '🔴 অফলাইন — বলুন...' : '🟢 শুনছি — বলুন...';
+      _statusText = _isOffline ? 'অফলাইন — বলুন...' : 'শুনছি — বলুন...';
     });
 
     final opts = SpeechListenOptions(
@@ -391,7 +391,7 @@ class _VoiceTriageScreenState extends State<VoiceTriageScreen> {
       _isListening = true;
       _transcript = '';
       _orbState = OrbState.listening;
-      _statusText = _isOffline ? '🔴 অফলাইন — ধরে রেখে বলুন' : '🟢 ধরে রেখে বলুন';
+      _statusText = _isOffline ? 'অফলাইন — ধরে রেখে বলুন' : 'ধরে রেখে বলুন';
     });
     final opts = SpeechListenOptions(
       listenMode: ListenMode.dictation,

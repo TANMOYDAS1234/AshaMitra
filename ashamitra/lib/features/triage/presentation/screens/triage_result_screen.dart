@@ -958,9 +958,9 @@ class _WhyThisDecision extends StatelessWidget {
       TriageOutcome.safe      => AppColors.safeGreen,
     };
     final bandLine = switch (outcome) {
-      TriageOutcome.emergency => '🔴 লাল ব্যান্ড — জরুরি রেফার প্রয়োজন',
-      TriageOutcome.attention => '🟡 হলুদ ব্যান্ড — মনোযোগ ও ফলো-আপ প্রয়োজন',
-      TriageOutcome.safe      => '🟢 সবুজ ব্যান্ড — এখন নিরাপদ',
+      TriageOutcome.emergency => 'লাল ব্যান্ড — জরুরি রেফার প্রয়োজন',
+      TriageOutcome.attention => 'হলুদ ব্যান্ড — মনোযোগ ও ফলো-আপ প্রয়োজন',
+      TriageOutcome.safe      => 'সবুজ ব্যান্ড — এখন নিরাপদ',
     };
     return Container(
       width: double.infinity,

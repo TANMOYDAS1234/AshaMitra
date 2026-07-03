@@ -272,20 +272,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontWeight: FontWeight.bold,
                     color: AppColors.onBackground)),
             const SizedBox(height: 16),
-            ...['🎙️', '👆', '🚨', '📋', '📊']
-                .asMap()
-                .entries
-                .map((e) => Padding(
+            ...List.generate(5, (i) => i)
+                .map((i) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(e.value,
-                              style: const TextStyle(fontSize: 18)),
+                          Container(
+                            margin: const EdgeInsets.only(top: 1),
+                            width: 24,
+                            height: 24,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.12),
+                                shape: BoxShape.circle),
+                            child: Text('${i + 1}',
+                                style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800)),
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                               child: Text(
-                                  'help_tip${e.key + 1}'.tr,
+                                  'help_tip${i + 1}'.tr,
                                   style: const TextStyle(
                                       fontSize: 14,
                                       color: AppColors.textSecondary,
@@ -319,7 +329,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _toggleNotifications() {
     Get.snackbar('notifications_updated'.tr, 'notifications_updated_msg'.tr,
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.primary.withOpacity(0.9),
+        backgroundColor: AppColors.primary.withValues(alpha: 0.9),
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
         borderRadius: 12,
@@ -580,6 +590,16 @@ class _Section extends StatelessWidget {
   }
 }
 
+/// Small circular tinted icon used by the profile rows (new card language).
+Widget _iconChip(IconData icon, {Color color = AppColors.primary}) => Container(
+      width: 38,
+      height: 38,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
+      child: Icon(icon, color: color, size: 19),
+    );
+
 class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -589,14 +609,21 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primary, size: 20),
+          _iconChip(icon),
           const SizedBox(width: 12),
-          Text(label, style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
+          Text(label,
+              style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
           const Spacer(),
-          Text(value, style: AppTextStyles.labelLg),
+          Flexible(
+            child: Text(value,
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.labelLg),
+          ),
         ],
       ),
     );
@@ -615,10 +642,10 @@ class _ActionRow extends StatelessWidget {
       onTap: onTap,
       borderRadius: AppRadius.lgR,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.primary, size: 20),
+            _iconChip(icon),
             const SizedBox(width: 12),
             Text(label, style: AppTextStyles.body),
             const Spacer(),

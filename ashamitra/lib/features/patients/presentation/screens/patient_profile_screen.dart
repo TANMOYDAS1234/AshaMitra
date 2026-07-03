@@ -29,13 +29,13 @@ class PatientProfileScreen extends StatelessWidget {
   // (triage-created patients) type strings.
   String _caseIcon(String type) {
     final t = type.toLowerCase();
-    if (t.contains('pregnan') || type.contains('গর্ভ')) return '🤰';
-    if (t.contains('postpartum') || type.contains('প্রসব')) return '🤱';
-    if (t.contains('newborn') || type.contains('নবজাতক')) return '👶';
-    if (t.contains('child') || type.contains('শিশু')) return '🧒';
-    if (t.contains('immun') || type.contains('টিকা')) return '💉';
-    if (t.contains('emergency') || type.contains('জরুরি')) return '🚑';
-    return '🏥';
+    if (t.contains('pregnan') || type.contains('গর্ভ')) return '';
+    if (t.contains('postpartum') || type.contains('প্রসব')) return '';
+    if (t.contains('newborn') || type.contains('নবজাতক')) return '';
+    if (t.contains('child') || type.contains('শিশু')) return '';
+    if (t.contains('immun') || type.contains('টিকা')) return '';
+    if (t.contains('emergency') || type.contains('জরুরি')) return '';
+    return '';
   }
 
   @override

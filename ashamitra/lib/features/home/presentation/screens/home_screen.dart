@@ -202,18 +202,38 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 10),
-            child: Text('home_records_section'.tr,
-                style: AppTextStyles.label.copyWith(
-                    color: AppColors.textSecondary, fontWeight: FontWeight.w700)),
+            padding: const EdgeInsets.only(left: 2, bottom: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 4,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.primary, AppColors.accent],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text('home_records_section'.tr,
+                    style: AppTextStyles.label.copyWith(
+                        color: AppColors.onBackground,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14)),
+              ],
+            ),
           ),
           GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.5,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 2.35,
             children: [
               Obx(() => _recordTile(
                     icon: Icons.auto_stories_rounded,
@@ -284,55 +304,53 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap: () => Get.toNamed(route),
         child: Ink(
           decoration: BoxDecoration(
-            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: AppShadows.low,
-            border: Border.all(color: color.withValues(alpha: 0.18)),
+            // Thin coloured status rail on the left, matching the module cards.
+            gradient: LinearGradient(
+              colors: [color, color.withValues(alpha: 0)],
+              stops: const [0.03, 0.03],
+            ),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            padding: const EdgeInsets.fromLTRB(11, 10, 9, 10),
+            child: Row(
               children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 46, height: 46,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.10),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(icon, color: color, size: 23),
-                    ),
-                    if (count > 0)
-                      Positioned(
-                        right: -6, top: -6,
-                        child: Container(
-                          constraints: const BoxConstraints(minWidth: 22),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: badgeColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.surface, width: 2),
-                          ),
-                          child: Text('$count',
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.caption.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 11)),
-                        ),
-                      ),
-                  ],
+                Container(
+                  width: 42, height: 42,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 21),
                 ),
-                const SizedBox(height: 8),
-                Text(title,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.label.copyWith(
-                        fontWeight: FontWeight.w700, height: 1.15)),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.label.copyWith(
+                          fontWeight: FontWeight.w700,
+                          height: 1.12,
+                          fontSize: 12.5)),
+                ),
+                if (count > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 26),
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: badgeColor.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text('$count',
+                        style: AppTextStyles.caption.copyWith(
+                            color: badgeColor,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12)),
+                  ),
+                ],
               ],
             ),
           ),
