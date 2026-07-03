@@ -454,6 +454,125 @@ class _VisitScreenState extends State<VisitScreen> {
     );
   }
 
+  /// Reference-style measurement card: a circular icon + label + inline value +
+  /// (optional) pink mic. Set [highlight] for key fields — a purple tint/border
+  /// and an optional NEW badge.
+  Widget _measureCard({
+    required IconData icon,
+    required String label,
+    required TextEditingController controller,
+    String? unit,
+    String? hint,
+    String? micField,
+    TextInputType keyboardType = TextInputType.number,
+    String? Function(String?)? validator,
+    bool highlight = false,
+    bool showNew = false,
+    void Function(String)? onChanged,
+  }) {
+    final accent = highlight ? AppColors.purple : AppColors.primary;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: highlight
+            ? AppColors.purple.withValues(alpha: 0.06)
+            : AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: highlight
+                ? AppColors.purple.withValues(alpha: 0.40)
+                : AppColors.cardBorder),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.12), shape: BoxShape.circle),
+            child: Icon(icon, color: accent, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption
+                              .copyWith(color: AppColors.textSecondary)),
+                    ),
+                    if (showNew) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                            color: AppColors.purple,
+                            borderRadius: BorderRadius.circular(6)),
+                        child: Text('NEW',
+                            style: AppTextStyles.caption.copyWith(
+                                color: Colors.white,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800)),
+                      ),
+                    ],
+                  ],
+                ),
+                TextFormField(
+                  controller: controller,
+                  keyboardType: keyboardType,
+                  validator: validator,
+                  onChanged: onChanged,
+                  style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w700),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 2),
+                    border: InputBorder.none,
+                    hintText: hint,
+                    hintStyle:
+                        AppTextStyles.body.copyWith(color: AppColors.textLight),
+                    suffixText: unit,
+                    suffixStyle: AppTextStyles.label
+                        .copyWith(color: AppColors.textSecondary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (micField != null) ...[
+            const SizedBox(width: 8),
+            _micBtn(micField, controller),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _micBtn(String field, TextEditingController ctrl) {
+    final active = _dictating == field;
+    return GestureDetector(
+      onTap: () => _dictate(field, ctrl),
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+            color: active ? AppColors.emergencyRed : AppColors.purple,
+            shape: BoxShape.circle),
+        child: Icon(active ? Icons.mic_rounded : Icons.mic_none_rounded,
+            color: Colors.white, size: 20),
+      ),
+    );
+  }
+
   // ── Validators (all optional — empty is allowed; flag implausible values) ──
   String? _vBp(String? v) {
     final s = (v ?? '').trim();
@@ -1113,39 +1232,40 @@ class _VisitScreenState extends State<VisitScreen> {
         ],
       ),
       const SizedBox(height: 14),
-      AppInput(
-        hint: 'visit_hint_bp_example'.tr,
+      _measureCard(
+        icon: Icons.favorite_rounded,
         label: 'visit_label_bp'.tr,
         controller: _bp,
-        prefixIcon: const Icon(Icons.favorite_outline, color: AppColors.primary, size: 20),
-        suffixIcon: _micSuffix('bp', _bp),
+        unit: 'mmHg',
+        hint: 'visit_hint_bp_example'.tr,
+        micField: 'bp',
+        keyboardType: TextInputType.text,
         validator: _vBp,
         onChanged: (_) => setState(() {}),
       ),
       _bpTrend(),
-      const SizedBox(height: 14),
-      AppInput(
-        hint: 'visit_hint_kg'.tr,
+      _measureCard(
+        icon: Icons.monitor_weight_rounded,
         label: 'visit_label_weight'.tr,
         controller: _weight,
-        keyboardType: TextInputType.number,
-        prefixIcon: const Icon(Icons.monitor_weight_outlined, color: AppColors.primary, size: 20),
+        unit: 'visit_unit_kg'.tr,
+        hint: '0.0',
+        micField: 'weight',
         validator: _range(25, 200, unit: 'visit_unit_kg'.tr),
         onChanged: (_) => setState(() {}),
       ),
       _weightTrend(),
-      const SizedBox(height: 14),
-      AppInput(
-        hint: 'g/dL',
+      _measureCard(
+        icon: Icons.bloodtype_rounded,
         label: 'visit_label_hb'.tr,
         controller: _hb,
-        keyboardType: TextInputType.number,
-        prefixIcon: const Icon(Icons.bloodtype_outlined, color: AppColors.primary, size: 20),
+        unit: 'g/dL',
+        hint: '0.0',
+        micField: 'hb',
         validator: _range(2, 20),
         onChanged: (_) => setState(() {}),
       ),
       _hbTrend(),
-      const SizedBox(height: 14),
       AppInput(
         hint: 'mg/dL',
         label: 'visit_label_blood_sugar'.tr,
@@ -1187,28 +1307,22 @@ class _VisitScreenState extends State<VisitScreen> {
         validator: _range(10, 45),
       ),
       const SizedBox(height: 14),
-      Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: AppInput(
-              hint: 'visit_hint_per_min'.tr,
-              label: 'visit_label_fhr'.tr,
-              controller: _fhr,
-              keyboardType: TextInputType.number,
-              validator: _range(60, 220),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: AppInput(
-              hint: 'visit_hint_lie'.tr,
-              label: 'visit_label_lie'.tr,
-              controller: _lie,
-              suffixIcon: _micSuffix('lie', _lie),
-            ),
-          ),
-        ],
+      _measureCard(
+        icon: Icons.monitor_heart_rounded,
+        label: 'visit_label_fhr'.tr,
+        controller: _fhr,
+        unit: 'bpm',
+        hint: 'visit_hint_per_min'.tr,
+        micField: 'fhr',
+        validator: _range(60, 220),
+        highlight: true,
+        showNew: true,
+      ),
+      AppInput(
+        hint: 'visit_hint_lie'.tr,
+        label: 'visit_label_lie'.tr,
+        controller: _lie,
+        suffixIcon: _micSuffix('lie', _lie),
       ),
       const SizedBox(height: 16),
       Text('visit_mandatory_tests'.tr, style: AppTextStyles.label),
