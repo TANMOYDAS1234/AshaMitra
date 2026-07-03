@@ -116,6 +116,22 @@ class PatientContextSheet extends StatelessWidget {
     // which already passes patientId/Name forward.
   }
 
+  /// Maps a caseId to a case photo (assets/images/cases/<name>.png).
+  static String _photoForCaseId(String caseId) {
+    switch (caseId) {
+      case 'pregnancy':
+      case 'postpartum':
+        return 'pregnancy';
+      case 'newborn':
+        return 'newborn';
+      case 'infant':
+      case 'child':
+        return 'child';
+      default:
+        return 'other';
+    }
+  }
+
   /// Maps a dashboard caseId to the form's expected case-type label.
   /// add_patient_screen's case chips are ['Pregnancy', 'Newborn', 'Child', 'Other'].
   static String _caseTypeForCaseId(String caseId) {
@@ -156,23 +172,37 @@ class PatientContextSheet extends StatelessWidget {
                 ),
               ),
             ),
-            // ── Case summary ──────────────────────────────────────────
+            // ── Case summary — a real case photo (photo-forward) ──────
             Row(
               children: [
-                Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: caseColor.withValues(alpha: 0.12),
-                    borderRadius: AppRadius.mdR,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.asset(
+                    'assets/images/cases/${_photoForCaseId(caseId)}.png',
+                    width: 52,
+                    height: 52,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 52,
+                      height: 52,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: caseColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(caseIcon, color: caseColor, size: 24),
+                    ),
                   ),
-                  child: Icon(caseIcon, color: caseColor, size: 22),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(caseTitle, style: AppTextStyles.h3),
+                      Text(caseTitle,
+                          style: AppTextStyles.h3,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis),
                       Text('checkup_for_whom'.tr, style: AppTextStyles.bodySm),
                     ],
                   ),

@@ -982,40 +982,26 @@ class _VisitScreenState extends State<VisitScreen> {
   /// absent → nothing (zero-height, no gap).
   /// Warm photorealistic banner per visit kind (login/splash style), with a
   /// bottom scrim + the visit label overlaid. Falls back to the code-drawn
-  /// figure if a photo is missing.
-  /// Photo hero that fades smoothly into the page background at the bottom, so
-  /// it melts into the content instead of looking like a hard-edged card. The
-  /// visit label already shows in the header subtitle, so no caption is needed.
+  /// Clean rounded photo card for the visit kind — no blend, no overlay (the
+  /// patient name + visit label already sit in the header above).
   Widget _moduleIllustration() {
-    return SizedBox(
-      height: 200,
+    return Container(
+      height: 180,
       width: double.infinity,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Image.asset(
-              'assets/images/visits/$_kind.png',
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => ModuleArt(kind: _kind, height: 200),
-            ),
-          ),
-          // Smooth fade of the lower half into the sage page background.
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: const LinearGradient(
-                  begin: Alignment.center,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, AppColors.background],
-                  stops: [0.5, 1.0],
-                ),
-              ),
-            ),
-          ),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 10,
+              offset: const Offset(0, 4)),
         ],
+      ),
+      child: Image.asset(
+        'assets/images/visits/$_kind.png',
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => ModuleArt(kind: _kind, height: 180),
       ),
     );
   }

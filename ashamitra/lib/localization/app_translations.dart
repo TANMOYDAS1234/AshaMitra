@@ -3070,7 +3070,7 @@ class AppTranslations extends Translations {
     'home_chip_pregnancy': 'গর্ভবতী',
     'home_chip_postpartum': 'প্রসব-পরবর্তী',
     'home_chip_newborn': 'নবজাতক',
-    'home_chip_infant': 'শিশু (০-১)',
+    'home_chip_infant': 'শিশু (১ বছরের কম)',
     'home_chip_child': 'শিশু',
     'home_chip_immunization': 'টিকা',
     'home_chip_development': 'বিকাশ',
