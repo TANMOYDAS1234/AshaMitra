@@ -37,6 +37,11 @@ class _PatientListScreenState extends State<PatientListScreen> {
   // card's status colour / badge / actions. Loaded once (cache-first, offline).
   final Map<String, Map<String, dynamic>> _dueByPatient = {};
 
+  // Refined status accents (softer than the neon triage bands): warm amber for
+  // "due", calm green for "up-to-date"; red stays for high-risk / overdue.
+  static const _cDue = Color(0xFFF59E0B); // amber-500
+  static const _cDone = Color(0xFF16A34A); // green-600
+
   @override
   void initState() {
     super.initState();
@@ -315,9 +320,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
     // Left-border colour: high-risk red → overdue red → due amber → done green.
     final Color accent = highRisk
         ? AppColors.emergencyRed
-        : (overdue
-            ? AppColors.emergencyRed
-            : (due != null ? AppColors.warningYellow : AppColors.safeGreen));
+        : (overdue ? AppColors.emergencyRed : (due != null ? _cDue : _cDone));
 
     // Badge (top-right).
     final String badge;
@@ -327,10 +330,10 @@ class _PatientListScreenState extends State<PatientListScreen> {
       badgeColor = AppColors.emergencyRed;
     } else if (due != null) {
       badge = _dueBadge(due);
-      badgeColor = overdue ? AppColors.emergencyRed : AppColors.accentDeep;
+      badgeColor = overdue ? AppColors.emergencyRed : _cDue;
     } else {
       badge = 'plist_badge_done'.tr;
-      badgeColor = AppColors.safeGreen;
+      badgeColor = _cDone;
     }
 
     // Actions: a due visit → start-checkup + remind; otherwise view-record + call.
@@ -340,7 +343,9 @@ class _PatientListScreenState extends State<PatientListScreen> {
         label: 'plist_start_checkup'.tr,
         icon: Icons.medical_services_rounded,
         filled: true,
-        color: highRisk ? AppColors.emergencyRed : AppColors.primary,
+        // Always purple (brand primary) — the red risk signal lives on the
+        // border/badge/avatar, so the primary action stays consistent.
+        color: AppColors.primary,
         onTap: () => Get.toNamed(AppRoutes.visit, arguments: due),
       ));
       actions.add(_CardAction(
