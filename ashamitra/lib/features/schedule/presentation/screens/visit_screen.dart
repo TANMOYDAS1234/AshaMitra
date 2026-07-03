@@ -723,11 +723,24 @@ class _VisitScreenState extends State<VisitScreen> {
                 leading: GestureDetector(onTap: _openProfile, child: _headerAvatar()),
                 onTitleTap: _openProfile, // tap name → patient profile
                 actions: [
-                  HeaderActionCircle(
-                    icon: Icons.call_rounded,
-                    tooltip: 'visit_call'.tr,
-                    color: AppColors.safeGreen,
-                    onTap: _callPatient,
+                  // Soft green call action (tinted circle, not a solid blob) so
+                  // it reads cleanly on the sage header.
+                  Tooltip(
+                    message: 'visit_call'.tr,
+                    child: Material(
+                      color: AppColors.safeGreen.withValues(alpha: 0.14),
+                      shape: const CircleBorder(),
+                      child: InkWell(
+                        onTap: _callPatient,
+                        customBorder: const CircleBorder(),
+                        child: const SizedBox(
+                          width: 42,
+                          height: 42,
+                          child: Icon(Icons.call_rounded,
+                              color: AppColors.safeGreen, size: 20),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -851,51 +864,38 @@ class _VisitScreenState extends State<VisitScreen> {
   /// Warm photorealistic banner per visit kind (login/splash style), with a
   /// bottom scrim + the visit label overlaid. Falls back to the code-drawn
   /// figure if a photo is missing.
+  /// Photo hero that fades smoothly into the page background at the bottom, so
+  /// it melts into the content instead of looking like a hard-edged card. The
+  /// visit label already shows in the header subtitle, so no caption is needed.
   Widget _moduleIllustration() {
-    final label = (_e['label'] ?? '').toString();
-    return Container(
-      height: 190,
+    return SizedBox(
+      height: 200,
       width: double.infinity,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4)),
-        ],
-      ),
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Image.asset(
-            'assets/images/visits/$_kind.png',
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => ModuleArt(kind: _kind, height: 190),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Image.asset(
+              'assets/images/visits/$_kind.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => ModuleArt(kind: _kind, height: 200),
+            ),
           ),
-          // Bottom scrim so the caption stays legible over any photo.
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Color(0xD91A0A1E)],
-                stops: [0.45, 1.0],
+          // Smooth fade of the lower half into the sage page background.
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  begin: Alignment.center,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, AppColors.background],
+                  stops: [0.5, 1.0],
+                ),
               ),
             ),
           ),
-          if (label.isNotEmpty)
-            Positioned(
-              left: 14, right: 14, bottom: 12,
-              child: Text(
-                label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.h3.copyWith(
-                    color: Colors.white, fontWeight: FontWeight.w800),
-              ),
-            ),
         ],
       ),
     );
@@ -1620,19 +1620,31 @@ class _VisitScreenState extends State<VisitScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.warningYellow.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.warningYellow, width: 1),
+        color: AppColors.accentSoft,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.schedule_rounded, color: AppColors.accent),
-          const SizedBox(width: 10),
+          Container(
+            width: 40,
+            height: 40,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.16),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.schedule_rounded,
+                color: AppColors.accentDeep, size: 22),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               'visit_too_early_banner'.trParams({'date': _windowStartText}),
               style: AppTextStyles.label.copyWith(
-                  color: AppColors.accentDeep, fontWeight: FontWeight.w600, height: 1.4),
+                  color: AppColors.accentDeep,
+                  fontWeight: FontWeight.w600,
+                  height: 1.35),
             ),
           ),
         ],
