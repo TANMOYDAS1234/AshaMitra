@@ -19,7 +19,6 @@ import '../../data/models/patient_model.dart';
 import '../../data/patient_matcher.dart';
 import '../../../../core/services/api_service.dart';
 import '../../../../shared/widgets/patient_photo.dart';
-import '../../../../shared/widgets/module_art.dart';
 import 'aadhaar_scanner_screen.dart';
 
 class AddPatientScreen extends StatefulWidget {
@@ -1430,89 +1429,89 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
 
   /// Circular tappable avatar at the top of the form — shows the photo (or a
   /// camera placeholder) and opens [_pickPhoto].
-  Widget _photoAvatar() {
+  Widget _photoAvatar({double radius = 36}) {
     ImageProvider? img;
     if (_photoB64 != null && _photoB64!.isNotEmpty) {
       try {
         img = MemoryImage(base64Decode(_photoB64!));
       } catch (_) {/* corrupt → show placeholder */}
     }
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 18),
-        child: GestureDetector(
-          onTap: _pickPhoto,
-          // Hold to view the photo full-screen (tap changes/removes it).
-          onLongPress: _photoB64 == null
-              ? null
-              : () => showPatientPhotoDialog(context, _photoB64, name: _nameCtrl.text),
-          child: Stack(
-            children: [
-              CircleAvatar(
-                radius: 46,
-                backgroundColor: AppColors.primary.withValues(alpha: 0.10),
-                backgroundImage: img,
-                child: img == null
-                    ? const Icon(Icons.add_a_photo_outlined,
-                        color: AppColors.primary, size: 28)
-                    : null,
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.surface, width: 2),
-                  ),
-                  child: Icon(img == null ? Icons.add : Icons.edit,
-                      color: Colors.white, size: 14),
-                ),
-              ),
-            ],
+    return GestureDetector(
+      onTap: _pickPhoto,
+      // Hold to view the photo full-screen (tap changes/removes it).
+      onLongPress: _photoB64 == null
+          ? null
+          : () =>
+              showPatientPhotoDialog(context, _photoB64, name: _nameCtrl.text),
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: radius,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.10),
+            backgroundImage: img,
+            child: img == null
+                ? Icon(Icons.add_a_photo_outlined,
+                    color: AppColors.primary, size: radius * 0.6)
+                : null,
           ),
-        ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.surface, width: 2),
+              ),
+              child: Icon(img == null ? Icons.add : Icons.edit,
+                  color: Colors.white, size: 12),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _aadhaarScanButton() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Material(
-        color: AppColors.primary.withValues(alpha: 0.08),
+    return Material(
+      color: AppColors.primary.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: _scanning ? null : _scanAadhaar,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
-              children: [
-                _scanning
-                    ? const SizedBox(
-                        width: 22, height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Icon(Icons.document_scanner_outlined, color: AppColors.primary),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('addp_scan_aadhaar'.tr,
-                          style: AppTextStyles.label.copyWith(
-                              color: AppColors.primary, fontWeight: FontWeight.w700)),
-                      Text('addp_scan_aadhaar_sub'.tr,
-                          style: AppTextStyles.label.copyWith(
-                              color: AppColors.textSecondary, fontSize: 11)),
-                    ],
-                  ),
+        onTap: _scanning ? null : _scanAadhaar,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          child: Row(
+            children: [
+              _scanning
+                  ? const SizedBox(
+                      width: 22, height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.document_scanner_outlined,
+                      color: AppColors.primary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('addp_scan_aadhaar'.tr,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.label.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700)),
+                    Text('addp_scan_aadhaar_sub'.tr,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.label.copyWith(
+                            color: AppColors.textSecondary, fontSize: 11)),
+                  ],
                 ),
-                const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
-              ],
-            ),
+              ),
+              const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
+            ],
           ),
         ),
       ),
@@ -1842,6 +1841,27 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     );
   }
 
+  Widget _caseSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('case_type'.tr, style: AppTextStyles.label),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const ['Pregnancy', 'Newborn', 'Child', 'Other']
+              .asMap()
+              .entries
+              .expand((e) => [
+                    Expanded(child: _caseCard(e.value)),
+                    if (e.key < 3) const SizedBox(width: 10),
+                  ])
+              .toList(),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1860,27 +1880,19 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     key: _formKey,
                     child: Column(
                       children: [
-                        _photoAvatar(),
-                        // Friendly per-case illustration (Gemini art if present,
-                        // else the code-drawn figure) — updates with the chips.
-                        // Shown in full (BoxFit.contain) so it isn't cropped.
-                        Container(
-                          height: 180,
-                          width: double.infinity,
-                          clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFDEFE9),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Image.asset(
-                            'assets/illustrations/${ModuleArt.kindKey(_caseType)}.png',
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) =>
-                                ModuleArt(kind: _caseType, height: 180),
-                          ),
+                        // Case type first — the worker picks who this is up top.
+                        _caseSelector(),
+                        const SizedBox(height: 18),
+                        // Identity capture — patient photo + Aadhaar autofill,
+                        // balanced side by side.
+                        Row(
+                          children: [
+                            _photoAvatar(),
+                            const SizedBox(width: 14),
+                            Expanded(child: _aadhaarScanButton()),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        _aadhaarScanButton(),
+                        const SizedBox(height: 18),
                         AppInput(
                           hint: 'full_name'.tr,
                           label: 'patient_name'.tr,
@@ -1972,25 +1984,6 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                           maxLength: 10,
                           prefixIcon: const Icon(Icons.phone_outlined, color: AppColors.primary, size: 20),
                           validator: Validators.phone,
-                        ),
-                        const SizedBox(height: 16),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('case_type'.tr, style: AppTextStyles.label),
-                            const SizedBox(height: 10),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: const ['Pregnancy', 'Newborn', 'Child', 'Other']
-                                  .asMap()
-                                  .entries
-                                  .expand((e) => [
-                                        Expanded(child: _caseCard(e.value)),
-                                        if (e.key < 3) const SizedBox(width: 10),
-                                      ])
-                                  .toList(),
-                            ),
-                          ],
                         ),
                         _mchSection(),
                         _riskHistorySection(),
