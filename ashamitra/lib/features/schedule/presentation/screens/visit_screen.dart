@@ -848,38 +848,57 @@ class _VisitScreenState extends State<VisitScreen> {
   /// friendly + easy. Drop an image at `assets/illustrations/<kind>.png`
   /// (anc / pnc / hbnc / hbyc / vaccine) and it shows here automatically;
   /// absent → nothing (zero-height, no gap).
-  Widget _moduleIllustration() => Container(
-        height: 200,
-        width: double.infinity,
-        clipBehavior: Clip.antiAlias,
-        decoration: BoxDecoration(
-          // Soft sage backdrop matching the illustrations' background, so the
-          // contained image's letterbox blends in.
-          color: const Color(0xFFE6F0E7),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        // Show the FULL illustration (no cropping) — fit inside the banner.
-        child: Image.asset(
-          'assets/illustrations/${_illustrationKey()}.png',
-          fit: BoxFit.contain,
-          // No PNG dropped in → show the code-drawn illustration for this module.
-          errorBuilder: (_, __, ___) => ModuleArt(kind: _kind, height: 200),
-        ),
-      );
-
-  /// Illustration asset key. ANC shows a per-trimester figure (growing belly)
-  /// keyed off the ANC stage; other kinds use their module illustration.
-  String _illustrationKey() {
-    if (_kind == 'anc') {
-      const byStage = {
-        'ANC1': 'anc_t1',
-        'ANC2': 'anc_t2',
-        'ANC3': 'anc_t3',
-        'ANC4': 'anc_t4',
-      };
-      return byStage[(_e['code'] ?? '').toString()] ?? 'anc';
-    }
-    return _kind;
+  /// Warm photorealistic banner per visit kind (login/splash style), with a
+  /// bottom scrim + the visit label overlaid. Falls back to the code-drawn
+  /// figure if a photo is missing.
+  Widget _moduleIllustration() {
+    final label = (_e['label'] ?? '').toString();
+    return Container(
+      height: 190,
+      width: double.infinity,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/images/visits/$_kind.png',
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => ModuleArt(kind: _kind, height: 190),
+          ),
+          // Bottom scrim so the caption stays legible over any photo.
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Color(0xD91A0A1E)],
+                stops: [0.45, 1.0],
+              ),
+            ),
+          ),
+          if (label.isNotEmpty)
+            Positioned(
+              left: 14, right: 14, bottom: 12,
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.h3.copyWith(
+                    color: Colors.white, fontWeight: FontWeight.w800),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   List<Widget> _body() {

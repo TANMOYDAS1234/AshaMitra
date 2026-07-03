@@ -71,6 +71,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/cases/
+    - assets/images/visits/
     - assets/video/
     - assets/illustrations/
     - assets/data/
