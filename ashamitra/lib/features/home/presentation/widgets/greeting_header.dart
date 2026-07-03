@@ -117,26 +117,19 @@ class GreetingHeader extends StatelessWidget {
                 )),
           ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Scale-to-fit so ANY name length shows in full (never "…"),
-                // rendering as large as the available width allows.
-                Obx(() => FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'greeting'.trParams(
-                            {'name': auth.user.value?.name ?? 'Didi'}),
-                        maxLines: 1,
-                        softWrap: false,
-                        style: AppTextStyles.h1,
-                      ),
-                    )),
-                const SizedBox(height: 2),
-                Text('todays_tasks'.tr, style: AppTextStyles.bodySm),
-              ],
-            ),
+            // Scale-to-fit so ANY name length shows in full (never "…"),
+            // rendering as large as the available width allows.
+            child: Obx(() => FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'greeting'.trParams(
+                        {'name': auth.user.value?.name ?? 'Didi'}),
+                    maxLines: 1,
+                    softWrap: false,
+                    style: AppTextStyles.h1,
+                  ),
+                )),
           ),
           _NotificationBell(onTap: () => _showNotifications(context)),
         ],
