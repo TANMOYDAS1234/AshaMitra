@@ -203,7 +203,10 @@ class _PatientListScreenState extends State<PatientListScreen> {
                     final sel = i == _filterIndex;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: Material(
+                      child: Align(
+                        alignment: Alignment.center,
+                        widthFactor: 1.0,
+                        child: Material(
                         color: sel ? AppColors.primary : AppColors.surface,
                         borderRadius: AppRadius.pillR,
                         child: InkWell(
@@ -231,6 +234,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
                             ),
                           ),
                         ),
+                      ),
                       ),
                     );
                   },
