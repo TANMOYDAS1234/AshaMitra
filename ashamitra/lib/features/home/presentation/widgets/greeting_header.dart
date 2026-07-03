@@ -127,10 +127,12 @@ class GreetingHeader extends StatelessWidget {
                         {'name': auth.user.value?.name ?? 'Didi'}),
                     maxLines: 1,
                     softWrap: false,
-                    style: AppTextStyles.h1,
+                    style: AppTextStyles.h2,
                   ),
                 )),
           ),
+          // Breathing room so the name never crowds the bell.
+          const SizedBox(width: 12),
           _NotificationBell(onTap: () => _showNotifications(context)),
         ],
       ),
