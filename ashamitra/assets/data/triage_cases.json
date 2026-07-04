@@ -23,7 +23,7 @@
   "cases": [
     {
       "id": "newborn",
-      "title": "👶 নবজাতক চেকআপ (০-২৮ দিন)",
+      "title": "নবজাতক চেকআপ (০-২৮ দিন)",
       "titleEn": "Newborn Checkup (0-28 days)",
       "module": "newborn",
       "protocol": "HBNC + IMNCI",
@@ -114,7 +114,7 @@
     },
     {
       "id": "child",
-      "title": "🧒 শিশু স্বাস্থ্য যাচাই (১-৫ বছর)",
+      "title": "শিশু স্বাস্থ্য যাচাই (১-৫ বছর)",
       "titleEn": "Child Health Check (1-5 years)",
       "module": "child",
       "protocol": "IMNCI + HBYC",
@@ -194,7 +194,7 @@
     },
     {
       "id": "infant",
-      "title": "👶 শিশু চেকআপ (১-১২ মাস)",
+      "title": "শিশু চেকআপ (১-১২ মাস)",
       "titleEn": "Infant Checkup (1-12 months)",
       "module": "child",
       "protocol": "IMNCI + HBYC",
@@ -273,7 +273,7 @@
     },
     {
       "id": "pregnancy",
-      "title": "🤰 গর্ভবতী মায়ের চেকআপ",
+      "title": "গর্ভবতী মায়ের চেকআপ",
       "titleEn": "Pregnant Mother Checkup",
       "module": "pregnancy",
       "protocol": "MCP + PMSMA",
@@ -364,7 +364,7 @@
     },
     {
       "id": "postpartum",
-      "title": "🤱 প্রসব-পরবর্তী চেকআপ",
+      "title": "প্রসব-পরবর্তী চেকআপ",
       "titleEn": "Postpartum Checkup",
       "module": "delivery_pnc",
       "protocol": "SBA + PPH + PNC",
@@ -450,7 +450,7 @@
     },
     {
       "id": "immunization",
-      "title": "💉 টিকা মিস / ইমিউনাইজেশন",
+      "title": "টিকা মিস / ইমিউনাইজেশন",
       "titleEn": "Immunization Missed",
       "module": "immunisation",
       "protocol": "UIP National Schedule",
@@ -519,7 +519,7 @@
     },
     {
       "id": "emergency",
-      "title": "🚨 জরুরি অবস্থা যাচাই",
+      "title": "জরুরি অবস্থা যাচাই",
       "titleEn": "Emergency Case",
       "module": "emergency",
       "protocol": "Global Emergency Rule Engine",
