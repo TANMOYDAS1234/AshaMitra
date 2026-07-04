@@ -307,7 +307,7 @@ class PatientProfileScreen extends StatelessWidget {
                       const SizedBox(height: 14),
                       // ── Info cards ───────────────────────────────────
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _InfoCard('prof_case'.tr, type,
                               _caseIconData(type), AppColors.primary),
