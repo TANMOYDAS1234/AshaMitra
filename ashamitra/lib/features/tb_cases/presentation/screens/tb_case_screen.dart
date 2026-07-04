@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/date_pick_field.dart';
 import '../../../../shared/widgets/module_list_card.dart';
+import '../../../../shared/widgets/module_hero.dart';
 import '../../controller/tb_case_controller.dart';
 
 // Presumptive-TB symptom checklist. Any "yes" → refer for sputum/CBNAAT.
@@ -70,11 +71,34 @@ class TbCaseListScreen extends StatelessWidget {
                 child: Obx(() {
                   final saved = ctrl.items.toList();
                   if (saved.isEmpty) return _empty(ctrl);
+                  final presumptive = saved
+                      .where((c) =>
+                          (c['stage'] ?? 'presumptive').toString() ==
+                          'presumptive')
+                      .length;
                   return RefreshIndicator(
                     onRefresh: ctrl.syncFromServer,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-                      children: saved.map((c) => _TbCard(data: c)).toList(),
+                      children: [
+                        ModuleHero(
+                          chip: 'tb_hero_chip'.tr,
+                          icon: Icons.coronavirus_rounded,
+                          stats: [
+                            ModuleStat('${saved.length}', 'tb_stat_total'.tr,
+                                emphasize: true),
+                            ModuleStat('$presumptive',
+                                'tb_stat_presumptive'.tr,
+                                warn: presumptive > 0),
+                            ModuleStat('${ctrl.onTreatmentCount}',
+                                'tb_stat_treatment'.tr),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        ModuleSectionHeader('tb_list_header'.tr,
+                            count: saved.length),
+                        ...saved.map((c) => _TbCard(data: c)),
+                      ],
                     ),
                   );
                 }),

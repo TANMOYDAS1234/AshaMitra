@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/date_pick_field.dart';
 import '../../../../shared/widgets/module_list_card.dart';
+import '../../../../shared/widgets/module_hero.dart';
 import '../../controller/medicine_stock_controller.dart';
 import '../../services/medicine_stock_pdf.dart';
 
@@ -89,21 +90,37 @@ class MedicineStockListScreen extends StatelessWidget {
                 child: Obx(() {
                   final months = ctrl.months;
                   if (ctrl.items.isEmpty) return _empty(ctrl);
+                  final total = ctrl.items.length;
+                  final low = ctrl.lowStockCount;
                   return RefreshIndicator(
                     onRefresh: ctrl.syncFromServer,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-                      children: months.expand((m) {
-                        final rows = ctrl.forMonth(m)
-                          ..sort((a, b) => (a['medicineName'] ?? '')
-                              .toString()
-                              .compareTo((b['medicineName'] ?? '').toString()));
-                        return [
-                          _monthHeader(m, rows),
-                          ...rows.map((r) => _StockCard(data: r)),
-                          const SizedBox(height: 14),
-                        ];
-                      }).toList(),
+                      children: [
+                        ModuleHero(
+                          chip: 'ms_hero_chip'.tr,
+                          icon: Icons.inventory_2_rounded,
+                          stats: [
+                            ModuleStat('$total', 'ms_stat_total'.tr,
+                                emphasize: true),
+                            ModuleStat('$low', 'ms_stat_low'.tr, warn: low > 0),
+                            ModuleStat('${total - low}', 'ms_stat_ok'.tr),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        ...months.expand((m) {
+                          final rows = ctrl.forMonth(m)
+                            ..sort((a, b) => (a['medicineName'] ?? '')
+                                .toString()
+                                .compareTo(
+                                    (b['medicineName'] ?? '').toString()));
+                          return [
+                            _monthHeader(m, rows),
+                            ...rows.map((r) => _StockCard(data: r)),
+                            const SizedBox(height: 14),
+                          ];
+                        }),
+                      ],
                     ),
                   );
                 }),

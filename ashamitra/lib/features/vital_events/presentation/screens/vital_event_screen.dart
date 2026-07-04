@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
-import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/module_list_card.dart';
+import '../../../../shared/widgets/module_hero.dart';
 import '../../controller/vital_event_controller.dart';
 import '../../../patients/controller/patient_controller.dart';
 import '../../../patients/data/models/patient_model.dart';
@@ -136,20 +136,34 @@ class VitalEventListScreen extends StatelessWidget {
                         .compareTo((a['eventDate'] ?? '').toString()));
                   if (saved.isEmpty && suggestions.isEmpty) return _empty(ctrl);
                   final pending = ctrl.unregisteredCount;
+                  final births = saved
+                      .where((e) =>
+                          (e['eventType'] ?? 'birth').toString() == 'birth')
+                      .length;
+                  final deaths = saved
+                      .where((e) =>
+                          (e['eventType'] ?? '').toString() == 'death')
+                      .length;
                   return RefreshIndicator(
                     onRefresh: ctrl.syncFromServer,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
                       children: [
-                        if (pending > 0)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10, left: 4),
-                            child: Text(
-                                've_pending_registration'
-                                    .trParams({'count': '$pending'}),
-                                style: AppTextStyles.label
-                                    .copyWith(color: AppColors.accent)),
-                          ),
+                        ModuleHero(
+                          chip: 've_hero_chip'.tr,
+                          icon: Icons.menu_book_rounded,
+                          stats: [
+                            ModuleStat('$births', 've_stat_births'.tr,
+                                emphasize: true),
+                            ModuleStat('$deaths', 've_stat_deaths'.tr),
+                            ModuleStat('$pending', 've_stat_pending'.tr,
+                                warn: pending > 0),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (saved.isNotEmpty)
+                          ModuleSectionHeader('ve_list_header'.tr,
+                              count: saved.length),
                         ...saved.map((e) => _VitalCard(data: e)),
                         if (suggestions.isNotEmpty) ...[
                           const SizedBox(height: 6),
@@ -206,74 +220,32 @@ class _VitalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isBirth = (data['eventType'] ?? 'birth').toString() == 'birth';
     final registered = data['registered'] == true;
-    final color = isBirth ? AppColors.safeGreen : AppColors.emergencyRed;
+    final accent = isBirth ? AppColors.safeGreen : AppColors.emergencyRed;
     final date = _fmtDate(data['eventDate']);
     final name = (data['personName'] ?? '').toString();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: AppRadius.lgR,
-        child: InkWell(
-          borderRadius: AppRadius.lgR,
-          onTap: () => Get.to(() => const VitalEventFormScreen(), arguments: data),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              borderRadius: AppRadius.lgR,
-              boxShadow: AppShadows.low,
-              border: Border(left: BorderSide(color: color, width: 4)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(isBirth ? Icons.child_friendly_rounded : Icons.local_florist_rounded,
-                        size: 18, color: color),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        name.isNotEmpty
-                            ? name
-                            : (isBirth ? 've_newborn'.tr : 've_deceased'.tr),
-                        style: AppTextStyles.h3,
-                        maxLines: 1, overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Builder(builder: (_) {
-                      final (label, chipColor) = suggested
-                          ? ('ve_chip_suggested'.tr, AppColors.primary)
-                          : (registered ? 've_chip_registered'.tr : 've_chip_pending'.tr,
-                              registered ? AppColors.safeGreen : AppColors.accent);
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: chipColor.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(label,
-                            style: AppTextStyles.caption.copyWith(
-                                color: chipColor, fontWeight: FontWeight.w700)),
-                      );
-                    }),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  [
-                    isBirth ? 've_birth'.tr : 've_death'.tr,
-                    if (date.isNotEmpty) date,
-                    if ((data['village'] ?? '').toString().isNotEmpty) data['village'],
-                  ].join('  ·  '),
-                  style: AppTextStyles.label.copyWith(color: AppColors.textSecondary),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    final (badgeLabel, badgeColor) = suggested
+        ? ('ve_chip_suggested'.tr, AppColors.primary)
+        : (registered
+            ? ('ve_chip_registered'.tr, AppColors.safeGreen)
+            : ('ve_chip_pending'.tr, AppColors.accent));
+    final subtitle = [
+      isBirth ? 've_birth'.tr : 've_death'.tr,
+      if (date.isNotEmpty) date,
+      if ((data['village'] ?? '').toString().isNotEmpty) data['village'],
+    ].join('  ·  ');
+    return ModuleListCard(
+      icon: isBirth
+          ? Icons.child_friendly_rounded
+          : Icons.local_florist_rounded,
+      title: name.isNotEmpty
+          ? name
+          : (isBirth ? 've_newborn'.tr : 've_deceased'.tr),
+      subtitle: subtitle,
+      accent: accent,
+      badge: badgeLabel,
+      badgeColor: badgeColor,
+      onTap: () =>
+          Get.to(() => const VitalEventFormScreen(), arguments: data),
     );
   }
 }

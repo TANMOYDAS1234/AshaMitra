@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_input.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/date_pick_field.dart';
 import '../../../../shared/widgets/module_list_card.dart';
+import '../../../../shared/widgets/module_hero.dart';
 import '../../controller/ncd_cbac_controller.dart';
 import '../../../patients/controller/patient_controller.dart';
 import '../../../patients/data/models/patient_model.dart';
@@ -133,11 +134,29 @@ class NcdCbacListScreen extends StatelessWidget {
                         .toString()
                         .compareTo((b['personName'] ?? '').toString()));
                   if (saved.isEmpty && suggestions.isEmpty) return _empty(ctrl);
+                  final referred =
+                      saved.where((e) => e['referred'] == true).length;
                   return RefreshIndicator(
                     onRefresh: ctrl.syncFromServer,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
                       children: [
+                        ModuleHero(
+                          chip: 'nc_hero_chip'.tr,
+                          icon: Icons.health_and_safety_rounded,
+                          stats: [
+                            ModuleStat('${saved.length}', 'nc_stat_total'.tr,
+                                emphasize: true),
+                            ModuleStat('${ctrl.highRiskCount}',
+                                'nc_stat_highrisk'.tr,
+                                warn: ctrl.highRiskCount > 0),
+                            ModuleStat('$referred', 'nc_stat_referred'.tr),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (saved.isNotEmpty)
+                          ModuleSectionHeader('nc_list_header'.tr,
+                              count: saved.length),
                         ...saved.map((c) => _NcdCard(data: c)),
                         if (suggestions.isNotEmpty) ...[
                           const SizedBox(height: 6),
