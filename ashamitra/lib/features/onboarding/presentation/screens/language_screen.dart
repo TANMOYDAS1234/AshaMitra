@@ -8,6 +8,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/blended_hero_image.dart';
 
 class LanguageScreen extends StatelessWidget {
   const LanguageScreen({super.key});
@@ -46,11 +47,9 @@ class LanguageScreen extends StatelessWidget {
                   style: AppTextStyles.display.copyWith(fontSize: 30),
                 ),
                 const SizedBox(height: 20),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
-                  child: Image.asset('assets/images/hero_asha.png',
-                      height: 160, width: double.infinity, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                const BlendedHeroImage(
+                  asset: 'assets/images/hero_asha.png',
+                  height: 170,
                 ),
                 const SizedBox(height: 28),
                 Obx(() => Column(

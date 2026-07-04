@@ -6,6 +6,7 @@ import '../../../../core/utils/validators.dart';
 import '../../../../shared/widgets/glass_card.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_input.dart';
+import '../../../../shared/widgets/blended_hero_image.dart';
 
 class AuthForm extends StatelessWidget {
   final void Function(String phone) onSubmit;
@@ -28,16 +29,10 @@ class AuthForm extends StatelessWidget {
             children: [
               const SizedBox(height: 24),
 
-              // ── Hero photo ───────────────────────────────────
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.asset(
-                  'assets/images/hero_asha.png',
-                  height: 196,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                ),
+              // ── Hero photo — edges blended into the background ──
+              const BlendedHeroImage(
+                asset: 'assets/images/hero_asha.png',
+                height: 208,
               ),
               const SizedBox(height: 20),
               const Text('ASHA Mitra',
