@@ -24,42 +24,58 @@ void showPatientPhotoDialog(BuildContext context, String? b64, {String? name}) {
   showDialog(
     context: context,
     barrierColor: Colors.black,
-    builder: (ctx) => GestureDetector(
-      onTap: () => Navigator.of(ctx).pop(),
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: InteractiveViewer(
-              minScale: 0.8,
-              maxScale: 4,
-              child: Center(child: Image(image: img, fit: BoxFit.contain)),
-            ),
-          ),
-          if (name != null && name.trim().isNotEmpty)
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 44,
-              child: Text(
-                name,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  shadows: [Shadow(blurRadius: 8, color: Colors.black)],
-                ),
+    // Material ancestor gives the content a proper DefaultTextStyle — without
+    // it, raw Text in the overlay renders Flutter's yellow debug underline.
+    builder: (ctx) => Material(
+      type: MaterialType.transparency,
+      child: GestureDetector(
+        onTap: () => Navigator.of(ctx).pop(),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 4,
+                child: Center(child: Image(image: img, fit: BoxFit.contain)),
               ),
             ),
-          Positioned(
-            top: 40,
-            right: 12,
-            child: IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.white, size: 30),
-              onPressed: () => Navigator.of(ctx).pop(),
+            if (name != null && name.trim().isNotEmpty)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 44,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            Positioned(
+              top: 40,
+              right: 12,
+              child: IconButton(
+                icon: const Icon(Icons.close_rounded,
+                    color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     ),
   );
