@@ -5,7 +5,6 @@ import '../../../../core/services/api_service.dart';
 import '../../../../core/services/local_storage_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
@@ -291,11 +290,6 @@ class _CheckupLogScreenState extends State<CheckupLogScreen> {
                 subtitle: 'clog_subtitle'.tr,
                 showBack: false,
                 actions: [
-                  HeaderActionPill(
-                    icon: Icons.download_rounded,
-                    label: 'clog_pdf_all'.tr,
-                    onTap: () => _downloadAll(visible),
-                  ),
                   HeaderActionCircle(
                     icon: Icons.refresh_rounded,
                     tooltip: 'clog_refresh'.tr,
@@ -303,21 +297,18 @@ class _CheckupLogScreenState extends State<CheckupLogScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
-              // Stats
+              const SizedBox(height: 6),
+              // Gradient hero — the report summary at a glance + a PDF CTA.
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                child: Row(
-                  children: [
-                    _Stat('clog_stat_total'.tr, '${_done.length}', AppColors.primary),
-                    const SizedBox(width: 8),
-                    _Stat('clog_stat_month'.tr, '$monthCount', AppColors.sky),
-                    const SizedBox(width: 8),
-                    _Stat('clog_stat_danger'.tr, '$dangerCount', AppColors.emergencyRed),
-                  ],
+                child: _heroBanner(
+                  total: _done.length,
+                  month: monthCount,
+                  danger: dangerCount,
+                  visible: visible,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 14),
               // Search
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -362,7 +353,8 @@ class _CheckupLogScreenState extends State<CheckupLogScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
+              if (!_loading && visible.isNotEmpty) _listHeader(visible.length),
               Expanded(
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
@@ -399,13 +391,179 @@ class _CheckupLogScreenState extends State<CheckupLogScreen> {
     final sel = current == value;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: sel,
-        selectedColor: AppColors.primary,
-        labelStyle: AppTextStyles.label.copyWith(
-            color: sel ? AppColors.onPrimary : AppColors.textSecondary),
-        onSelected: (_) => onTap(value),
+      child: Center(
+        child: ChoiceChip(
+          label: Text(label),
+          selected: sel,
+          selectedColor: AppColors.primary,
+          labelStyle: AppTextStyles.label.copyWith(
+              color: sel ? AppColors.onPrimary : AppColors.textSecondary),
+          onSelected: (_) => onTap(value),
+        ),
+      ),
+    );
+  }
+
+  // ── Gradient hero summary (home-style) ────────────────────────────────────
+  Widget _heroBanner({
+    required int total,
+    required int month,
+    required int danger,
+    required List<Map<String, dynamic>> visible,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.primaryDeep, AppColors.primary, AppColors.purple],
+          stops: [0.0, 0.5, 1.0],
+        ),
+        boxShadow: AppShadows.tinted(AppColors.primary, strength: 2),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.20),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('clog_subtitle'.tr,
+                      style: AppTextStyles.caption.copyWith(
+                          color: Colors.white, fontWeight: FontWeight.w700)),
+                ),
+                const Spacer(),
+                Icon(Icons.insights_rounded,
+                    color: Colors.white.withValues(alpha: 0.85), size: 22),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                    child: _heroStat('$total', 'clog_stat_total'.tr,
+                        emphasize: true)),
+                const SizedBox(width: 10),
+                Expanded(child: _heroStat('$month', 'clog_stat_month'.tr)),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: _heroStat('$danger', 'clog_stat_danger'.tr,
+                        danger: danger > 0)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Material(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => _downloadAll(visible),
+                child: SizedBox(
+                  height: 46,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.download_rounded,
+                          color: AppColors.primary, size: 19),
+                      const SizedBox(width: 8),
+                      Text('clog_pdf_all'.tr,
+                          style: AppTextStyles.label.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w800)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _heroStat(String value, String label,
+      {bool emphasize = false, bool danger = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: emphasize ? 0.24 : 0.13),
+        borderRadius: BorderRadius.circular(16),
+        border: danger
+            ? Border.all(color: Colors.white.withValues(alpha: 0.55), width: 1)
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (danger) ...[
+                const Icon(Icons.warning_amber_rounded,
+                    color: Colors.white, size: 15),
+                const SizedBox(width: 3),
+              ],
+              Text(value,
+                  style: AppTextStyles.h2.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      height: 1.0)),
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.caption
+                  .copyWith(color: Colors.white.withValues(alpha: 0.85))),
+        ],
+      ),
+    );
+  }
+
+  /// Section header with the home-style gradient accent bar.
+  Widget _listHeader(int count) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 2, 20, 10),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 18,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.accent],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text('clog_recent'.tr,
+              style: AppTextStyles.label.copyWith(
+                  color: AppColors.onBackground,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 14)),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text('$count',
+                style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary, fontWeight: FontWeight.w800)),
+          ),
+        ],
       ),
     );
   }
@@ -417,115 +575,121 @@ class _CheckupLogScreenState extends State<CheckupLogScreen> {
     final color = ok ? AppColors.safeGreen : AppColors.emergencyRed;
     final date = _fmtDate(_completedDate(e));
     final summary = _summary(e);
+    final name = (e['patientName'] ?? '').toString();
     return Material(
-      color: AppColors.surface,
-      borderRadius: AppRadius.lgR,
+      color: ok ? AppColors.surface : const Color(0xFFFEF2F2),
+      borderRadius: BorderRadius.circular(18),
       child: InkWell(
-        borderRadius: AppRadius.lgR,
+        borderRadius: BorderRadius.circular(18),
         onTap: () => _openProfile(e), // tap → patient profile
         child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          borderRadius: AppRadius.lgR,
-          boxShadow: AppShadows.low,
-          border: Border(left: BorderSide(color: color, width: 4)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 34, height: 34,
-              decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.14), shape: BoxShape.circle),
-              child: Icon(_icon(kind), size: 18, color: color),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: AppShadows.low,
+            border: ok
+                ? null
+                : Border.all(color: AppColors.emergencyRed, width: 1.0),
+            // Coloured status rail on the left edge.
+            gradient: LinearGradient(
+              colors: [color, color.withValues(alpha: 0)],
+              stops: const [0.014, 0.014],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 6, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: 46, height: 46,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      shape: BoxShape.circle),
+                  child: Icon(_icon(kind), size: 22, color: color),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text((e['patientName'] ?? '').toString(),
-                            maxLines: 1, overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.h3),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(name,
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.h3),
+                          ),
+                          if (date.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Text(date,
+                                style: AppTextStyles.caption
+                                    .copyWith(color: AppColors.textSecondary)),
+                          ],
+                        ],
                       ),
-                      if (date.isNotEmpty)
-                        Text(date,
-                            style: AppTextStyles.caption
-                                .copyWith(color: AppColors.textSecondary)),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${_kindLabel(kind)} · ${(e['label'] ?? '').toString()}',
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySm
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: 7),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 9, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.14),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(
+                                  ok
+                                      ? Icons.check_circle_rounded
+                                      : Icons.warning_amber_rounded,
+                                  size: 13, color: color),
+                              const SizedBox(width: 4),
+                              Text(
+                                ok
+                                    ? 'clog_band_ok'.tr
+                                    : 'clog_band_danger'
+                                        .trParams({'count': '${flags.length}'}),
+                                style: AppTextStyles.caption.copyWith(
+                                    color: color, fontWeight: FontWeight.w700),
+                              ),
+                            ]),
+                          ),
+                          if (summary.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(summary,
+                                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.textSecondary)),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${_kindLabel(kind)} · ${(e['label'] ?? '').toString()}',
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.label
-                        .copyWith(color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    ok
-                        ? 'clog_band_ok'.tr
-                        : 'clog_band_danger'.trParams({'count': '${flags.length}'}),
-                    style: AppTextStyles.caption
-                        .copyWith(color: color, fontWeight: FontWeight.w700),
-                  ),
-                  if (summary.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(summary,
-                        maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.caption
-                            .copyWith(color: AppColors.onBackground)),
-                  ],
-                ],
-              ),
+                ),
+                // Per-checkup report PDF
+                IconButton(
+                  tooltip: 'clog_pdf_one'.tr,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _downloadOne(e),
+                  icon: const Icon(Icons.download_rounded,
+                      size: 20, color: AppColors.primary),
+                ),
+              ],
             ),
-            // Per-checkup report PDF
-            IconButton(
-              tooltip: 'clog_pdf_one'.tr,
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
-              onPressed: () => _downloadOne(e),
-              icon: const Icon(Icons.download_rounded, size: 20, color: AppColors.primary),
-            ),
-          ],
-        ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _Stat extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-  const _Stat(this.label, this.value, this.color);
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.lgR,
-          boxShadow: AppShadows.tinted(color),
-        ),
-        child: Column(
-          children: [
-            Text(value,
-                style: AppTextStyles.h2.copyWith(color: color, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 2),
-            Text(label,
-                maxLines: 1, overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-          ],
-        ),
-      ),
-    );
-  }
-}
