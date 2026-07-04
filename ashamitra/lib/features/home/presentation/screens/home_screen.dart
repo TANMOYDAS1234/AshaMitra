@@ -231,9 +231,9 @@ class _HomeScreenState extends State<HomeScreen> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: 2,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 2.35,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.35,
             children: [
               Obx(() => _recordTile(
                     icon: Icons.auto_stories_rounded,
@@ -297,60 +297,91 @@ class _HomeScreenState extends State<HomeScreen> {
   }) {
     final badgeColor = countColor ?? color;
     return Material(
-      color: AppColors.surface,
-      borderRadius: BorderRadius.circular(16),
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         onTap: () => Get.toNamed(route),
         child: Ink(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: AppShadows.low,
-            // Thin coloured status rail on the left, matching the module cards.
+            borderRadius: BorderRadius.circular(20),
+            // Soft colour-wash card — light in the top-left, fading out.
             gradient: LinearGradient(
-              colors: [color, color.withValues(alpha: 0)],
-              stops: const [0.03, 0.03],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withValues(alpha: 0.16),
+                color.withValues(alpha: 0.05),
+              ],
             ),
+            border: Border.all(color: color.withValues(alpha: 0.14)),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.10),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(11, 10, 9, 10),
-            child: Row(
+            padding: const EdgeInsets.all(13),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  width: 42, height: 42,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: color, size: 21),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.label.copyWith(
-                          fontWeight: FontWeight.w700,
-                          height: 1.12,
-                          fontSize: 12.5)),
-                ),
-                if (count > 0) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    constraints: const BoxConstraints(minWidth: 26),
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: badgeColor.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(20),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Filled icon badge with a soft coloured glow.
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withValues(alpha: 0.38),
+                            blurRadius: 9,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Icon(icon, color: Colors.white, size: 22),
                     ),
-                    child: Text('$count',
-                        style: AppTextStyles.caption.copyWith(
-                            color: badgeColor,
+                    const Spacer(),
+                    if (count > 0)
+                      Container(
+                        constraints: const BoxConstraints(minWidth: 26),
+                        height: 26,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(13),
+                          boxShadow: AppShadows.low,
+                        ),
+                        child: Text('$count',
+                            style: AppTextStyles.caption.copyWith(
+                                color: badgeColor,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 13)),
+                      ),
+                  ],
+                ),
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.label.copyWith(
+                            color: AppColors.onBackground,
                             fontWeight: FontWeight.w800,
-                            fontSize: 12)),
+                            height: 1.2,
+                            fontSize: 12.5)),
                   ),
-                ],
+                ),
               ],
             ),
           ),
