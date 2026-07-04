@@ -276,8 +276,11 @@ class AppRoutes {
     ),
     GetPage(
       name: patientProfile,
+      // Opaque slide (not ...WithFade): a fade keeps the incoming page
+      // translucent mid-transition, so the previous screen's card shows
+      // through as a "ghost" behind the header. rightToLeft covers cleanly.
       page: () => const PatientProfileScreen(),
-      transition: Transition.rightToLeftWithFade,
+      transition: Transition.rightToLeft,
       transitionDuration: _medium,
       curve: Curves.easeOutCubic,
     ),

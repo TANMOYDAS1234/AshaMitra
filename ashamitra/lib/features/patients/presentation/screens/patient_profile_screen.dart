@@ -320,6 +320,14 @@ class PatientProfileScreen extends StatelessWidget {
                           _InfoCard('prof_last_visit'.tr,
                               lastVisit?.isNotEmpty == true ? lastVisit! : '—',
                               Icons.event_available_rounded, AppColors.sky),
+                          const SizedBox(width: 10),
+                          _InfoCard('prof_status'.tr, risk.label,
+                              Icons.health_and_safety_rounded,
+                              risk == RiskLevel.emergency
+                                  ? AppColors.emergencyRed
+                                  : risk == RiskLevel.high
+                                      ? AppColors.warningYellow
+                                      : AppColors.safeGreen),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -446,6 +454,15 @@ class PatientProfileScreen extends StatelessWidget {
 }
 
 // ── Section title ─────────────────────────────────────────────────────────
+extension on RiskLevel {
+  String get label => switch (this) {
+        RiskLevel.safe => 'prof_risk_safe'.tr,
+        RiskLevel.moderate => 'prof_risk_moderate'.tr,
+        RiskLevel.high => 'prof_risk_high'.tr,
+        RiskLevel.emergency => 'prof_risk_emergency'.tr,
+      };
+}
+
 class _SectionTitle extends StatelessWidget {
   final String text;
   final IconData? icon;
