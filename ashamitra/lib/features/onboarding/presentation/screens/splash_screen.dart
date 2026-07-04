@@ -21,10 +21,12 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   VideoPlayerController? _ctrl;
   bool _navigated = false;
+  DateTime? _start;
 
   @override
   void initState() {
     super.initState();
+    _start = DateTime.now();
     final c = VideoPlayerController.asset('assets/video/splash.mp4');
     _ctrl = c;
     c.initialize().then((_) {
@@ -56,6 +58,14 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void _go() {
     if (_navigated || !mounted) return;
+    // Keep the splash up for at least ~2.8s so the animation actually plays —
+    // even if the video reports "ended" early (decode/render hiccup).
+    final elapsed = DateTime.now().difference(_start ?? DateTime.now());
+    const minShow = Duration(milliseconds: 2800);
+    if (elapsed < minShow) {
+      Timer(minShow - elapsed, _go);
+      return;
+    }
     _navigated = true;
     final auth = Get.find<AuthController>();
     if (auth.restoreSession()) {
