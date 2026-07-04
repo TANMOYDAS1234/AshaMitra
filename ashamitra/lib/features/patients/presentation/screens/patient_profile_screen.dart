@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../../../../app/routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
-import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
@@ -27,15 +26,77 @@ class PatientProfileScreen extends StatelessWidget {
 
   // Case icon — handles both English (manual patients) and Bengali
   // (triage-created patients) type strings.
-  String _caseIcon(String type) {
+  IconData _caseIconData(String type) {
     final t = type.toLowerCase();
-    if (t.contains('pregnan') || type.contains('গর্ভ')) return '';
-    if (t.contains('postpartum') || type.contains('প্রসব')) return '';
-    if (t.contains('newborn') || type.contains('নবজাতক')) return '';
-    if (t.contains('child') || type.contains('শিশু')) return '';
-    if (t.contains('immun') || type.contains('টিকা')) return '';
-    if (t.contains('emergency') || type.contains('জরুরি')) return '';
-    return '';
+    if (t.contains('pregnan') || type.contains('গর্ভ')) {
+      return Icons.pregnant_woman_rounded;
+    }
+    if (t.contains('postpartum') || type.contains('প্রসব')) {
+      return Icons.volunteer_activism_rounded;
+    }
+    if (t.contains('newborn') || type.contains('নবজাতক')) {
+      return Icons.child_care_rounded;
+    }
+    if (t.contains('infant') || type.contains('শিশু')) {
+      return Icons.child_friendly_rounded;
+    }
+    if (t.contains('child')) return Icons.face_rounded;
+    if (t.contains('immun') || type.contains('টিকা')) {
+      return Icons.vaccines_rounded;
+    }
+    if (t.contains('emergency') || type.contains('জরুরি')) {
+      return Icons.emergency_rounded;
+    }
+    return Icons.assignment_ind_rounded;
+  }
+
+  /// One line of hero meta (village / mobile) — white icon + text on gradient.
+  Widget _heroMeta(IconData icon, String text) => Padding(
+        padding: const EdgeInsets.only(top: 3),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: Colors.white.withValues(alpha: 0.85)),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.bodySm
+                      .copyWith(color: Colors.white.withValues(alpha: 0.92))),
+            ),
+          ],
+        ),
+      );
+
+  /// Crisp white risk pill that reads cleanly on the gradient hero.
+  Widget _heroRiskPill(RiskLevel risk) {
+    final (label, color, icon) = switch (risk) {
+      RiskLevel.safe =>
+        ('risk_safe'.tr, AppColors.safeGreen, Icons.check_circle_rounded),
+      RiskLevel.moderate => (
+          'risk_moderate'.tr,
+          AppColors.warningYellow,
+          Icons.warning_amber_rounded
+        ),
+      RiskLevel.high =>
+        ('risk_high'.tr, const Color(0xFFF97316), Icons.error_rounded),
+      RiskLevel.emergency =>
+        ('risk_emergency'.tr, AppColors.emergencyRed, Icons.emergency_rounded),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, color: color, size: 14),
+        const SizedBox(width: 5),
+        Text(label,
+            style: AppTextStyles.caption
+                .copyWith(color: color, fontWeight: FontWeight.w800)),
+      ]),
+    );
   }
 
   @override
@@ -146,13 +207,24 @@ class PatientProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                   child: Column(
                     children: [
-                      // ── Patient header card ──────────────────────────
+                      // ── Patient header — gradient hero (home language) ──
                       Container(
-                        padding: const EdgeInsets.all(20),
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: AppRadius.xlR,
-                          boxShadow: AppShadows.mid,
+                          borderRadius: BorderRadius.circular(24),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              AppColors.primaryDeep,
+                              AppColors.primary,
+                              AppColors.purple,
+                            ],
+                            stops: [0.0, 0.55, 1.0],
+                          ),
+                          boxShadow:
+                              AppShadows.tinted(AppColors.primary, strength: 2),
                         ),
                         child: Row(
                           children: [
@@ -177,31 +249,36 @@ class PatientProfileScreen extends StatelessWidget {
                                 child: Hero(
                                   tag: 'patient_avatar_$patientId',
                                   child: Container(
-                                    width: 64, height: 64,
+                                    width: 70, height: 70,
+                                    padding: const EdgeInsets.all(3),
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      gradient: ph == null
-                                          ? const LinearGradient(
-                                              colors: [AppColors.primary, AppColors.purple],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            )
-                                          : null,
-                                      image: ph != null
-                                          ? DecorationImage(image: ph, fit: BoxFit.cover)
-                                          : null,
+                                      color: Colors.white.withValues(alpha: 0.28),
                                     ),
-                                    child: ph != null
-                                        ? null
-                                        : Center(
-                                            child: Text(
-                                              initial,
-                                              style: AppTextStyles.display.copyWith(
-                                                fontSize: 26,
-                                                color: Colors.white,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: ph == null
+                                            ? Colors.white.withValues(alpha: 0.18)
+                                            : null,
+                                        image: ph != null
+                                            ? DecorationImage(
+                                                image: ph, fit: BoxFit.cover)
+                                            : null,
+                                      ),
+                                      child: ph != null
+                                          ? null
+                                          : Center(
+                                              child: Text(
+                                                initial,
+                                                style: AppTextStyles.display.copyWith(
+                                                  fontSize: 26,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Colors.white,
+                                                ),
                                               ),
                                             ),
-                                          ),
+                                    ),
                                   ),
                                 ),
                               );
@@ -215,30 +292,17 @@ class PatientProfileScreen extends StatelessWidget {
                                     name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.h2,
+                                    style: AppTextStyles.h2.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w800),
                                   ),
+                                  const SizedBox(height: 5),
                                   if (village.isNotEmpty && village != '—')
-                                    Text(
-                                      'prof_village'.trParams({'village': village}),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppTextStyles.bodySm,
-                                    ),
+                                    _heroMeta(Icons.location_on_rounded, village),
                                   if (mobile.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 2),
-                                      child: Row(
-                                        children: [
-                                          const Icon(Icons.phone_rounded,
-                                              size: 13,
-                                              color: AppColors.textSecondary),
-                                          const SizedBox(width: 4),
-                                          Text(mobile, style: AppTextStyles.bodySm),
-                                        ],
-                                      ),
-                                    ),
-                                  const SizedBox(height: 8),
-                                  RiskBadge(level: risk),
+                                    _heroMeta(Icons.phone_rounded, mobile),
+                                  const SizedBox(height: 10),
+                                  _heroRiskPill(risk),
                                 ],
                               ),
                             ),
@@ -248,18 +312,17 @@ class PatientProfileScreen extends StatelessWidget {
                       const SizedBox(height: 14),
                       // ── Info cards ───────────────────────────────────
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _InfoCard(
-                              'prof_case'.trParams({'icon': _caseIcon(type)}),
-                              type,
-                              Icons.assignment_rounded, AppColors.primary),
+                          _InfoCard('prof_case'.tr, type,
+                              _caseIconData(type), AppColors.primary),
                           const SizedBox(width: 10),
                           _InfoCard('prof_last_visit'.tr,
                               lastVisit?.isNotEmpty == true ? lastVisit! : '—',
-                              Icons.calendar_month_rounded, AppColors.sky),
+                              Icons.event_available_rounded, AppColors.sky),
                           const SizedBox(width: 10),
                           _InfoCard('prof_status'.tr, risk.label,
-                              Icons.favorite_rounded,
+                              Icons.health_and_safety_rounded,
                               risk == RiskLevel.emergency
                                   ? AppColors.emergencyRed
                                   : risk == RiskLevel.high
@@ -333,20 +396,23 @@ class PatientProfileScreen extends StatelessWidget {
                       const SizedBox(height: 24),
                       // ── Checkup timeline (schedule events, done + upcoming) ──
                       if (patientId.isNotEmpty) ...[
-                        _SectionTitle('prof_checkup_timeline'.tr),
+                        _SectionTitle('prof_checkup_timeline'.tr,
+                            icon: Icons.timeline_rounded),
                         const SizedBox(height: 12),
                         _CheckupTimeline(patientId: patientId),
                         const SizedBox(height: 24),
                       ],
                       // ── Referrals for this patient (Form 3 + outcome) ──
                       if (patientId.isNotEmpty) ...[
-                        _SectionTitle('prof_referral'.tr),
+                        _SectionTitle('prof_referral'.tr,
+                            icon: Icons.local_hospital_rounded),
                         const SizedBox(height: 12),
                         _ProfileReferrals(patientId: patientId),
                         const SizedBox(height: 24),
                       ],
                       // ── Last assessment ──────────────────────────────
-                      _SectionTitle('prof_last_assessment'.tr),
+                      _SectionTitle('prof_last_assessment'.tr,
+                          icon: Icons.fact_check_rounded),
                       const SizedBox(height: 12),
                       if (hasAssessment) ...[
                         if (outcome != null && outcome.isNotEmpty)
@@ -370,7 +436,8 @@ class PatientProfileScreen extends StatelessWidget {
                         const _EmptyAssessment(),
                       if (history.isNotEmpty) ...[
                         const SizedBox(height: 24),
-                        _SectionTitle('prof_report_history'.tr),
+                        _SectionTitle('prof_report_history'.tr,
+                            icon: Icons.history_rounded),
                         const SizedBox(height: 12),
                         _ReportHistory(reports: history),
                       ],
@@ -398,12 +465,36 @@ extension on RiskLevel {
 // ── Section title ─────────────────────────────────────────────────────────
 class _SectionTitle extends StatelessWidget {
   final String text;
-  const _SectionTitle(this.text);
+  final IconData? icon;
+  const _SectionTitle(this.text, {this.icon});
 
   @override
-  Widget build(BuildContext context) => Align(
-        alignment: Alignment.centerLeft,
-        child: Text(text, style: AppTextStyles.h3),
+  Widget build(BuildContext context) => Row(
+        children: [
+          Container(
+            width: 4,
+            height: 20,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.accent],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          if (icon != null) ...[
+            Icon(icon, size: 18, color: AppColors.primary),
+            const SizedBox(width: 6),
+          ],
+          Expanded(
+            child: Text(text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.h3),
+          ),
+        ],
       );
 }
 
@@ -1315,25 +1406,49 @@ class _InfoCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.lgR,
-          boxShadow: AppShadows.tinted(color),
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              color.withValues(alpha: 0.15),
+              color.withValues(alpha: 0.05),
+            ],
+          ),
+          border: Border.all(color: color.withValues(alpha: 0.14)),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 6),
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.35),
+                    blurRadius: 7,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 19),
+            ),
+            const SizedBox(height: 10),
             Text(
               value,
               maxLines: 1, overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.label,
+              style: AppTextStyles.label.copyWith(
+                  fontWeight: FontWeight.w800, color: AppColors.onBackground),
             ),
+            const SizedBox(height: 1),
             Text(
               label,
               maxLines: 1, overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.caption,
+              style: AppTextStyles.caption
+                  .copyWith(color: AppColors.textSecondary),
             ),
           ],
         ),
