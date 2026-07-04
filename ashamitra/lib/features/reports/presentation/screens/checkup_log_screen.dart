@@ -297,88 +297,124 @@ class _CheckupLogScreenState extends State<CheckupLogScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              // Gradient hero — the report summary at a glance + a PDF CTA.
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                child: _heroBanner(
-                  total: _done.length,
-                  month: monthCount,
-                  danger: dangerCount,
-                  visible: visible,
-                ),
-              ),
-              const SizedBox(height: 14),
-              // Search
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: TextField(
-                  onChanged: (v) => setState(() => _query = v.toLowerCase().trim()),
-                  decoration: InputDecoration(
-                    hintText: 'clog_search_hint'.tr,
-                    prefixIcon: const Icon(Icons.search_rounded,
-                        color: AppColors.primary, size: 22),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Kind chips
-              SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  children: [
-                    _chip('clog_kind_all'.tr, 'all', _kind, (v) => setState(() => _kind = v)),
-                    _chip('clog_kind_anc'.tr, 'anc', _kind, (v) => setState(() => _kind = v)),
-                    _chip('clog_kind_vaccine'.tr, 'vaccine', _kind, (v) => setState(() => _kind = v)),
-                    _chip('clog_kind_hbnc'.tr, 'hbnc', _kind, (v) => setState(() => _kind = v)),
-                    _chip('clog_kind_hbyc'.tr, 'hbyc', _kind, (v) => setState(() => _kind = v)),
-                    _chip('clog_kind_pnc'.tr, 'pnc', _kind, (v) => setState(() => _kind = v)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 6),
-              // Time chips
-              SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  children: [
-                    _chip('filter_all_time'.tr, 'all', _time, (v) => setState(() => _time = v)),
-                    _chip('filter_today'.tr, 'today', _time, (v) => setState(() => _time = v)),
-                    _chip('filter_week'.tr, 'week', _time, (v) => setState(() => _time = v)),
-                    _chip('filter_month'.tr, 'month', _time, (v) => setState(() => _time = v)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              if (!_loading && visible.isNotEmpty) _listHeader(visible.length),
+              // The hero, search and filters scroll away with the list so the
+              // cards claim the full viewport height while browsing.
               Expanded(
-                child: _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : (_done.isEmpty
-                        ? EmptyState(
+                child: RefreshIndicator(
+                  onRefresh: _load,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 6),
+                            // Gradient hero — report summary + PDF CTA.
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                              child: _heroBanner(
+                                total: _done.length,
+                                month: monthCount,
+                                danger: dangerCount,
+                                visible: visible,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            // Search
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: TextField(
+                                onChanged: (v) => setState(
+                                    () => _query = v.toLowerCase().trim()),
+                                decoration: InputDecoration(
+                                  hintText: 'clog_search_hint'.tr,
+                                  prefixIcon: const Icon(Icons.search_rounded,
+                                      color: AppColors.primary, size: 22),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            // Kind chips
+                            SizedBox(
+                              height: 40,
+                              child: ListView(
+                                scrollDirection: Axis.horizontal,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                children: [
+                                  _chip('clog_kind_all'.tr, 'all', _kind, (v) => setState(() => _kind = v)),
+                                  _chip('clog_kind_anc'.tr, 'anc', _kind, (v) => setState(() => _kind = v)),
+                                  _chip('clog_kind_vaccine'.tr, 'vaccine', _kind, (v) => setState(() => _kind = v)),
+                                  _chip('clog_kind_hbnc'.tr, 'hbnc', _kind, (v) => setState(() => _kind = v)),
+                                  _chip('clog_kind_hbyc'.tr, 'hbyc', _kind, (v) => setState(() => _kind = v)),
+                                  _chip('clog_kind_pnc'.tr, 'pnc', _kind, (v) => setState(() => _kind = v)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            // Time chips
+                            SizedBox(
+                              height: 40,
+                              child: ListView(
+                                scrollDirection: Axis.horizontal,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 20),
+                                children: [
+                                  _chip('filter_all_time'.tr, 'all', _time, (v) => setState(() => _time = v)),
+                                  _chip('filter_today'.tr, 'today', _time, (v) => setState(() => _time = v)),
+                                  _chip('filter_week'.tr, 'week', _time, (v) => setState(() => _time = v)),
+                                  _chip('filter_month'.tr, 'month', _time, (v) => setState(() => _time = v)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            if (!_loading && visible.isNotEmpty)
+                              _listHeader(visible.length),
+                          ],
+                        ),
+                      ),
+                      if (_loading)
+                        const SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_done.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: EmptyState(
                             icon: Icons.fact_check_outlined,
                             title: 'clog_empty_title'.tr,
                             subtitle: 'clog_empty_subtitle'.tr,
-                          )
-                        : (visible.isEmpty
-                            ? EmptyState(
-                                icon: Icons.filter_alt_off_rounded,
-                                title: 'clog_no_match'.tr,
-                                subtitle: 'clog_no_match_sub'.tr,
-                              )
-                            : RefreshIndicator(
-                                onRefresh: _load,
-                                child: ListView.separated(
-                                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                                  itemCount: visible.length,
-                                  itemBuilder: (_, i) => _card(visible[i]),
-                                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                                ),
-                              ))),
+                          ),
+                        )
+                      else if (visible.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: EmptyState(
+                            icon: Icons.filter_alt_off_rounded,
+                            title: 'clog_no_match'.tr,
+                            subtitle: 'clog_no_match_sub'.tr,
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (_, i) => Padding(
+                                padding: EdgeInsets.only(
+                                    bottom:
+                                        i == visible.length - 1 ? 0 : 8),
+                                child: _card(visible[i]),
+                              ),
+                              childCount: visible.length,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
