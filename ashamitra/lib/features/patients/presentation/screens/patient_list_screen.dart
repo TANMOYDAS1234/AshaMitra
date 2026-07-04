@@ -654,14 +654,16 @@ class _PatientCardV2 extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: badgeColor.withValues(alpha: 0.12),
+            // High-risk pops as a solid pill; others stay soft-tinted.
+            color: highRisk ? badgeColor : badgeColor.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Text(badge,
-              style: AppTextStyles.caption
-                  .copyWith(color: badgeColor, fontWeight: FontWeight.w700)),
+              style: AppTextStyles.caption.copyWith(
+                  color: highRisk ? Colors.white : badgeColor,
+                  fontWeight: FontWeight.w700)),
         ),
         if (riskSubtext != null) ...[
           const SizedBox(height: 3),
