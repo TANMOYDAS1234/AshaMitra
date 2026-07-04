@@ -18,19 +18,25 @@ class ModuleListCard extends StatelessWidget {
     required this.badge,
     required this.onTap,
     this.danger = false,
+    this.badgeColor,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
 
-  /// Status colour — drives the left rail, the icon avatar tint and the pill.
+  /// Status colour — drives the left rail and the icon avatar tint (and the
+  /// pill, unless [badgeColor] overrides it).
   final Color accent;
   final String badge;
   final VoidCallback onTap;
 
   /// When true the card uses the light-red attention skin (red border + tint).
   final bool danger;
+
+  /// Optional distinct colour for the status pill (e.g. rail = clinical band,
+  /// pill = tracking status). Falls back to [accent].
+  final Color? badgeColor;
 
   @override
   Widget build(BuildContext context) {
@@ -100,12 +106,13 @@ class ModuleListCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.14),
+                          color: (badgeColor ?? accent).withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(badge,
                             style: AppTextStyles.caption.copyWith(
-                                color: accent, fontWeight: FontWeight.w700)),
+                                color: badgeColor ?? accent,
+                                fontWeight: FontWeight.w700)),
                       ),
                       const SizedBox(height: 6),
                       Icon(Icons.chevron_right_rounded,
