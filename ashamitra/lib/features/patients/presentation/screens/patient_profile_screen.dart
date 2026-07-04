@@ -50,54 +50,24 @@ class PatientProfileScreen extends StatelessWidget {
     return Icons.assignment_ind_rounded;
   }
 
-  /// One line of hero meta (village / mobile) — white icon + text on gradient.
-  Widget _heroMeta(IconData icon, String text) => Padding(
-        padding: const EdgeInsets.only(top: 3),
+  /// One meta line (village / mobile) — a coloured icon + dark text so the
+  /// detail stays prominent on the white header card.
+  Widget _metaRow(IconData icon, String text) => Padding(
+        padding: const EdgeInsets.only(top: 4),
         child: Row(
           children: [
-            Icon(icon, size: 14, color: Colors.white.withValues(alpha: 0.85)),
-            const SizedBox(width: 5),
+            Icon(icon, size: 15, color: AppColors.primary),
+            const SizedBox(width: 6),
             Flexible(
               child: Text(text,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.bodySm
-                      .copyWith(color: Colors.white.withValues(alpha: 0.92))),
+                      .copyWith(color: AppColors.onBackground)),
             ),
           ],
         ),
       );
-
-  /// Crisp white risk pill that reads cleanly on the gradient hero.
-  Widget _heroRiskPill(RiskLevel risk) {
-    final (label, color, icon) = switch (risk) {
-      RiskLevel.safe =>
-        ('risk_safe'.tr, AppColors.safeGreen, Icons.check_circle_rounded),
-      RiskLevel.moderate => (
-          'risk_moderate'.tr,
-          AppColors.warningYellow,
-          Icons.warning_amber_rounded
-        ),
-      RiskLevel.high =>
-        ('risk_high'.tr, const Color(0xFFF97316), Icons.error_rounded),
-      RiskLevel.emergency =>
-        ('risk_emergency'.tr, AppColors.emergencyRed, Icons.emergency_rounded),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, color: color, size: 14),
-        const SizedBox(width: 5),
-        Text(label,
-            style: AppTextStyles.caption
-                .copyWith(color: color, fontWeight: FontWeight.w800)),
-      ]),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -207,24 +177,15 @@ class PatientProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                   child: Column(
                     children: [
-                      // ── Patient header — gradient hero (home language) ──
+                      // ── Patient header — clean white card ──
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(18),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(24),
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              AppColors.primaryDeep,
-                              AppColors.primary,
-                              AppColors.purple,
-                            ],
-                            stops: [0.0, 0.55, 1.0],
-                          ),
-                          boxShadow:
-                              AppShadows.tinted(AppColors.primary, strength: 2),
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(22),
+                          boxShadow: AppShadows.mid,
+                          border: Border.all(color: AppColors.cardBorder),
                         ),
                         child: Row(
                           children: [
@@ -249,35 +210,57 @@ class PatientProfileScreen extends StatelessWidget {
                                 child: Hero(
                                   tag: 'patient_avatar_$patientId',
                                   child: Container(
-                                    width: 70, height: 70,
-                                    padding: const EdgeInsets.all(3),
-                                    decoration: BoxDecoration(
+                                    width: 72, height: 72,
+                                    padding: const EdgeInsets.all(2.5),
+                                    decoration: const BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: Colors.white.withValues(alpha: 0.28),
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          AppColors.primary,
+                                          AppColors.purple
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      ),
                                     ),
                                     child: Container(
-                                      decoration: BoxDecoration(
+                                      padding: const EdgeInsets.all(2.5),
+                                      decoration: const BoxDecoration(
                                         shape: BoxShape.circle,
-                                        color: ph == null
-                                            ? Colors.white.withValues(alpha: 0.18)
-                                            : null,
-                                        image: ph != null
-                                            ? DecorationImage(
-                                                image: ph, fit: BoxFit.cover)
-                                            : null,
+                                        color: AppColors.surface,
                                       ),
-                                      child: ph != null
-                                          ? null
-                                          : Center(
-                                              child: Text(
-                                                initial,
-                                                style: AppTextStyles.display.copyWith(
-                                                  fontSize: 26,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: Colors.white,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          gradient: ph == null
+                                              ? const LinearGradient(
+                                                  colors: [
+                                                    AppColors.primary,
+                                                    AppColors.purple
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                )
+                                              : null,
+                                          image: ph != null
+                                              ? DecorationImage(
+                                                  image: ph, fit: BoxFit.cover)
+                                              : null,
+                                        ),
+                                        child: ph != null
+                                            ? null
+                                            : Center(
+                                                child: Text(
+                                                  initial,
+                                                  style: AppTextStyles.display
+                                                      .copyWith(
+                                                    fontSize: 24,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: Colors.white,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -292,17 +275,16 @@ class PatientProfileScreen extends StatelessWidget {
                                     name,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.h2.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w800),
+                                    style: AppTextStyles.h2
+                                        .copyWith(fontWeight: FontWeight.w800),
                                   ),
                                   const SizedBox(height: 5),
                                   if (village.isNotEmpty && village != '—')
-                                    _heroMeta(Icons.location_on_rounded, village),
+                                    _metaRow(Icons.location_on_rounded, village),
                                   if (mobile.isNotEmpty)
-                                    _heroMeta(Icons.phone_rounded, mobile),
+                                    _metaRow(Icons.phone_rounded, mobile),
                                   const SizedBox(height: 10),
-                                  _heroRiskPill(risk),
+                                  RiskBadge(level: risk),
                                 ],
                               ),
                             ),
