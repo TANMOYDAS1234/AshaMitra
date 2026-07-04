@@ -207,22 +207,17 @@ class PatientProfileScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                   child: Column(
                     children: [
-                      // ── Patient header — purple hero (neutral shadow, no halo) ──
+                      // ── Patient header — solid purple card ──
+                      // Solid fill (not a gradient): on some budget GPUs a
+                      // gradient + shadow renders a ghost duplicate and can
+                      // corrupt the layout below. A solid colour is the same
+                      // reliable path the (ghost-free) white card used.
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
+                          color: AppColors.primary,
                           borderRadius: BorderRadius.circular(24),
-                          gradient: const LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              AppColors.primaryDeep,
-                              AppColors.primary,
-                              AppColors.purple,
-                            ],
-                            stops: [0.0, 0.55, 1.0],
-                          ),
                           boxShadow: AppShadows.mid,
                         ),
                         child: Row(
