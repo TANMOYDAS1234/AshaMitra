@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../core/services/api_service.dart';
 import '../../../app/routes.dart';
 import '../../../core/services/local_storage_service.dart';
+import '../../auth/controller/auth_controller.dart';
 import '../../auth/data/models/user_model.dart';
 
 class AdminController extends GetxController {
@@ -56,6 +57,12 @@ class AdminController extends GetxController {
   void _handleUnauth() {
     ApiService.clearToken();
     LocalStorageService.clearUser();
+    // Don't yank off the splash: these admin-stat calls fire from AppBinding on
+    // startup and 401 for a logged-out worker. The splash routes itself when it
+    // finishes; interrupting it here was cutting the animation short.
+    if (AuthController.splashActive || Get.currentRoute == AppRoutes.splash) {
+      return;
+    }
     Get.offAllNamed(AppRoutes.login);
   }
 
