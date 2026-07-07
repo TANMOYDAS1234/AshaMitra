@@ -366,13 +366,28 @@ class PatientProfileScreen extends StatelessWidget {
                             }
                             return '';
                           }
-                          await McpReportPdf.generate(ctrl.patients[i], header: {
-                            'asha': s(['name', 'fullName']),
-                            'block': s(['block']),
-                            'district': s(['district']),
-                            'facility':
-                                s(['subCentre', 'subcentre', 'facilityName', 'facility']),
-                          });
+                          try {
+                            await McpReportPdf.generate(ctrl.patients[i],
+                                header: {
+                                  'asha': s(['name', 'fullName']),
+                                  'block': s(['block']),
+                                  'district': s(['district']),
+                                  'facility': s([
+                                    'subCentre',
+                                    'subcentre',
+                                    'facilityName',
+                                    'facility'
+                                  ]),
+                                });
+                          } catch (e) {
+                            Get.snackbar('prof_report'.tr, 'PDF: $e',
+                                snackPosition: SnackPosition.BOTTOM,
+                                backgroundColor: AppColors.emergencyRed,
+                                colorText: Colors.white,
+                                margin: const EdgeInsets.all(16),
+                                borderRadius: 12,
+                                duration: const Duration(seconds: 8));
+                          }
                         },
                       ),
                       // Pregnancy patients: see every pregnancy of this woman.
@@ -1242,12 +1257,14 @@ class _CheckupTimelineState extends State<_CheckupTimeline> {
         'district': s(['district']),
         'facility': s(['subCentre', 'subcentre', 'facilityName', 'facility']),
       });
-    } catch (_) {
-      Get.snackbar('prof_report'.tr, 'prof_report_failed'.tr,
+    } catch (e) {
+      Get.snackbar('prof_report'.tr, 'PDF: $e',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: AppColors.emergencyRed,
           colorText: Colors.white,
-          margin: const EdgeInsets.all(16), borderRadius: 12);
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          duration: const Duration(seconds: 8));
     }
   }
 }
