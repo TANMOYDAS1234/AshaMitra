@@ -22,6 +22,10 @@ import 'app_colors.dart';
 class AppTextStyles {
   AppTextStyles._();
 
+  // SolaimanLipi renders a touch smaller than the old font at the same point
+  // size, so scale every style up a little for readability.
+  static const double _scale = 1.08;
+
   // Base font factory — SolaimanLipi (bundled) for all Bengali/Latin text.
   static TextStyle _hind({
     required double size,
@@ -32,7 +36,7 @@ class AppTextStyles {
   }) =>
       TextStyle(
         fontFamily: 'SolaimanLipi',
-        fontSize: size,
+        fontSize: size * _scale,
         fontWeight: weight,
         color: color,
         height: height,
