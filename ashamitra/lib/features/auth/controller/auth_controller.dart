@@ -33,6 +33,10 @@ class AuthController extends GetxController {
     user.value = null;
     ApiService.clearToken();
     LocalStorageService.clearUser(); // keeps patients/reports on the device
+    // If a startup sync 401s while the splash is still on screen, don't yank
+    // the user to login mid-animation — the session is already cleared, so the
+    // splash's own routing will send them on (to language) once it finishes.
+    if (Get.currentRoute == AppRoutes.splash) return;
     Get.offAllNamed(AppRoutes.login);
     // Defer the snackbar so it attaches to the login route, not the outgoing
     // screen being torn down by offAllNamed's transition (GetX timing hazard).
