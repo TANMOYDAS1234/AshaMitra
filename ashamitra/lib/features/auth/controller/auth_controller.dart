@@ -14,6 +14,12 @@ class AuthController extends GetxController {
 
   bool _sessionExpiring = false;
 
+  /// True while the splash is on screen. A startup sync can 401 on an expired
+  /// token before the splash finishes; this suppresses the login redirect so
+  /// the splash always plays. Set by SplashScreen, reliable regardless of how
+  /// GetX reports the current route mid-transition.
+  static bool splashActive = false;
+
   @override
   void onInit() {
     super.onInit();
@@ -35,8 +41,8 @@ class AuthController extends GetxController {
     LocalStorageService.clearUser(); // keeps patients/reports on the device
     // If a startup sync 401s while the splash is still on screen, don't yank
     // the user to login mid-animation — the session is already cleared, so the
-    // splash's own routing will send them on (to language) once it finishes.
-    if (Get.currentRoute == AppRoutes.splash) return;
+    // splash's own routing will send them on once it finishes.
+    if (splashActive || Get.currentRoute == AppRoutes.splash) return;
     Get.offAllNamed(AppRoutes.login);
     // Defer the snackbar so it attaches to the login route, not the outgoing
     // screen being torn down by offAllNamed's transition (GetX timing hazard).

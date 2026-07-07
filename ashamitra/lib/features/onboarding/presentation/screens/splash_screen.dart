@@ -26,6 +26,9 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    // Suppress the 401→login redirect while the splash plays (a startup sync
+    // can reject an expired token before we finish).
+    AuthController.splashActive = true;
     _ken = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 6),
@@ -37,6 +40,7 @@ class _SplashScreenState extends State<SplashScreen>
   void _go() {
     if (_navigated || !mounted) return;
     _navigated = true;
+    AuthController.splashActive = false;
     final auth = Get.find<AuthController>();
     if (auth.restoreSession()) {
       Get.offAllNamed(auth.user.value?.isAdmin == true
@@ -49,6 +53,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    AuthController.splashActive = false;
     _ken.dispose();
     super.dispose();
   }
