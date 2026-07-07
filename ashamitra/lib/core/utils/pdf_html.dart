@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:http/http.dart' as http;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
+import '../services/api_service.dart';
 import 'pdf_helper.dart';
 
 /// Renders PDFs via the platform HTML→PDF engine (Android print framework /
@@ -158,14 +160,47 @@ class PdfHtml {
     final font = await _embeddedFont();
     final html =
         '<!doctype html><html><head><meta charset="utf-8">$font$_css</head><body>$body</body></html>';
-    // convertHtml is deprecated cross-platform but on Android routes through the
-    // native WebView/print pipeline — which is exactly what shapes Bengali
-    // correctly. The app is Android-only, so this is the intended path.
+
+    // 1) Primary: render on the backend (headless Chromium). Reliable Bengali
+    // shaping on any phone — the device WebView path was flaky on budget MTK
+    // hardware. Needs connectivity.
+    final serverBytes = await _renderOnServer(html, landscape);
+    if (serverBytes != null) {
+      await PdfHelper.saveAndOpen(serverBytes, fileName);
+      return;
+    }
+
+    // 2) Fallback: on-device WebView render (offline, or server unreachable).
     // ignore: deprecated_member_use
     final bytes = await Printing.convertHtml(
       format: landscape ? PdfPageFormat.a4.landscape : PdfPageFormat.a4,
       html: html,
     );
     await PdfHelper.saveAndOpen(bytes, fileName);
+  }
+
+  /// POST the assembled HTML to the backend and return the PDF bytes, or null
+  /// if offline / the server errors (caller then falls back to on-device).
+  static Future<List<int>?> _renderOnServer(String html, bool landscape) async {
+    try {
+      final resp = await http
+          .post(
+            Uri.parse('${ApiService.baseUrl}/report/pdf'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (ApiService.token != null)
+                'Authorization': 'Bearer ${ApiService.token}',
+            },
+            body: jsonEncode({'html': html, 'landscape': landscape}),
+          )
+          .timeout(const Duration(seconds: 30));
+      final ct = resp.headers['content-type'] ?? '';
+      if (resp.statusCode == 200 &&
+          ct.contains('pdf') &&
+          resp.bodyBytes.length > 500) {
+        return resp.bodyBytes;
+      }
+    } catch (_) {/* offline / timeout / error → fall back */}
+    return null;
   }
 }
