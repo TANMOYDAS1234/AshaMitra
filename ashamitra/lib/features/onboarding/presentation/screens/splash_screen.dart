@@ -2,15 +2,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:video_player/video_player.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../app/routes.dart';
 import '../../../../features/auth/controller/auth_controller.dart';
 
-/// Warm, meaningful maternal splash: a full-screen mother-and-newborn video
-/// (watermark removed, upscaled) under a plum scrim with the brand name fading
-/// up. Falls back to the still image if the video can't initialise. Navigates
-/// when the clip ends (with a safety timeout).
+/// Warm, meaningful maternal splash: the mother-and-newborn photo with a slow
+/// Ken Burns push-in under a plum scrim, and the brand name fading up. Uses a
+/// still image + transform (not video) so it renders reliably on every device
+/// — video_player was black/glitchy on some budget MediaTek GPUs. Navigates
+/// after a short hold.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -18,59 +18,30 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
-  VideoPlayerController? _ctrl;
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ken;
   bool _navigated = false;
-  DateTime? _start;
 
   @override
   void initState() {
     super.initState();
-    _start = DateTime.now();
-    final c = VideoPlayerController.asset('assets/video/splash.mp4');
-    _ctrl = c;
-    c.initialize().then((_) {
-      if (!mounted) return;
-      c
-        ..setVolume(0)
-        ..setLooping(false)
-        ..play();
-      c.addListener(_watchEnd);
-      setState(() {});
-    }).catchError((_) {
-      // Video failed → show the still image and move on shortly.
-      Timer(const Duration(milliseconds: 2600), _go);
-    });
-    // Safety: never get stuck on the splash (just after the 3.5s clip ends).
-    Timer(const Duration(milliseconds: 4200), _go);
-  }
-
-  void _watchEnd() {
-    final c = _ctrl;
-    if (c == null) return;
-    final v = c.value;
-    if (v.isInitialized &&
-        v.duration > Duration.zero &&
-        v.position >= v.duration - const Duration(milliseconds: 120)) {
-      _go();
-    }
+    _ken = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..forward();
+    // Hold the splash long enough for the reveal to read, then route on.
+    Timer(const Duration(milliseconds: 3200), _go);
   }
 
   void _go() {
     if (_navigated || !mounted) return;
-    // Keep the splash up for at least ~2.8s so the animation actually plays —
-    // even if the video reports "ended" early (decode/render hiccup).
-    final elapsed = DateTime.now().difference(_start ?? DateTime.now());
-    const minShow = Duration(milliseconds: 2800);
-    if (elapsed < minShow) {
-      Timer(minShow - elapsed, _go);
-      return;
-    }
     _navigated = true;
     final auth = Get.find<AuthController>();
     if (auth.restoreSession()) {
-      Get.offAllNamed(
-          auth.user.value?.isAdmin == true ? AppRoutes.adminDashboard : AppRoutes.home);
+      Get.offAllNamed(auth.user.value?.isAdmin == true
+          ? AppRoutes.adminDashboard
+          : AppRoutes.home);
     } else {
       Get.offNamed(AppRoutes.language);
     }
@@ -78,8 +49,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void dispose() {
-    _ctrl?.removeListener(_watchEnd);
-    _ctrl?.dispose();
+    _ken.dispose();
     super.dispose();
   }
 
@@ -91,27 +61,23 @@ class _SplashScreenState extends State<SplashScreen> {
       statusBarBrightness: Brightness.dark,
     ));
 
-    final c = _ctrl;
-    final ready = c != null && c.value.isInitialized;
-
     return Scaffold(
       backgroundColor: const Color(0xFF2A0E33),
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Video (or still-image fallback), full-screen cover.
-          if (ready)
-            FittedBox(
-              fit: BoxFit.cover,
-              clipBehavior: Clip.hardEdge,
-              child: SizedBox(
-                width: c.value.size.width,
-                height: c.value.size.height,
-                child: VideoPlayer(c),
-              ),
-            )
-          else
-            Image.asset(
+          // Ken Burns: a slow zoom + upward drift on the maternal photo so the
+          // splash feels alive without relying on video decoding.
+          AnimatedBuilder(
+            animation: _ken,
+            builder: (_, child) {
+              final t = Curves.easeInOut.transform(_ken.value);
+              return Transform.translate(
+                offset: Offset(0, -16 * t),
+                child: Transform.scale(scale: 1.06 + 0.16 * t, child: child),
+              );
+            },
+            child: Image.asset(
               'assets/images/splash_mother.png',
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => const DecoratedBox(
@@ -122,6 +88,7 @@ class _SplashScreenState extends State<SplashScreen> {
                         end: Alignment.bottomRight)),
               ),
             ),
+          ),
 
           // Plum scrim: darken top (status bar) + bottom (title).
           const DecoratedBox(
@@ -150,27 +117,31 @@ class _SplashScreenState extends State<SplashScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _Reveal(
-                      delay: const Duration(milliseconds: 500),
+                      delay: const Duration(milliseconds: 400),
                       child: Text(
                         'আশামিত্র',
                         style: AppTextStyles.display.copyWith(
                           fontSize: 40,
                           color: Colors.white,
                           letterSpacing: 1.0,
-                          shadows: const [Shadow(color: Colors.black45, blurRadius: 12)],
+                          shadows: const [
+                            Shadow(color: Colors.black45, blurRadius: 12)
+                          ],
                         ),
                       ),
                     ),
                     const SizedBox(height: 8),
                     _Reveal(
-                      delay: const Duration(milliseconds: 850),
+                      delay: const Duration(milliseconds: 750),
                       child: Text(
                         'splash_subtitle'.tr,
                         textAlign: TextAlign.center,
                         style: AppTextStyles.bodyLg.copyWith(
                           color: Colors.white.withValues(alpha: 0.92),
                           letterSpacing: 0.5,
-                          shadows: const [Shadow(color: Colors.black45, blurRadius: 10)],
+                          shadows: const [
+                            Shadow(color: Colors.black45, blurRadius: 10)
+                          ],
                         ),
                       ),
                     ),
@@ -185,7 +156,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-/// Fades + slides its child up after `delay` ms.
+/// Fades + slides its child up after `delay`.
 class _Reveal extends StatefulWidget {
   final Widget child;
   final Duration delay;
