@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
-import 'package:open_file/open_file.dart';
+import 'package:printing/printing.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../theme/app_colors.dart';
@@ -86,9 +86,15 @@ class PdfHelper {
     );
   }
 
-  /// Writes [pdfBytes] to app-scoped storage and opens the system PDF viewer.
-  static Future<void> saveAndOpen(
-      List<int> pdfBytes, String fileName) async {
+  /// Keeps a copy of [pdfBytes] in app storage (for records) and opens the
+  /// system share sheet so the worker can view / print / save / send the PDF.
+  ///
+  /// Uses `Printing.sharePdf` instead of `OpenFile.open` — the latter silently
+  /// fails when no separate PDF-viewer app is installed (a common cause of
+  /// "the download button does nothing"); the share sheet always works.
+  static Future<void> saveAndOpen(List<int> pdfBytes, String fileName) async {
+    final bytes = Uint8List.fromList(pdfBytes);
+    // Best-effort local copy for records — never block sharing on it.
     try {
       final Directory dir;
       if (Platform.isAndroid) {
@@ -99,37 +105,22 @@ class PdfHelper {
       } else {
         dir = await getApplicationDocumentsDirectory();
       }
+      await File('${dir.path}/$fileName').writeAsBytes(bytes, flush: true);
+    } catch (_) {}
 
-      final path = '${dir.path}/$fileName';
-      await File(path).writeAsBytes(pdfBytes, flush: true);
-
-      final result = await OpenFile.open(path);
-      final sizeKb = (pdfBytes.length / 1024).toStringAsFixed(1);
-
-      Get.snackbar(
-        result.type == ResultType.done ? 'PDF Opened' : 'PDF Saved',
-        result.type == ResultType.done
-            ? 'Share via the viewer. File: $fileName ($sizeKb KB)'
-            : 'Saved as $fileName ($sizeKb KB). ${result.message}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.safeGreen,
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-        duration: const Duration(seconds: 5),
-      );
+    try {
+      await Printing.sharePdf(bytes: bytes, filename: fileName);
     } catch (e) {
       Get.snackbar(
-        'PDF failed',
-        'Could not save PDF: $e',
+        'PDF',
+        'PDF: $e',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.emergencyRed,
         colorText: Colors.white,
         margin: const EdgeInsets.all(16),
         borderRadius: 12,
-        duration: const Duration(seconds: 6),
+        duration: const Duration(seconds: 8),
       );
     }
   }
-
 }
