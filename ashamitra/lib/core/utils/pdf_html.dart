@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'pdf_helper.dart';
@@ -100,7 +102,7 @@ class PdfHtml {
   static const _css = '''
 <style>
   @page { margin: 12mm 9mm; }
-  * { font-family: "Noto Sans Bengali","Noto Serif Bengali","Hind Siliguri","HindSiliguri",sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  * { font-family: "SolaimanLipi","Noto Sans Bengali","Hind Siliguri",sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { color:#241726; font-size:12px; margin:0; }
   .hd { display:flex; justify-content:space-between; align-items:flex-start; }
   .title { font-size:17px; font-weight:700; color:#791C87; }
@@ -132,13 +134,30 @@ class PdfHtml {
 
   /// Wrap a HTML [body] in the document shell and render to a PDF, then
   /// save+open. Set [landscape] for wide tables (e.g. the Form-2 register).
+  // SolaimanLipi embedded (base64) so the report shapes Bengali in the same
+  // font as the app UI, regardless of what fonts the device WebView carries.
+  static String? _fontFace;
+  static Future<String> _embeddedFont() async {
+    if (_fontFace != null) return _fontFace!;
+    try {
+      final data = await rootBundle.load('assets/fonts/SolaimanLipi.ttf');
+      final b64 = base64Encode(data.buffer.asUint8List());
+      _fontFace = "<style>@font-face{font-family:'SolaimanLipi';"
+          "src:url(data:font/ttf;base64,$b64) format('truetype');}</style>";
+    } catch (_) {
+      _fontFace = ''; // fall back to the device's Noto Bengali
+    }
+    return _fontFace!;
+  }
+
   static Future<void> render({
     required String body,
     required String fileName,
     bool landscape = false,
   }) async {
+    final font = await _embeddedFont();
     final html =
-        '<!doctype html><html><head><meta charset="utf-8">$_css</head><body>$body</body></html>';
+        '<!doctype html><html><head><meta charset="utf-8">$font$_css</head><body>$body</body></html>';
     // convertHtml is deprecated cross-platform but on Android routes through the
     // native WebView/print pipeline — which is exactly what shapes Bengali
     // correctly. The app is Android-only, so this is the intended path.

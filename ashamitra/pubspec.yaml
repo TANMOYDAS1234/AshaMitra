@@ -80,3 +80,7 @@ flutter:
     # download-on-demand guidelines library). Re-add this line to bundle them.
     - assets/voices/
     - assets/fonts/
+  fonts:
+    - family: SolaimanLipi
+      fonts:
+        - asset: assets/fonts/SolaimanLipi.ttf

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
 /// Bengali-first typography system.
@@ -23,7 +22,7 @@ import 'app_colors.dart';
 class AppTextStyles {
   AppTextStyles._();
 
-  // Base font factory. Wraps google_fonts so every style shares one source.
+  // Base font factory — SolaimanLipi (bundled) for all Bengali/Latin text.
   static TextStyle _hind({
     required double size,
     FontWeight weight = FontWeight.w400,
@@ -31,7 +30,8 @@ class AppTextStyles {
     double height = 1.4,
     double letterSpacing = 0,
   }) =>
-      GoogleFonts.hindSiliguri(
+      TextStyle(
+        fontFamily: 'SolaimanLipi',
         fontSize: size,
         fontWeight: weight,
         color: color,
