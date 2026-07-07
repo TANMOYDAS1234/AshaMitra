@@ -7,10 +7,57 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/app_text_styles.dart';
 import '../core/theme/app_radius.dart';
 import '../core/services/language_controller.dart';
+import '../features/auth/controller/auth_controller.dart';
 import '../localization/app_translations.dart';
 
-class App extends StatelessWidget {
+class App extends StatefulWidget {
   const App({super.key});
+
+  @override
+  State<App> createState() => _AppState();
+}
+
+class _AppState extends State<App> with WidgetsBindingObserver {
+  DateTime? _pausedAt;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _pausedAt = DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
+      _maybeReplaySplash();
+    }
+  }
+
+  /// Reopening the app while logged out should feel like a fresh launch — but a
+  /// warm resume skips the initial (splash) route. So when the worker returns to
+  /// the app after being away, and they're sitting logged-out on login/language,
+  /// replay the splash. Guarded so it never interrupts an OTP entry, an active
+  /// session, or a quick app-switch.
+  void _maybeReplaySplash() {
+    final paused = _pausedAt;
+    _pausedAt = null;
+    if (paused == null) return;
+    if (DateTime.now().difference(paused) < const Duration(seconds: 12)) return;
+    if (!Get.isRegistered<AuthController>()) return;
+    if (Get.find<AuthController>().user.value != null) return; // logged in
+    final route = Get.currentRoute;
+    if (route == AppRoutes.login || route == AppRoutes.language) {
+      Get.offAllNamed(AppRoutes.splash);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
