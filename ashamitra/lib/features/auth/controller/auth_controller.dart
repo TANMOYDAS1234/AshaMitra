@@ -43,17 +43,9 @@ class AuthController extends GetxController {
     // the user to login mid-animation — the session is already cleared, so the
     // splash's own routing will send them on once it finishes.
     if (splashActive || Get.currentRoute == AppRoutes.splash) return;
-    Get.offAllNamed(AppRoutes.login);
-    // Defer the snackbar so it attaches to the login route, not the outgoing
-    // screen being torn down by offAllNamed's transition (GetX timing hazard).
-    Future.delayed(const Duration(milliseconds: 400), () {
-      Get.snackbar(
-        'সেশন শেষ হয়েছে',
-        'আবার লগইন করুন — আপনার তথ্য ফোনে নিরাপদ আছে, লগইন করলেই সিঙ্ক হবে।',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 5),
-      );
-    });
+    // Replay the splash on the way out so the animation shows on logout/expiry
+    // too; the splash routes to login once it finishes.
+    Get.offAllNamed(AppRoutes.splash);
   }
 
   bool restoreSession() {
@@ -200,6 +192,8 @@ class AuthController extends GetxController {
     user.value = null;
     ApiService.clearToken();
     LocalStorageService.clearUser();
-    Get.offAllNamed(AppRoutes.login);
+    // Route through the splash so its animation plays on logout, then it lands
+    // the (now logged-out) worker on login.
+    Get.offAllNamed(AppRoutes.splash);
   }
 }

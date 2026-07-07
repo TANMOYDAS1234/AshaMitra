@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/services/language_controller.dart';
 import '../../../../app/routes.dart';
 import '../../../../features/auth/controller/auth_controller.dart';
 
@@ -47,7 +48,10 @@ class _SplashScreenState extends State<SplashScreen>
           ? AppRoutes.adminDashboard
           : AppRoutes.home);
     } else {
-      Get.offNamed(AppRoutes.language);
+      // Onboarded worker who's logged out → straight to login; a first-ever
+      // launch → language selection.
+      Get.offAllNamed(
+          LanguageController.hasChosen ? AppRoutes.login : AppRoutes.language);
     }
   }
 

@@ -37,4 +37,9 @@ class LanguageController extends GetxController {
 
   String get currentLabel => labels[selectedIndex.value];
   String get currentDisplayName => displayNames[selectedIndex.value];
+
+  /// True once the worker has explicitly picked a language — i.e. they've been
+  /// through onboarding at least once. Lets a logged-out returning worker skip
+  /// straight to login instead of re-doing language/welcome.
+  static bool get hasChosen => LocalStorageService.get(_key) != null;
 }
