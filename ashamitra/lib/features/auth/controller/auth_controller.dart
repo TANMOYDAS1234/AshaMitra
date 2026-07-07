@@ -43,9 +43,7 @@ class AuthController extends GetxController {
     // the user to login mid-animation — the session is already cleared, so the
     // splash's own routing will send them on once it finishes.
     if (splashActive || Get.currentRoute == AppRoutes.splash) return;
-    // Replay the splash on the way out so the animation shows on logout/expiry
-    // too; the splash routes to login once it finishes.
-    Get.offAllNamed(AppRoutes.splash);
+    Get.offAllNamed(AppRoutes.login);
   }
 
   bool restoreSession() {
@@ -192,8 +190,8 @@ class AuthController extends GetxController {
     user.value = null;
     ApiService.clearToken();
     LocalStorageService.clearUser();
-    // Route through the splash so its animation plays on logout, then it lands
-    // the (now logged-out) worker on login.
-    Get.offAllNamed(AppRoutes.splash);
+    // Straight to login — the splash is for *opening* the app, not for the
+    // in-session logout tap. (The resume observer replays it on the next open.)
+    Get.offAllNamed(AppRoutes.login);
   }
 }

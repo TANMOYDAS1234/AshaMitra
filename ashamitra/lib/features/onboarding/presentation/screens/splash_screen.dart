@@ -40,25 +40,17 @@ class _SplashScreenState extends State<SplashScreen> {
         ..setVolume(0)
         ..setLooping(false)
         ..play();
-      c.addListener(_watchEnd);
+      // Navigate a beat after the clip finishes — measured from when it starts
+      // playing (not from initState), so slow video-init on budget phones can't
+      // cut it short.
+      Timer(c.value.duration + const Duration(milliseconds: 500), _go);
       setState(() {});
     }).catchError((_) {
       // Video failed → show the still image and move on shortly.
       Timer(const Duration(milliseconds: 2800), _go);
     });
-    // Safety: never get stuck (just after the ~3.5s clip ends).
-    Timer(const Duration(milliseconds: 4500), _go);
-  }
-
-  void _watchEnd() {
-    final c = _ctrl;
-    if (c == null) return;
-    final v = c.value;
-    if (v.isInitialized &&
-        v.duration > Duration.zero &&
-        v.position >= v.duration - const Duration(milliseconds: 120)) {
-      _go();
-    }
+    // Absolute safety — only fires if the video never initialises at all.
+    Timer(const Duration(milliseconds: 9000), _go);
   }
 
   void _go() {
@@ -88,7 +80,6 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void dispose() {
     AuthController.splashActive = false;
-    _ctrl?.removeListener(_watchEnd);
     _ctrl?.dispose();
     super.dispose();
   }
