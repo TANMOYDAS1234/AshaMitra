@@ -83,8 +83,12 @@ class _VisitScreenState extends State<VisitScreen> {
         'visit_tb_night_sweats'.tr,
         'visit_tb_no_weight_gain'.tr,
       ];
-  // Danger-sign flags (ANC / newborn / young-child).
+  // Danger-sign flags. `_flags` = emergency (refer now / 108) — ANC, newborn and
+  // the HBYC emergency group. HBYC also has two non-emergency buckets so a supply
+  // gap or a pending vaccine no longer fires an ambulance referral:
   final Set<String> _flags = {};
+  final Set<String> _referFlags = {};   // HBYC: refer to PHC for evaluation
+  final Set<String> _routineFlags = {}; // HBYC: handle at home (give / schedule)
 
   List<String> get _ancDangerSigns => [
         'visit_anc_ds_swelling'.tr,
@@ -109,14 +113,20 @@ class _VisitScreenState extends State<VisitScreen> {
         'visit_nb_ds_umbilical_infection'.tr,
       ];
 
-  // HBYC young-child home-visit checklist (IIBYC card) — care + danger items.
-  List<String> get _hbycSigns => [
+  // HBYC young-child checklist (IIBYC card), split by clinical action so the
+  // decision matches severity instead of flagging everything as an emergency:
+  //   emergency → refer NOW (108)   ·   refer → PHC review   ·   routine → at home
+  List<String> get _hbycEmergency => [
         'visit_hbyc_sign_child_sick'.tr,
-        'visit_hbyc_sign_feeding_poor'.tr,
-        'visit_hbyc_sign_no_weight_gain'.tr,
-        'visit_hbyc_sign_vaccine_pending'.tr,
         'visit_hbyc_sign_diarrhea_pneumonia'.tr,
+      ];
+  List<String> get _hbycRefer => [
+        'visit_hbyc_sign_no_weight_gain'.tr,
+        'visit_hbyc_sign_feeding_poor'.tr,
         'visit_hbyc_sign_dev_delay'.tr,
+      ];
+  List<String> get _hbycRoutine => [
+        'visit_hbyc_sign_vaccine_pending'.tr,
         'visit_hbyc_sign_no_ors_iron'.tr,
       ];
 
@@ -353,6 +363,10 @@ class _VisitScreenState extends State<VisitScreen> {
       _aefiSevere ||
       _muacStatus == 'SAM' ||
       _autoAncFlags().isNotEmpty;
+
+  /// HBYC non-emergency referral (refer to PHC for review) — distinct from the
+  /// emergency 108 path above and from the routine "handle at home" ticks.
+  bool get _needsRefer => _referFlags.isNotEmpty;
 
   /// True when this ANC visit is being opened before its clinical window opens
   /// (the due date is the window start). ANC1 (registration) is exempt — earlier
@@ -706,9 +720,13 @@ class _VisitScreenState extends State<VisitScreen> {
         if (_pncPpd.isNotEmpty) 'depressionScreen': _pncPpd.toList(),
         if (_pncFlags.isNotEmpty) 'pncFlags': _pncFlags.toList(),
       },
-      // Manual ticks + measurement-derived ANC flags (deduped).
-      if ({..._flags, ..._autoAncFlags()}.isNotEmpty)
-        'dangerFlags': {..._flags, ..._autoAncFlags()}.toList(),
+      // Manual ticks + measurement-derived ANC flags (deduped). Emergency (108)
+      // and refer-to-PHC ticks both count as referral dangers; routine "handle at
+      // home" ticks are logged separately so they never flag the child as at-risk.
+      if ({..._flags, ..._referFlags, ..._autoAncFlags()}.isNotEmpty)
+        'dangerFlags':
+            {..._flags, ..._referFlags, ..._autoAncFlags()}.toList(),
+      if (_routineFlags.isNotEmpty) 'routineActions': _routineFlags.toList(),
       'completedAt': DateTime.now().toIso8601String(),
     };
     final ok = await ApiService.markScheduleEvent(_id, 'done', record: record);
@@ -895,6 +913,13 @@ class _VisitScreenState extends State<VisitScreen> {
                       if (_hasDanger) ...[
                         const SizedBox(height: 16),
                         _dangerBanner(),
+                      ] else if (_needsRefer) ...[
+                        const SizedBox(height: 16),
+                        _referBanner(),
+                      ],
+                      if (_routineFlags.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _routineNote(),
                       ],
                       const SizedBox(height: 28),
                       AppButton(
@@ -1567,7 +1592,13 @@ class _VisitScreenState extends State<VisitScreen> {
         }).toList(),
       ),
       const SizedBox(height: 18),
-      ..._flagBody('visit_check_child_care_danger'.tr, _hbycSigns),
+      ..._flagBody('visit_hbyc_group_emergency'.tr, _hbycEmergency),
+      const SizedBox(height: 14),
+      ..._flagBody('visit_hbyc_group_refer'.tr, _hbycRefer,
+          target: _referFlags, color: AppColors.warningYellow),
+      const SizedBox(height: 14),
+      ..._flagBody('visit_hbyc_group_routine'.tr, _hbycRoutine,
+          target: _routineFlags, color: AppColors.sky),
       const SizedBox(height: 12),
       // Quick link to the milestone screening for this age band — keeps
       // development on the young-child visit instead of a separate detour.
@@ -1707,6 +1738,61 @@ class _VisitScreenState extends State<VisitScreen> {
               'visit_danger_banner'.tr,
               style: AppTextStyles.label.copyWith(
                   color: AppColors.emergencyRed, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// HBYC non-emergency referral banner — refer to PHC for review (amber, not
+  /// the red 108 emergency).
+  Widget _referBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.warningYellow.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.warningYellow, width: 1),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.local_hospital_rounded,
+              color: AppColors.warningYellow),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'visit_refer_banner'.tr,
+              style: AppTextStyles.label.copyWith(
+                  color: const Color(0xFF92600A), fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// HBYC routine reminder — give ORS/iron, schedule the pending vaccine. Not a
+  /// danger, so it never triggers a referral.
+  Widget _routineNote() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.sky.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.sky.withValues(alpha: 0.45)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.inventory_2_rounded, color: AppColors.sky, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'visit_routine_note'.tr,
+              style: AppTextStyles.label.copyWith(
+                  color: AppColors.textSecondary, fontWeight: FontWeight.w600),
             ),
           ),
         ],
