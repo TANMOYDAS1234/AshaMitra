@@ -230,6 +230,30 @@ class McpReportPdf {
       'highRisk': md['highRisk'] == true,
       'highRiskReason': (md['highRiskReason'] ?? '').toString(),
       'idRows': idRows,
+      // ── Raw fields for the official MCP-card form layout ──────────────────
+      'isChild': isChild,
+      'motherName': isChild ? p.guardianName : p.name,
+      'motherAge': isChild
+          ? ''
+          : '${p.age} ${switch (p.ageUnit) { 'days' => 'দিন', 'months' => 'মাস', _ => 'বছর' }}',
+      'fatherName': m('fatherName'),
+      'address': (p.village.isNotEmpty && p.village != 'Unknown') ? p.village : '',
+      'motherMobile': isChild ? '' : p.mobile,
+      'fatherMobile': m('fatherMobile'),
+      'rchMother': m('rchId'),
+      'bankName': m('bankName'),
+      'ifsc': m('ifsc'),
+      'bankAccount': m('bankAccount'),
+      'gravida': m('gravida'),
+      'prevLive': m('prevLiveBirths'),
+      'lmp': p.lmp != null ? _fmt(p.lmp!.toIso8601String()) : '',
+      'edd': p.edd != null ? _fmt(p.edd!.toIso8601String()) : '',
+      'childName': isChild ? p.name : '',
+      'dob': p.dob != null ? _fmt(p.dob!.toIso8601String()) : '',
+      'genderBn': isChild ? genderBn : '',
+      'childRch': m('childRchId'),
+      'childAadhaar': m('childAadhaar'),
+      'motherAadhaar': m('motherAadhaar'),
       'anc': anc,
       'weightGain': weightGain,
       'pnc': pnc,
@@ -240,33 +264,127 @@ class McpReportPdf {
     };
   }
 
+  /// Faithful reproduction of the West Bengal "মা ও শিশুর সুরক্ষা কার্ড"
+  /// identity page (page 3 of the physical booklet), pre-filled with whatever
+  /// the app knows; every other field prints as a blank line to fill by hand.
+  static String _mcpCardForm(Map<String, dynamic> data) {
+    final e = PdfHtml.esc;
+    final h = ((data['header'] as Map?) ?? const {})
+        .map((k, v) => MapEntry(k.toString(), v.toString()));
+    String g(String k) => (data[k] ?? '').toString();
+
+    // A labelled fill-field; `grow` sets its flex weight in the row.
+    String f(String label, String value, {int grow = 3}) =>
+        '<span class="fl">${e(label)}</span>'
+        '<span class="fv" style="flex:$grow">${e(value)}</span>';
+    // A checkbox + label; ticked when [on].
+    String c(String label, {bool on = false}) =>
+        '<span class="ck"><i class="${on ? 'b on' : 'b'}"></i>${e(label)}</span>';
+    String row(String inner) => '<div class="frow">$inner</div>';
+    String sec(String t) => '<div class="msec">${e(t)}</div>';
+
+    final b = StringBuffer();
+    b.write('''
+<style>
+  .mcp { color:#14210f; }
+  .mcp .gov { text-align:center; border:1.4px solid #2f7d32; border-radius:6px;
+    padding:6px 10px; margin-bottom:6px; background:#f0f7f0; }
+  .mcp .gov b { color:#1b5e20; font-size:11.5px; line-height:1.55; }
+  .mcp .ctop { display:flex; justify-content:space-between; align-items:center;
+    margin:2px 0 4px; }
+  .mcp .ctop .t { font-size:15px; font-weight:800; color:#1b5e20; }
+  .mcp .ctop .hr { font-size:9.5px; font-weight:600; }
+  .mcp .gen { font-size:8.5px; color:#6b7280; text-align:right; margin-top:2px; }
+  .mcp .msec { font-size:11px; font-weight:800; color:#fff; background:#2f7d32;
+    padding:3px 9px; border-radius:4px; margin:9px 0 3px; }
+  .mcp .frow { display:flex; flex-wrap:wrap; align-items:flex-end; gap:2px 12px;
+    padding:2.5px 2px; font-size:10px; }
+  .mcp .fl { font-weight:700; white-space:nowrap; }
+  .mcp .fv { border-bottom:1px dotted #7d7d7d; min-width:55px; padding:0 4px 1px;
+    font-weight:600; color:#0b3d0b; }
+  .mcp .ck { white-space:nowrap; font-weight:600; }
+  .mcp .ck i.b { display:inline-block; width:11px; height:11px;
+    border:1.2px solid #333; margin:0 3px -1px 0; }
+  .mcp .ck i.b.on { background:#2f7d32; border-color:#2f7d32; }
+</style>
+<div class="mcp">
+  <div class="gov"><b>স্বাস্থ্য ও পরিবার কল্যাণ দপ্তর, পশ্চিমবঙ্গ সরকার<br>
+    নারী ও শিশু বিকাশ এবং সমাজ কল্যাণ দপ্তর, পশ্চিমবঙ্গ সরকার</b></div>
+  <div class="ctop">
+    <span class="t">মা ও শিশুর সুরক্ষা কার্ড</span>
+    <span class="hr">গর্ভবতী উচ্চ ঝুঁকিপূর্ণ&nbsp;&nbsp;''');
+    b.write(c('হ্যাঁ', on: data['highRisk'] == true));
+    b.write(c('না', on: data['highRisk'] != true));
+    b.write('</span></div>');
+    b.write('<div class="gen">তৈরি: ${e(g('generatedAt'))}</div>');
+
+    // ── পরিবারের পরিচয়পত্র ──
+    b.write(sec('পরিবারের পরিচয়পত্র'));
+    b.write(row(f('মায়ের নাম', g('motherName'), grow: 4) + f('বয়স', g('motherAge'), grow: 1)));
+    b.write(row(f('বাবার নাম', g('fatherName'), grow: 6)));
+    b.write(row(f('ঠিকানা', g('address'), grow: 6)));
+    b.write(row(f('মায়ের মোবাইল', g('motherMobile')) + f('বাবার মোবাইল', g('fatherMobile'))));
+    b.write(row(f('এম সি টি এস / আর সি এইচ / নিবন্ধন নং (মা)', g('rchMother'), grow: 6)));
+    b.write(row('<span class="fl">PMMVY জন্য যোগ্য</span>'
+        '${c('হ্যাঁ')}${c('না')}${f('ব্যাঙ্ক ও শাখা', g('bankName'), grow: 3)}'));
+    b.write(row(f('IFSC', g('ifsc')) + f('অ্যাকাউন্ট নং', g('bankAccount'))));
+
+    // ── গর্ভাবস্থার তথ্য ──
+    b.write(sec('গর্ভাবস্থার তথ্য'));
+    b.write(row(f('গর্ভসঞ্চার সংখ্যা', g('gravida'), grow: 1)
+        + f('পূর্ববর্তী জীবিত শিশু', g('prevLive'), grow: 1)
+        + f('সর্বশেষ প্রসবের স্থান', '', grow: 2)));
+    b.write(row(f('শেষ মাসিকের তারিখ (LMP)', g('lmp')) + f('সম্ভাব্য প্রসবের তারিখ (EDD)', g('edd'))));
+    b.write(row(f('নথিভুক্তকরণের তারিখ', '') + f('চিহ্নিত প্রসব কেন্দ্র', h['facility'] ?? '')));
+    b.write(row('<span class="fl">গর্ভাবস্থার ফলাফল</span>'
+        '${c('জীবিত শিশুর প্রসব')}${c('মৃত শিশুর প্রসব')}'));
+
+    // ── জন্মের রেকর্ড ──
+    b.write(sec('জন্মের রেকর্ড'));
+    b.write(row(f('বাচ্চার নাম', g('childName'), grow: 4) + f('জন্মের তারিখ', g('dob'), grow: 2)));
+    b.write(row('${f('জন্মের সময়', '', grow: 2)}<span class="fl">লিঙ্গ</span>'
+        '${c('ছেলে', on: g('genderBn') == 'ছেলে')}${c('মেয়ে', on: g('genderBn') == 'মেয়ে')}'));
+    b.write(row(f('বর্তমান প্রসবের স্থান', '', grow: 4) + f('জন্ম রেজিস্ট্রেশন নং', '', grow: 2)));
+    b.write(row(f('নিবন্ধন নং (শিশু)', g('childRch'), grow: 6)));
+
+    // ── প্রতিষ্ঠান সংক্রান্ত তথ্য ──
+    b.write(sec('প্রতিষ্ঠান সংক্রান্ত তথ্য'));
+    b.write(row(f('অঙ্গনওয়াড়ি কেন্দ্র', '') + f('LGD কোড', '', grow: 1)));
+    b.write(row(f('গ্রাম / শহর', g('address'), grow: 3) + f('ওয়ার্ড', '', grow: 1)
+        + f('ব্লক', h['block'] ?? '', grow: 2)));
+    b.write(row(f('পোস্ট অফিস', '') + f('পোস্টাল কোড', '', grow: 1)));
+    b.write(row(f('ASHA / HHW', h['asha'] ?? '') + f('ANM / FTS', '')));
+    b.write(row(f('PHC / UPHC', '') + f('BPHC', '')));
+    b.write(row(f('গ্রামীণ হাসপাতাল (RH)', '', grow: 2) + f('জেলা', h['district'] ?? '', grow: 1)
+        + f('উপস্বাস্থ্যকেন্দ্র', '', grow: 2)));
+    b.write(row(f('রেফারেল হাসপাতাল', '', grow: 3) + f('স্থায়ী পুষ্টি দিবস', '', grow: 2)));
+    b.write(row(f('শিশুর আধার নং', g('childAadhaar')) + f('মায়ের আধার নং', g('motherAadhaar'))));
+    b.write(row(f('ASHA মোবাইল', '') + f('ANM / FTS মোবাইল', '')));
+    b.write(row(f('অ্যাম্বুলেন্স টোল ফ্রি', '102 / 108', grow: 1)
+        + f('রেফারেল হাসপাতালের ফোন', '', grow: 2)));
+    b.write('</div>');
+    return b.toString();
+  }
+
   /// Builds the report body HTML from the prepared [data] map.
   static String _html(Map<String, dynamic> data) {
     List<List<String>> rows(dynamic src) => ((src as List?) ?? const [])
         .map((r) => (r as List).map((c) => c.toString()).toList())
         .toList();
-    final idRows = rows(data['idRows']);
     final anc = rows(data['anc']);
     final pnc = rows(data['pnc']);
     final vac = rows(data['vac']);
     final hbnc = rows(data['hbnc']);
     final hbyc = rows(data['hbyc']);
     final due = rows(data['due']);
-    final header = ((data['header'] as Map?) ?? const {})
-        .map((k, v) => MapEntry(k.toString(), v.toString()));
 
     final b = StringBuffer();
-    b.write(PdfHtml.reportHeader(
-      title: (data['title'] ?? '').toString(),
-      generatedAt: (data['generatedAt'] ?? '').toString(),
-      header: header,
-    ));
+    // Official MCP-card identity form (page-3 layout), pre-filled with app data.
+    b.write(_mcpCardForm(data));
     if (data['highRisk'] == true) {
       final reason = (data['highRiskReason'] ?? '').toString();
       b.write(PdfHtml.band('উচ্চ ঝুঁকি: ${reason.isNotEmpty ? reason : 'হ্যাঁ'}'));
     }
-    b.write(PdfHtml.section('পরিচয় ও গর্ভাবস্থার তথ্য'));
-    b.write(PdfHtml.kvGrid(idRows));
 
     if (anc.isNotEmpty) {
       b.write(PdfHtml.section('ANC ভিজিট (পরিমাপ)'));
