@@ -107,6 +107,8 @@ class McpReportPdf {
     final hbyc = <List<String>>[];
     final pnc = <List<String>>[];
     final due = <List<String>>[];
+    final immGiven = <int, String>{}; // schedule band index → date the dose was given
+    final aefiNotes = <String>[]; // adverse events following immunization
     for (final e in events) {
       if (e is! Map) continue;
       final kind = (e['kind'] ?? '').toString();
@@ -157,6 +159,25 @@ class McpReportPdf {
           ((rec['givenVaccines'] as List?)?.join(', ') ?? ''),
           status.join(' · '),
         ]);
+        // Place this dose on the schedule grid by the child's age at the visit.
+        final dd = DateTime.tryParse((e['dueDate'] ?? '').toString());
+        if (p.dob != null && dd != null) {
+          final ageDays = dd.difference(p.dob!).inDays;
+          var best = 0, bestDiff = 1 << 30;
+          for (var i = 0; i < _immSchedule.length; i++) {
+            final diff = (ageDays - (_immSchedule[i][2] as int)).abs();
+            if (diff < bestDiff) {
+              bestDiff = diff;
+              best = i;
+            }
+          }
+          immGiven[best] = _fmt(rec['completedAt'] ?? e['doneDate'] ?? e['dueDate']);
+        }
+        if (rec['aefiSevere'] == true) {
+          aefiNotes.add('$label — তীব্র AEFI');
+        } else if ((rec['aefi'] as List?)?.isNotEmpty ?? false) {
+          aefiNotes.add('$label — AEFI');
+        }
       } else if (kind == 'hbnc') {
         final parts = <String>[];
         final w = rec['babyWeight']?.toString() ?? '';
@@ -217,6 +238,19 @@ class McpReportPdf {
         ? 'মোট ওজন বৃদ্ধি: ${(ws.last - ws.first).toStringAsFixed(1)} কেজি (লক্ষ্য ৯–১১ কেজি)'
         : '';
 
+    // Immunization schedule + record grid — children only (the full national
+    // schedule, with the date each dose was actually given).
+    final imm = isChild
+        ? [
+            for (var i = 0; i < _immSchedule.length; i++)
+              [
+                _immSchedule[i][0] as String,
+                _immSchedule[i][1] as String,
+                immGiven[i] ?? '',
+              ]
+          ]
+        : <List<String>>[];
+
     return {
       'fileName': 'mcp_report_${p.name.replaceAll(RegExp(r"\s+"), "_")}.pdf',
       'generatedAt': _fmt(DateTime.now().toIso8601String()),
@@ -230,6 +264,8 @@ class McpReportPdf {
       'highRisk': md['highRisk'] == true,
       'highRiskReason': (md['highRiskReason'] ?? '').toString(),
       'idRows': idRows,
+      'imm': imm,
+      'aefiNote': aefiNotes.join(' · '),
       // ── Raw fields for the official MCP-card form layout ──────────────────
       'isChild': isChild,
       'motherName': isChild ? p.guardianName : p.name,
@@ -401,6 +437,43 @@ class McpReportPdf {
     return b.toString();
   }
 
+  // WB UIP immunization schedule — mirrors assets/data/asha_engine.json →
+  // immunization.schedule (WB NHM Safe Motherhood Book, pg 25–26).
+  // [ageBn, vaccinesBn, offsetDays-from-birth] (offset used only to match a
+  // completed visit to its band by the child's age; not clinical timing).
+  static const List<List<dynamic>> _immSchedule = [
+    ['জন্মের পরপরই', 'BCG · OPV-0 · হেপ B-0', 0],
+    ['৬ সপ্তাহ', 'পেন্টা-1 · OPV-1 · রোটা-1 · fIPV-1', 42],
+    ['১০ সপ্তাহ', 'পেন্টা-2 · OPV-2 · রোটা-2', 70],
+    ['১৪ সপ্তাহ', 'পেন্টা-3 · OPV-3 · রোটা-3 · fIPV-2', 98],
+    ['৯–১২ মাস', 'MR-1 · ভিটামিন A-1 · JE-1', 320],
+    ['১৬–২৪ মাস', 'DPT বুস্টার-1 · MR-2 · OPV বুস্টার · ভিট A-2 · JE-2', 600],
+    ['২–৫ বছর', 'ভিটামিন A (৩য়–৯ম ডোজ, ৬ মাস অন্তর)', 1095],
+    ['৫–৬ বছর', 'DPT বুস্টার-2', 2007],
+    ['১০ বছর', 'TD', 3652],
+    ['১৬ বছর', 'TD', 5844],
+  ];
+
+  /// Immunization schedule + record grid (MCP-card pg 25–26 / booklet pg 36–38):
+  /// the full national schedule down the rows, the date each dose was actually
+  /// given in the last column (blank box ▢ where still due). [rows] are
+  /// [ageBn, vaccinesBn, givenDate].
+  static String _immunizationGrid(List<List<String>> rows) {
+    const mh =
+        'style="background:#f3e8f9;font-weight:700;white-space:nowrap;text-align:left"';
+    final b = StringBuffer(
+        '<table><thead><tr><th $mh>বয়স</th><th style="text-align:left">নির্ধারিত টিকা</th>'
+        '<th style="white-space:nowrap">দেওয়া হয়েছে<br>(তারিখ)</th></tr></thead><tbody>');
+    for (final r in rows) {
+      final given = r.length > 2 ? r[2] : '';
+      b.write('<tr><td $mh>${PdfHtml.esc(r[0])}</td>'
+          '<td style="text-align:left">${PdfHtml.esc(r[1])}</td>'
+          '<td>${given.isEmpty ? '<span style="color:#c7c7c7">▢</span>' : PdfHtml.cell(given)}</td></tr>');
+    }
+    b.write('</tbody></table>');
+    return b.toString();
+  }
+
   /// Builds the report body HTML from the prepared [data] map.
   static String _html(Map<String, dynamic> data) {
     List<List<String>> rows(dynamic src) => ((src as List?) ?? const [])
@@ -409,6 +482,7 @@ class McpReportPdf {
     final anc = rows(data['anc']);
     final pnc = rows(data['pnc']);
     final vac = rows(data['vac']);
+    final imm = rows(data['imm']);
     final hbnc = rows(data['hbnc']);
     final hbyc = rows(data['hbyc']);
     final due = rows(data['due']);
@@ -432,7 +506,16 @@ class McpReportPdf {
       b.write(PdfHtml.table(const ['ভিজিট', 'তারিখ', 'পর্যবেক্ষণ'], pnc,
           weights: const [22, 18, 60]));
     }
-    if (vac.isNotEmpty) {
+    if (imm.isNotEmpty) {
+      // Child → the full national schedule as a grid, with doses given to date.
+      b.write(PdfHtml.section('টিকাকরণ সূচি ও রেকর্ড'));
+      b.write(_immunizationGrid(imm));
+      final aefi = (data['aefiNote'] ?? '').toString();
+      if (aefi.isNotEmpty) {
+        b.write('<div class="note">টিকা-পরবর্তী প্রতিক্রিয়া (AEFI): ${PdfHtml.esc(aefi)}</div>');
+      }
+    } else if (vac.isNotEmpty) {
+      // Mother → TT/Td doses as a simple record.
       b.write(PdfHtml.section('টিকাকরণ'));
       b.write(PdfHtml.table(const ['ভিজিট', 'তারিখ', 'যে টিকা দেওয়া হয়েছে', 'অবস্থা'], vac,
           weights: const [20, 16, 40, 24]));
@@ -452,7 +535,13 @@ class McpReportPdf {
       b.write(PdfHtml.table(const ['কাজ', 'ধরন', 'তারিখ', 'অবস্থা'], due,
           weights: const [40, 18, 22, 20]));
     }
-    if (anc.isEmpty && pnc.isEmpty && vac.isEmpty && hbnc.isEmpty && hbyc.isEmpty && due.isEmpty) {
+    if (anc.isEmpty &&
+        pnc.isEmpty &&
+        vac.isEmpty &&
+        imm.isEmpty &&
+        hbnc.isEmpty &&
+        hbyc.isEmpty &&
+        due.isEmpty) {
       b.write('<div class="foot">— এখনও কোনো ভিজিট/সূচি নেই —</div>');
     }
     b.write(PdfHtml.footer(
