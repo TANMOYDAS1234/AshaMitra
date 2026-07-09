@@ -96,7 +96,7 @@ class DueRegisterService {
     }
 
     return {
-      'title': 'মাসিক Due রেজিস্টার (কাজের তালিকা)',
+      'title': 'মাসিক Overdue রেজিস্টার (কাজের তালিকা)',
       'monthLabel': monthLabel,
       'generatedAt': _stamp(),
       'header': {...header, 'horizon': '$withinDays দিন'},
@@ -136,10 +136,10 @@ class DueRegisterService {
           ]);
         }
         return {
-          'title': 'ক. ANC Due তালিকা (${evs.length})',
+          'title': 'ক. ANC Overdue তালিকা (${evs.length})',
           'columns': const [
             '#', 'RCH/MCTS', 'নাম', 'স্বামী/পিতা', 'গ্রাম', 'বয়স',
-            'LMP', 'EDD', 'GA সপ্তাহ', 'G-P-L-A', 'ANC', 'Due', 'মোবাইল', 'ঝুঁকি',
+            'LMP', 'EDD', 'GA সপ্তাহ', 'G-P-L-A', 'ANC', 'Overdue', 'মোবাইল', 'ঝুঁকি',
           ],
           'rows': rows,
           'note': note ?? '',
@@ -176,10 +176,10 @@ class DueRegisterService {
             'টিকা প্রণোদনা (RI Form 6): পূর্ণ টিকাকরণে ₹১০০, সম্পূর্ণ টিকাকরণে ₹৫০। '
             'আনুমানিক সম্ভাব্য: ₹$est (পূর্ণ $full × ₹১০০ + সম্পূর্ণ $complete × ₹৫০)।';
         return {
-          'title': 'খ. টিকাকরণ Due তালিকা / RI ডিউ-লিস্ট (${evs.length})',
+          'title': 'খ. টিকাকরণ Overdue তালিকা / RI ডিউ-লিস্ট (${evs.length})',
           'columns': const [
             '#', 'RCH/MCTS', 'শিশুর নাম', 'মা', 'DOB', 'বয়স', 'লিঙ্গ',
-            'গ্রাম', 'প্রদেয় টিকা', 'Due', 'মোবাইল',
+            'গ্রাম', 'প্রদেয় টিকা', 'Overdue', 'মোবাইল',
           ],
           'rows': rows,
           'note': note,
@@ -201,9 +201,9 @@ class DueRegisterService {
           ]);
         }
         return {
-          'title': 'গ. নবজাতক গৃহ-পরিদর্শন (HBNC) Due (${evs.length})',
+          'title': 'গ. নবজাতক গৃহ-পরিদর্শন (HBNC) Overdue (${evs.length})',
           'columns': const [
-            '#', 'নবজাতক', 'মা', 'DOB', 'জন্ম ওজন', 'পরিদর্শন', 'Due', 'মোবাইল',
+            '#', 'নবজাতক', 'মা', 'DOB', 'জন্ম ওজন', 'পরিদর্শন', 'Overdue', 'মোবাইল',
           ],
           'rows': rows,
           'note': '',
@@ -226,9 +226,9 @@ class DueRegisterService {
           ]);
         }
         return {
-          'title': 'ঘ. শিশু যত্ন (HBYC) Due (${evs.length})',
+          'title': 'ঘ. শিশু যত্ন (HBYC) Overdue (${evs.length})',
           'columns': const [
-            '#', 'শিশুর নাম', 'মা', 'DOB', 'বয়স', 'পরিদর্শন', 'Due', 'মোবাইল',
+            '#', 'শিশুর নাম', 'মা', 'DOB', 'বয়স', 'পরিদর্শন', 'Overdue', 'মোবাইল',
           ],
           'rows': rows,
           'note': '',
@@ -313,7 +313,7 @@ class DueRegisterService {
           final v = _vitalsShort(e['record']);
           return [dd, v].where((s) => s.isNotEmpty).join('\n');
         }
-        return 'Due ${_d(_due(e))}';
+        return 'Overdue ${_d(_due(e))}';
       }
       var tt = 0;
       for (final e in anc) {
@@ -338,7 +338,7 @@ class DueRegisterService {
         'G-P-L-A', 'ঝুঁকি', 'ANC-১', 'ANC-২', 'ANC-৩', 'ANC-৪', 'TT',
       ],
       'rows': rows,
-      'note': 'প্রতিটি ANC ঘরে — সম্পন্ন হলে তারিখ + BP/ওজন/Hb; না হলে "Due <তারিখ>"। প্রসব ও PNC কলাম প্রসব-নথিভুক্তির পরে যুক্ত হবে।',
+      'note': 'প্রতিটি ANC ঘরে — সম্পন্ন হলে তারিখ + BP/ওজন/Hb; না হলে "Overdue <তারিখ>"। প্রসব ও PNC কলাম প্রসব-নথিভুক্তির পরে যুক্ত হবে।',
     };
   }
 
@@ -363,7 +363,7 @@ class DueRegisterService {
         for (final e in vac) {
           final w = _offsetWeeks(p.dob, e['dueDate']);
           if (w == null || w < lo || w > hi) continue;
-          return _isDone(e) ? _d(_doneOn(e)) : 'Due';
+          return _isDone(e) ? _d(_doneOn(e)) : 'Overdue';
         }
         return '';
       }
@@ -380,7 +380,7 @@ class DueRegisterService {
         'জন্ম-ডোজ', '৬ সপ্তাহ', '১০ সপ্তাহ', '১৪ সপ্তাহ', '৯ মাস', '১৬-২৪ মাস',
       ],
       'rows': rows,
-      'note': 'প্রতিটি মাইলফলক ঘরে — দেওয়া হলে তারিখ; বাকি থাকলে "Due"।',
+      'note': 'প্রতিটি মাইলফলক ঘরে — দেওয়া হলে তারিখ; বাকি থাকলে "Overdue"।',
     };
   }
 
@@ -514,7 +514,7 @@ class DueRegisterService {
     final sections = (data['sections'] as List?) ?? const [];
     final b = StringBuffer();
     b.write(PdfHtml.reportHeader(
-      title: (data['title'] ?? 'মাসিক Due রেজিস্টার').toString(),
+      title: (data['title'] ?? 'মাসিক Overdue রেজিস্টার').toString(),
       generatedAt: (data['generatedAt'] ?? '').toString(),
       header: {
         'asha': (header['asha'] ?? '').toString(),

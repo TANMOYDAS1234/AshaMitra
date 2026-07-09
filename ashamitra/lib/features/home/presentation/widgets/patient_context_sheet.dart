@@ -380,14 +380,14 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
     }
   }
 
-  /// Due-status line + a "মনে করান" (remind) action for a patient row.
+  /// Overdue-status line + a "মনে করান" (remind) action for a patient row.
   Widget _dueHint(PatientModel p) {
     if (!_dueLoaded) return const SizedBox.shrink();
     final e = _due[p.id];
     if (e == null) {
       return Padding(
         padding: const EdgeInsets.only(top: 3),
-        child: Text('কোনো Due চেকআপ নেই',
+        child: Text('কোনো Overdue চেকআপ নেই',
             style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
       );
     }
@@ -404,7 +404,7 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
     String two(int n) => n.toString().padLeft(2, '0');
     final label = (e['label'] ?? '').toString();
     final (String text, Color color) = toEnd < 0
-        ? ('${toEnd.abs()} দিন পার — Due', AppColors.emergencyRed) // window closed
+        ? ('${toEnd.abs()} দিন পার — Overdue', AppColors.emergencyRed) // window closed
         : days <= 0
             ? (toEnd == 0 ? 'আজ শেষ দিন' : 'এখন করুন · $toEnd দিন বাকি',
                 AppColors.primary) // in window

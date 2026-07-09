@@ -129,7 +129,7 @@ class McpReportPdf {
       if (status == 'pending') {
         final dd = DateTime.tryParse((e['dueDate'] ?? '').toString());
         final overdue = dd != null && dd.isBefore(DateTime.now());
-        due.add([label, _kindBn(kind), _fmt(e['dueDate']), overdue ? 'Due' : 'আসন্ন']);
+        due.add([label, _kindBn(kind), _fmt(e['dueDate']), overdue ? 'Overdue' : 'Upcoming']);
         continue;
       }
       if (status != 'done') continue;
@@ -531,7 +531,7 @@ class McpReportPdf {
           weights: const [22, 18, 60]));
     }
     if (due.isNotEmpty) {
-      b.write(PdfHtml.section('আসন্ন / Due (টিকা ও পরীক্ষা)'));
+      b.write(PdfHtml.section('Upcoming / Overdue (টিকা ও পরীক্ষা)'));
       b.write(PdfHtml.table(const ['কাজ', 'ধরন', 'তারিখ', 'অবস্থা'], due,
           weights: const [40, 18, 22, 20]));
     }

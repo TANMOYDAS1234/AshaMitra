@@ -44,7 +44,7 @@ class CheckupLauncher {
     if (pending.isEmpty) {
       Get.snackbar(
         'চেকআপ',
-        'এখন কোনো Due চেকআপ নেই — LMP/DOB থেকে সূচি তৈরি হয় (অথবা সব ভিজিট সম্পন্ন)।',
+        'এখন কোনো Overdue চেকআপ নেই — LMP/DOB থেকে সূচি তৈরি হয় (অথবা সব ভিজিট সম্পন্ন)।',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: AppColors.warningYellow,
         colorText: Colors.white,

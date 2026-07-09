@@ -22,7 +22,7 @@ class BengaliStyle {
     'সংরক্ষণ': 'সেভ', // save
     'পরিদর্শন': 'ভিজিট', // visit (also fixes "গৃহ পরিদর্শন")
     'রক্তচাপ': 'BP', // blood pressure
-    'বকেয়া': 'Due', // overdue / pending → the English word workers use
+    'বকেয়া': 'Overdue', // past-due status → precise English word
   };
 
   /// Hindi: same philosophy — the common English terms people actually use.
