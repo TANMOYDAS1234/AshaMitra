@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:get/get.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -26,11 +27,23 @@ class _DevelopmentScreenState extends State<DevelopmentScreen> {
   int _bandIdx = -1;
   final Set<int> _checked = {};
   bool _showResult = false;
+  int? _months; // child age (from the visit that opened this) → auto-select band
 
   @override
   void initState() {
     super.initState();
+    final a = Get.arguments;
+    if (a is Map && a['ageMonths'] is int) _months = a['ageMonths'] as int;
     _load();
+  }
+
+  /// Map an age in months to the milestone band (upper bounds 3/6/9/12/18/24/36+).
+  int _bandForAge(int months) {
+    const upper = [3, 6, 9, 12, 18, 24, 36];
+    for (var i = 0; i < upper.length && i < _bands.length; i++) {
+      if (months <= upper[i]) return i;
+    }
+    return _bands.length - 1;
   }
 
   Future<void> _load() async {
@@ -44,6 +57,8 @@ class _DevelopmentScreenState extends State<DevelopmentScreen> {
       if (yellow.isNotEmpty) {
         _referBn = (yellow.first['action_bn'] ?? _referBn).toString();
       }
+      // Opened from a child's visit → pre-select the band for the child's age.
+      if (_months != null && _bands.isNotEmpty) _bandIdx = _bandForAge(_months!);
     } catch (_) {
       _bands = [];
     }
@@ -104,6 +119,17 @@ class _DevelopmentScreenState extends State<DevelopmentScreen> {
                             if (_showResult) ...[
                               const SizedBox(height: 18),
                               _resultCard(),
+                              // Opened from a visit → let the worker carry the
+                              // finding back so it's saved on the checkup.
+                              if (_months != null) ...[
+                                const SizedBox(height: 14),
+                                AppButton(
+                                  label: 'এই ফলাফল চেকআপে যোগ করুন',
+                                  width: double.infinity,
+                                  onPressed: () =>
+                                      Get.back(result: _checked.isNotEmpty),
+                                ),
+                              ],
                             ],
                           ],
                         ),

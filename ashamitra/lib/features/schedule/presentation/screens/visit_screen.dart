@@ -17,6 +17,7 @@ import '../../../../shared/widgets/patient_photo.dart';
 import '../../../patients/controller/patient_controller.dart';
 import '../../../patients/data/models/patient_model.dart';
 import '../../services/reminder_service.dart';
+import '../../services/child_growth.dart';
 
 /// Unified "conduct visit" screen — one UI shell for every scheduled visit
 /// type (ANC, immunization, HBNC newborn home visit). The body adapts to the
@@ -42,6 +43,7 @@ class _VisitScreenState extends State<VisitScreen> {
   // Previous completed ANC for this patient → reference + trend comparison.
   Map<String, dynamic>? _prevAnc;
   String _prevAncDate = '';
+  double? _prevYcWeight; // last HBYC weight → growth-faltering comparison
 
   // Vaccine: which of the milestone's vaccines were given (default: all).
   final Set<String> _given = {};
@@ -175,6 +177,7 @@ class _VisitScreenState extends State<VisitScreen> {
     if (_kind == 'vaccine') _given.addAll(_vaccines);
     _loadDraft(); // resume a half-filled visit, if any
     if (_kind == 'anc') _loadPrevAnc(); // last ANC → reference + trends
+    if (_kind == 'hbyc') _loadPrevHbyc(); // last HBYC weight → growth faltering
   }
 
   /// Loads the patient's most recent *completed* ANC record so this visit can
@@ -227,6 +230,38 @@ class _VisitScreenState extends State<VisitScreen> {
         _syphilis.text = rec['syphilis'].toString();
       }
     });
+  }
+
+  /// Loads the most recent completed HBYC visit's weight so this visit can flag
+  /// growth faltering (no gain / weight loss) against it.
+  Future<void> _loadPrevHbyc() async {
+    final pid = _e['patientId']?.toString() ?? '';
+    if (pid.isEmpty) return;
+    List<dynamic> evs;
+    try {
+      evs = await ApiService.getScheduleForPatient(pid);
+    } catch (_) {
+      return;
+    }
+    final done = evs
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .where((e) =>
+            (e['kind']?.toString() == 'hbyc') &&
+            (e['status']?.toString() == 'done') &&
+            e['id']?.toString() != _id &&
+            e['record'] is Map)
+        .toList()
+      ..sort((a, b) => (b['dueDate']?.toString() ?? '')
+          .compareTo(a['dueDate']?.toString() ?? ''));
+    for (final ev in done) {
+      final w = double.tryParse(
+          ((ev['record'] as Map)['weight'] ?? '').toString().trim());
+      if (w != null && w > 0) {
+        if (mounted) setState(() => _prevYcWeight = w);
+        return;
+      }
+    }
   }
 
   /// Leading number from a free-text value ("10.4 g/dL" → 10.4, "120/80" → 120).
@@ -362,11 +397,17 @@ class _VisitScreenState extends State<VisitScreen> {
       _pncPpd.isNotEmpty ||
       _aefiSevere ||
       _muacStatus == 'SAM' ||
+      _wfa == 'severe' || // severely underweight for age → urgent referral
       _autoAncFlags().isNotEmpty;
 
   /// HBYC non-emergency referral (refer to PHC for review) — distinct from the
   /// emergency 108 path above and from the routine "handle at home" ticks.
-  bool get _needsRefer => _referFlags.isNotEmpty;
+  /// Also fires on underweight-for-age or growth faltering (weight loss / no gain).
+  bool get _needsRefer =>
+      _referFlags.isNotEmpty ||
+      _wfa == 'underweight' ||
+      _falter == 'loss' ||
+      _falter == 'no_gain';
 
   /// True when this ANC visit is being opened before its clinical window opens
   /// (the due date is the window start). ANC1 (registration) is exempt — earlier
@@ -401,6 +442,33 @@ class _VisitScreenState extends State<VisitScreen> {
     if (mm < 115) return 'SAM';
     if (mm < 125) return 'MAM';
     return 'normal';
+  }
+
+  /// Child age in whole months (from the linked patient's DOB).
+  int? get _childMonths => ChildGrowth.ageMonths(_patient()?.dob);
+
+  /// Weight-for-age band for the HBYC weight: severe / underweight / normal / ''.
+  String get _wfa => ChildGrowth.wfaStatus(double.tryParse(_ycWeight.text.trim()),
+      _childMonths, _patient()?.gender ?? '');
+
+  /// Growth faltering vs the previous HBYC weight: loss / no_gain / ok / ''.
+  String get _falter => ChildGrowth.faltering(
+      double.tryParse(_ycWeight.text.trim()), _prevYcWeight);
+
+  /// Growth findings recorded into dangerFlags (severe/underweight/faltering).
+  Set<String> _autoGrowthFlags() {
+    final s = <String>{};
+    if (_wfa == 'severe') {
+      s.add('গুরুতর কম ওজন (বয়স অনুযায়ী)');
+    } else if (_wfa == 'underweight') {
+      s.add('কম ওজন (বয়স অনুযায়ী)');
+    }
+    if (_falter == 'loss') {
+      s.add('ওজন কমেছে');
+    } else if (_falter == 'no_gain') {
+      s.add('ওজন বাড়েনি');
+    }
+    return s;
   }
 
   // ── Voice dictation (free-text fields) ──────────────────────────────────
@@ -708,6 +776,8 @@ class _VisitScreenState extends State<VisitScreen> {
         'weight': _ycWeight.text.trim(),
         'muac': _ycMuac.text.trim(),
         if (_muacStatus.isNotEmpty) 'muacStatus': _muacStatus,
+        if (_wfa.isNotEmpty) 'wfaStatus': _wfa,
+        if (_falter.isNotEmpty && _falter != 'ok') 'weightTrend': _falter,
         'servicesGiven': _hbycGiven.toList(),
       },
       if (_kind == 'pnc') ...{
@@ -723,9 +793,14 @@ class _VisitScreenState extends State<VisitScreen> {
       // Manual ticks + measurement-derived ANC flags (deduped). Emergency (108)
       // and refer-to-PHC ticks both count as referral dangers; routine "handle at
       // home" ticks are logged separately so they never flag the child as at-risk.
-      if ({..._flags, ..._referFlags, ..._autoAncFlags()}.isNotEmpty)
-        'dangerFlags':
-            {..._flags, ..._referFlags, ..._autoAncFlags()}.toList(),
+      if ({..._flags, ..._referFlags, ..._autoGrowthFlags(), ..._autoAncFlags()}
+          .isNotEmpty)
+        'dangerFlags': {
+          ..._flags,
+          ..._referFlags,
+          ..._autoGrowthFlags(),
+          ..._autoAncFlags()
+        }.toList(),
       if (_routineFlags.isNotEmpty) 'routineActions': _routineFlags.toList(),
       'completedAt': DateTime.now().toIso8601String(),
     };
@@ -1569,6 +1644,7 @@ class _VisitScreenState extends State<VisitScreen> {
         const SizedBox(height: 10),
         _muacBanner(status),
       ],
+      _growthBanner(),
       const SizedBox(height: 16),
       Text('visit_given_this_visit2'.tr, style: AppTextStyles.label),
       const SizedBox(height: 8),
@@ -1607,7 +1683,15 @@ class _VisitScreenState extends State<VisitScreen> {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => Get.toNamed(AppRoutes.development),
+          onTap: () async {
+            // Pass the child's age so the milestone screen pre-selects the band;
+            // if a delay is flagged there, carry it back onto this checkup.
+            final r = await Get.toNamed(AppRoutes.development,
+                arguments: {'ageMonths': _childMonths});
+            if (r == true && mounted) {
+              setState(() => _referFlags.add('visit_hbyc_sign_dev_delay'.tr));
+            }
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             child: Row(
@@ -1662,6 +1746,56 @@ class _VisitScreenState extends State<VisitScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Weight-for-age + growth-faltering banners for the HBYC visit.
+  Widget _growthBanner() {
+    final items = <(Color, IconData, String)>[];
+    switch (_wfa) {
+      case 'severe':
+        items.add((AppColors.emergencyRed, Icons.monitor_weight_rounded,
+            'গুরুতর কম ওজন (বয়স অনুযায়ী) — এখনই রেফার করুন'));
+      case 'underweight':
+        items.add((AppColors.warningYellow, Icons.monitor_weight_rounded,
+            'বয়স অনুযায়ী কম ওজন — পুষ্টি পরামর্শ ও ফলো-আপ করুন'));
+      case 'normal':
+        items.add((AppColors.safeGreen, Icons.monitor_weight_rounded,
+            'বয়স অনুযায়ী ওজন স্বাভাবিক'));
+    }
+    switch (_falter) {
+      case 'loss':
+        items.add((AppColors.emergencyRed, Icons.trending_down_rounded,
+            'গতবারের চেয়ে ওজন কমেছে — রেফার করুন'));
+      case 'no_gain':
+        items.add((AppColors.warningYellow, Icons.trending_flat_rounded,
+            'গতবার থেকে ওজন বাড়েনি — পুষ্টি পরামর্শ দিন'));
+    }
+    if (items.isEmpty) return const SizedBox.shrink();
+    return Column(
+      children: items
+          .map((it) => Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: it.$1.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: it.$1, width: 1),
+                  ),
+                  child: Row(children: [
+                    Icon(it.$2, color: it.$1, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(it.$3,
+                          style: AppTextStyles.label.copyWith(
+                              color: it.$1, fontWeight: FontWeight.w700)),
+                    ),
+                  ]),
+                ),
+              ))
+          .toList(),
     );
   }
 
