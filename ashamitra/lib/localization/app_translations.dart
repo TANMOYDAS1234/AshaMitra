@@ -1,6 +1,16 @@
 import 'package:get/get.dart';
+import '../core/utils/bengali_style.dart';
 
 class AppTranslations extends Translations {
+  // Every locale's strings, humanized once (formal → spoken + common English
+  // terms) via [BengaliStyle]. en is already plain, so it passes through.
+  static final Map<String, String> _enHuman =
+      BengaliStyle.humanizeMap(_en, 'en_US');
+  static final Map<String, String> _bnHuman =
+      BengaliStyle.humanizeMap(_bn, 'bn_BD');
+  static final Map<String, String> _hiHuman =
+      BengaliStyle.humanizeMap(_hi, 'hi_IN');
+
   static const _en = {
     // ── De-hardcode batch 2 (lists / nav / referral map) ──
     "search_patient_hint": "Search patient or village...",
@@ -1877,7 +1887,7 @@ class AppTranslations extends Translations {
     "attached_to_report": "এই রিপোর্টের সাথে যুক্ত",
     // ── Patient context sheet ─────────────────────────────────────
     "checkup_for_whom": "কার জন্য এই চেকআপ?",
-    "pick_existing_patient": "চলমান রোগী বেছে নিন",
+    "pick_existing_patient": "রোগী বেছে নিন",
     "pick_existing_patient_sub": "আগে থেকে যুক্ত রোগীদের তালিকা থেকে বেছে নিন",
     "add_new_patient_sheet": "নতুন রোগী যোগ করুন",
     "add_new_patient_sheet_sub": "এখনই নাম, গ্রাম, মোবাইল দিন — পরে চেকআপ শুরু হবে",
@@ -1895,7 +1905,7 @@ class AppTranslations extends Translations {
     "case_infant_title": "শিশু (১–১২ মাস)",
     "case_infant_sub": "শিশুর স্বাস্থ্য",
     "case_child_title": "শিশু (১–৫ বছর)",
-    "case_child_sub": "শিশু স্বাস্থ্য যাচাই",
+    "case_child_sub": "শিশু স্বাস্থ্য চেকআপ",
     "case_immunisation_title": "টিকা / ইমিউনাইজেশন",
     "case_immunisation_sub": "টিকা মিস যাচাই",
     "case_emergency_title": "জরুরি অবস্থা",
@@ -4729,8 +4739,8 @@ class AppTranslations extends Translations {
 
   @override
   Map<String, Map<String, String>> get keys => {
-        'en_US': _en,
-        'bn_BD': _bn,
-        'hi_IN': _hi,
+        'en_US': _enHuman,
+        'bn_BD': _bnHuman,
+        'hi_IN': _hiHuman,
       };
 }

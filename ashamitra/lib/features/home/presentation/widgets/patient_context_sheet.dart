@@ -408,7 +408,7 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
         : days <= 0
             ? (toEnd == 0 ? 'আজ শেষ দিন' : 'এখন করুন · $toEnd দিন বাকি',
                 AppColors.primary) // in window
-            : ('পরবর্তী: ${two(dd.day)}/${two(dd.month)} ($days দিন বাকি)',
+            : ('পরের: ${two(dd.day)}/${two(dd.month)} ($days দিন বাকি)',
                 AppColors.textSecondary); // upcoming
     final reminded = ReminderService.lastRemindedText(e);
     return Column(

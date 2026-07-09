@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../utils/logger.dart';
+import '../utils/bengali_style.dart';
 import 'local_storage_service.dart';
 
 class UnauthorizedException implements Exception {}
@@ -674,7 +675,7 @@ class ApiService {
       _guard(res.statusCode);
       if (res.statusCode != 200) return [];
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      return body['data'] as List? ?? [];
+      return BengaliStyle.humanizeEvents(body['data'] as List? ?? []);
     } catch (_) {
       return [];
     }
@@ -691,7 +692,7 @@ class ApiService {
       _guard(res.statusCode);
       if (res.statusCode != 200) return [];
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      return body['data'] as List? ?? [];
+      return BengaliStyle.humanizeEvents(body['data'] as List? ?? []);
     } catch (_) {
       return [];
     }
@@ -706,7 +707,7 @@ class ApiService {
       _guard(res.statusCode);
       if (res.statusCode != 200) return [];
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      return body['data'] as List? ?? [];
+      return BengaliStyle.humanizeEvents(body['data'] as List? ?? []);
     } catch (_) {
       return [];
     }
