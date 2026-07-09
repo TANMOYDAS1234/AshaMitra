@@ -366,6 +366,41 @@ class McpReportPdf {
     return b.toString();
   }
 
+  static const _ord = ['১ম', '২য়', '৩য়', '৪র্থ', '৫ম', '৬ষ্ঠ', '৭ম', '৮ম'];
+
+  /// ANC exam grid in the MCP-card page-5 layout: measurements down the rows,
+  /// each visit a column. [anc] rows are
+  /// [label, date, weight, bp, hb, urine, fundal, given, flags].
+  static String _ancExamGrid(List<List<String>> anc) {
+    const mh =
+        'style="background:#f3e8f9;font-weight:700;text-align:left;white-space:nowrap"';
+    final measures = <List<dynamic>>[
+      ['তারিখ', 1],
+      ['ওজন (কেজি)', 2],
+      ['রক্তচাপ', 3],
+      ['Hb (গ্রাম)', 4],
+      ['মূত্র (অ্যাল./সুগার)', 5],
+      ['জরায়ুর উচ্চতা', 6],
+      ['দেওয়া হয়েছে', 7],
+      ['বিপদচিহ্ন / TB', 8],
+    ];
+    final b = StringBuffer('<table><thead><tr><th $mh>গর্ভকালীন পরীক্ষা</th>');
+    for (var i = 0; i < anc.length; i++) {
+      b.write('<th>${PdfHtml.esc(i < _ord.length ? _ord[i] : '${i + 1}')}</th>');
+    }
+    b.write('</tr></thead><tbody>');
+    for (final m in measures) {
+      final idx = m[1] as int;
+      b.write('<tr><td $mh>${PdfHtml.esc(m[0] as String)}</td>');
+      for (final r in anc) {
+        b.write('<td>${PdfHtml.cell(idx < r.length ? r[idx] : '')}</td>');
+      }
+      b.write('</tr>');
+    }
+    b.write('</tbody></table>');
+    return b.toString();
+  }
+
   /// Builds the report body HTML from the prepared [data] map.
   static String _html(Map<String, dynamic> data) {
     List<List<String>> rows(dynamic src) => ((src as List?) ?? const [])
@@ -387,12 +422,8 @@ class McpReportPdf {
     }
 
     if (anc.isNotEmpty) {
-      b.write(PdfHtml.section('ANC ভিজিট (পরিমাপ)'));
-      b.write(PdfHtml.table(
-        const ['ভিজিট', 'তারিখ', 'ওজন', 'BP', 'Hb', 'মূত্র(A/S)', 'জরায়ু', 'দেওয়া হয়েছে', 'বিপদ/TB'],
-        anc,
-        weights: const [14, 12, 7, 9, 7, 9, 8, 18, 16],
-      ));
+      b.write(PdfHtml.section('গর্ভকালীন পরীক্ষা (ANC)'));
+      b.write(_ancExamGrid(anc));
       final wg = (data['weightGain'] ?? '').toString();
       if (wg.isNotEmpty) b.write('<div class="note">${PdfHtml.esc(wg)}</div>');
     }
