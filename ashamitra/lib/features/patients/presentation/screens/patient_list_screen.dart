@@ -449,7 +449,7 @@ class _PatientListScreenState extends State<PatientListScreen> {
     return s.isNotEmpty ? s : null;
   }
 
-  // "বকেয়া ANC ৩" / "বকেয়া টিকা" etc. from the due event.
+  // "Due ANC ৩" / "Due টিকা" etc. from the due event.
   String _dueBadge(Map<String, dynamic> e) {
     final kind = (e['kind'] ?? '').toString();
     final code = (e['code'] ?? '').toString();

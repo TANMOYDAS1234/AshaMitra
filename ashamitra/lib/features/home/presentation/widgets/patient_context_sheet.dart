@@ -387,7 +387,7 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
     if (e == null) {
       return Padding(
         padding: const EdgeInsets.only(top: 3),
-        child: Text('কোনো বকেয়া চেকআপ নেই',
+        child: Text('কোনো Due চেকআপ নেই',
             style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
       );
     }
@@ -404,7 +404,7 @@ class _ExistingPatientPickerState extends State<_ExistingPatientPicker> {
     String two(int n) => n.toString().padLeft(2, '0');
     final label = (e['label'] ?? '').toString();
     final (String text, Color color) = toEnd < 0
-        ? ('${toEnd.abs()} দিন পার — বকেয়া', AppColors.emergencyRed) // window closed
+        ? ('${toEnd.abs()} দিন পার — Due', AppColors.emergencyRed) // window closed
         : days <= 0
             ? (toEnd == 0 ? 'আজ শেষ দিন' : 'এখন করুন · $toEnd দিন বাকি',
                 AppColors.primary) // in window
