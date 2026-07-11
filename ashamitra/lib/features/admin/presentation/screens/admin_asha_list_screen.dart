@@ -8,6 +8,7 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../admin/controller/admin_controller.dart';
+import '../../../auth/controller/auth_controller.dart';
 import '../../../../features/auth/data/models/user_model.dart';
 
 class AdminAshaListScreen extends StatelessWidget {
@@ -16,6 +17,8 @@ class AdminAshaListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ctrl = Get.find<AdminController>();
+    // The level this supervisor manages one step below (ASHA / ANM / BMHO).
+    final child = Get.find<AuthController>().user.value?.manages ?? 'ASHA';
 
     // Always reload fresh data from Atlas when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) => ctrl.loadAshaWorkers());
@@ -26,12 +29,12 @@ class AdminAshaListScreen extends StatelessWidget {
           child: Column(
             children: [
               AppHeader(
-                title: 'admin_asha_list'.tr,
+                title: '$child তালিকা',
                 actions: [
                   HeaderActionCircle(
                     icon: Icons.person_add_alt_1_rounded,
                     onTap: () => Get.toNamed(AppRoutes.adminAddAsha),
-                    tooltip: 'Add ASHA',
+                    tooltip: 'নতুন $child',
                   ),
                 ],
               ),

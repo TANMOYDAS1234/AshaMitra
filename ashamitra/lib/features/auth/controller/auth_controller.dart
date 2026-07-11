@@ -123,7 +123,9 @@ class AuthController extends GetxController {
         // Reload persisted data for this session
         Get.find<PatientController>().reloadFromStorage();
         Get.find<PatientController>().syncFromServer();
-        if (u.isAdmin) {
+        // Any supervisor level (ANM / BMHO / CMHO) lands on the management panel;
+        // ASHA workers go to their home. The panel adapts to the role.
+        if (u.isSupervisor) {
           Get.offAllNamed(AppRoutes.adminDashboard);
         } else {
           Get.offAllNamed(AppRoutes.home);

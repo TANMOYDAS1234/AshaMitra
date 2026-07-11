@@ -63,8 +63,8 @@ class AdminDashboardScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'admin_panel'.tr,
+                          Obx(() => Text(
+                            '${auth.user.value?.roleShort ?? 'ANM'} প্যানেল',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -73,7 +73,7 @@ class AdminDashboardScreen extends StatelessWidget {
                               letterSpacing: -0.5,
                               color: AppColors.onBackground,
                             ),
-                          ),
+                          )),
                           const SizedBox(height: 2),
                           Obx(() => Text(
                                 auth.user.value?.name ?? 'Admin',

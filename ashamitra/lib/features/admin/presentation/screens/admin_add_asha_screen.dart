@@ -7,6 +7,7 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../admin/controller/admin_controller.dart';
+import '../../../auth/controller/auth_controller.dart';
 
 class AdminAddAshaScreen extends StatefulWidget {
   const AdminAddAshaScreen({super.key});
@@ -75,13 +76,14 @@ class _AdminAddAshaScreenState extends State<AdminAddAshaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final child = Get.find<AuthController>().user.value?.manages ?? 'ASHA';
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(gradient: AppGradients.background),
         child: SafeArea(
           child: Column(
             children: [
-              AppHeader(title: 'admin_add_asha'.tr),
+              AppHeader(title: 'নতুন $child যোগ করুন'),
 
               // ── Form Area ────────────────────────────────────────
               Expanded(
