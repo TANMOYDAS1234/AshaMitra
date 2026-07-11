@@ -838,6 +838,16 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  /// Direct reports of a specific member of my subtree (drill-down the tree).
+  static Future<Map<String, dynamic>> getWorkerTeam(String id) async {
+    final res = await http.get(
+      Uri.parse('$baseUrl/admin/workers/$id/team'),
+      headers: _headers,
+    ).timeout(const Duration(seconds: 15));
+    _guard(res.statusCode);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   static Future<Map<String, dynamic>> getWorkerReports(String id) async {
     final res = await http.get(
       Uri.parse('$baseUrl/admin/workers/$id/reports'),

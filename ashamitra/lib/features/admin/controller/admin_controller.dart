@@ -120,6 +120,20 @@ class AdminController extends GetxController {
     return null;
   }
 
+  /// Direct reports of a member of my subtree — drills one level down the tree
+  /// (BMHO taps an ANM → her ASHAs; CMHO taps a BMHO → his ANMs).
+  Future<List<UserModel>> getWorkerTeam(String workerId) async {
+    try {
+      final res = await ApiService.getWorkerTeam(workerId);
+      if (res['success'] == true) {
+        return (res['data'] as List)
+            .map((d) => UserModel.fromJson(d as Map<String, dynamic>))
+            .toList();
+      }
+    } on UnauthorizedException { _handleUnauth(); } catch (_) {}
+    return [];
+  }
+
   // ── ASHA Workers ───────────────────────────────────────────────
 
   /// Populates [deletedReports] from the admin audit endpoint. Each row

@@ -8,6 +8,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../features/auth/data/models/user_model.dart';
 import '../../../../shared/widgets/user_avatar.dart';
 import '../../../admin/controller/admin_controller.dart';
+import '../../../auth/controller/auth_controller.dart';
 import '../../../../app/routes.dart';
 import 'admin_report_detail.dart';
 
@@ -27,6 +28,8 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
   @override
   Widget build(BuildContext context) {
     final ctrl = Get.find<AdminController>();
+    // The level this supervisor manages (ASHA for an ANM, ANM for a BMHO, …).
+    final child = Get.find<AuthController>().user.value?.manages ?? 'ASHA';
 
     return Container(
       decoration: const BoxDecoration(gradient: AppGradients.background),
@@ -39,7 +42,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('admin_asha_workers'.tr, style: AppTextStyles.h2),
+                    child: Text('আমার $child', style: AppTextStyles.h2),
                   ),
                   IconButton(
                     onPressed: () => _showAddSheet(context, ctrl),
@@ -49,7 +52,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                     ),
                     icon: const Icon(Icons.person_add_alt_1_rounded,
                         color: AppColors.onPrimary, size: 20),
-                    tooltip: 'admin_add_asha_tooltip'.tr,
+                    tooltip: 'নতুন $child',
                   ),
                 ],
               ),
@@ -73,12 +76,13 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                             color: AppColors.textSecondary
                                 .withValues(alpha: 0.4)),
                         const SizedBox(height: 16),
-                        Text('admin_no_asha'.tr, style: AppTextStyles.labelLg),
+                        Text('এখনও কোনো $child যোগ করা হয়নি',
+                            style: AppTextStyles.labelLg),
                         const SizedBox(height: 12),
                         ElevatedButton.icon(
                           onPressed: () => _showAddSheet(context, ctrl),
                           icon: const Icon(Icons.add_rounded, size: 18),
-                          label: Text('admin_add_asha'.tr),
+                          label: Text('নতুন $child যোগ করুন'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.onPrimary,
@@ -101,8 +105,16 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                     itemBuilder: (_, i) => _WorkerCard(
                       worker: ctrl.ashaWorkers[i],
                       ctrl: ctrl,
-                      onTap: () =>
-                          _showWorkerDetail(context, ctrl.ashaWorkers[i], ctrl),
+                      onTap: () {
+                        final w = ctrl.ashaWorkers[i];
+                        // A sub-supervisor (ANM/BMHO) → drill into their team;
+                        // an ASHA leaf → show her patients & reports.
+                        if (w.manages.isNotEmpty) {
+                          _showTeamSheet(context, w, ctrl);
+                        } else {
+                          _showWorkerDetail(context, w, ctrl);
+                        }
+                      },
                     ),
                   ),
                 );
@@ -116,6 +128,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
 
   // ── Add ASHA bottom sheet ──────────────────────────────────────────
   void _showAddSheet(BuildContext context, AdminController ctrl) {
+    final child = Get.find<AuthController>().user.value?.manages ?? 'ASHA';
     final formKey = GlobalKey<FormState>();
     final phone = TextEditingController();
     final name = TextEditingController();
@@ -152,7 +165,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text('admin_add_asha'.tr, style: AppTextStyles.h3),
+                Text('নতুন $child যোগ করুন', style: AppTextStyles.h3),
                 const SizedBox(height: 20),
                 _formField(name, 'admin_full_name'.tr, Icons.person_rounded,
                     validator: (v) => (v == null || v.trim().isEmpty)
@@ -397,6 +410,109 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                     ),
                   ),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Team drill-down sheet (a sub-supervisor's direct reports) ──────────────
+  // Recurses down the tree: tapping a member who is themselves a supervisor
+  // opens their team; an ASHA leaf opens her patients & reports.
+  void _showTeamSheet(
+      BuildContext context, UserModel node, AdminController ctrl) async {
+    final team = await ctrl.getWorkerTeam(node.id);
+    if (!context.mounted) return;
+    final childLabel = node.manages; // what THIS node manages, e.g. 'ASHA'
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        builder: (sheetCtx, scrollCtrl) => Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.xxl)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 8),
+                child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2))),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle),
+                      child: UserAvatar(
+                          user: node,
+                          size: 46,
+                          backgroundColor:
+                              AppColors.primary.withValues(alpha: 0.1),
+                          textColor: AppColors.primary),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(node.name, style: AppTextStyles.h3),
+                          Text('${node.roleShort} · ${team.length} $childLabel',
+                              style: AppTextStyles.caption),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: team.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 32),
+                          child: Text('এখনও কোনো $childLabel যোগ করা হয়নি',
+                              style: AppTextStyles.body
+                                  .copyWith(color: AppColors.textSecondary)),
+                        ),
+                      )
+                    : ListView.separated(
+                        controller: scrollCtrl,
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                        itemCount: team.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (_, i) => _WorkerCard(
+                          worker: team[i],
+                          ctrl: ctrl,
+                          onTap: () {
+                            final m = team[i];
+                            Navigator.of(sheetCtx).pop();
+                            if (m.manages.isNotEmpty) {
+                              _showTeamSheet(context, m, ctrl);
+                            } else {
+                              _showWorkerDetail(context, m, ctrl);
+                            }
+                          },
+                        ),
+                      ),
               ),
             ],
           ),
