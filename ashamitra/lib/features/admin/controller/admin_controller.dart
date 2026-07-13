@@ -327,6 +327,59 @@ class AdminController extends GetxController {
     }
   }
 
+  // ── Team search ────────────────────────────────────────────────────────
+  final workerQuery = ''.obs;
+
+  /// Direct reports narrowed by the search box (name / phone / block / district).
+  List<UserModel> get visibleWorkers {
+    final q = workerQuery.value.trim().toLowerCase();
+    if (q.isEmpty) return ashaWorkers;
+    return ashaWorkers
+        .where((w) =>
+            w.name.toLowerCase().contains(q) ||
+            w.phone.contains(q) ||
+            w.block.toLowerCase().contains(q) ||
+            w.district.toLowerCase().contains(q))
+        .toList();
+  }
+
+  // ── Bulk actions ───────────────────────────────────────────────────────
+  final selectedWorkers = <String>{}.obs;
+
+  void toggleSelect(String id) {
+    if (selectedWorkers.contains(id)) {
+      selectedWorkers.remove(id);
+    } else {
+      selectedWorkers.add(id);
+    }
+  }
+
+  void clearSelection() => selectedWorkers.clear();
+
+  /// Activate/deactivate every selected member in one pass. Returns how many
+  /// succeeded so the UI can report honestly on partial failure.
+  Future<int> bulkSetActive(bool active) async {
+    final ids = selectedWorkers.toList();
+    var ok = 0;
+    isLoading.value = true;
+    try {
+      for (final id in ids) {
+        try {
+          final res = active
+              ? await ApiService.activateWorker(id)
+              : await ApiService.deactivateWorker(id);
+          if (res['success'] == true) ok++;
+        } catch (_) {/* keep going — report the partial count */}
+      }
+    } finally {
+      isLoading.value = false;
+    }
+    clearSelection();
+    await loadAshaWorkers();
+    await loadStats();
+    return ok;
+  }
+
   // ── Analytics ──────────────────────────────────────────────────────────
   // Derived from the reports already loaded for this panel — which the server
   // has scoped to the supervisor's own subtree — so a CMHO's curve is their

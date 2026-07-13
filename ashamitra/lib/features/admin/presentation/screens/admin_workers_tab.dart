@@ -58,6 +58,76 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
               ),
             ),
 
+            // ── Search ──────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+              child: TextField(
+                onChanged: (v) => ctrl.workerQuery.value = v,
+                style: AppTextStyles.body,
+                decoration: InputDecoration(
+                  hintText: '$child খুঁজুন — নাম, মোবাইল বা গ্রাম',
+                  hintStyle: AppTextStyles.caption,
+                  prefixIcon: const Icon(Icons.search_rounded,
+                      color: AppColors.primary, size: 20),
+                  isDense: true,
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(
+                      borderRadius: AppRadius.mdR, borderSide: BorderSide.none),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: AppRadius.mdR,
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: AppRadius.mdR,
+                      borderSide: const BorderSide(
+                          color: AppColors.primary, width: 1.5)),
+                ),
+              ),
+            ),
+
+            // ── Bulk action bar (appears once anything is selected) ──────
+            Obx(() {
+              final n = ctrl.selectedWorkers.length;
+              if (n == 0) return const SizedBox.shrink();
+              return Container(
+                margin: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.08),
+                  borderRadius: AppRadius.mdR,
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text('$n জন বাছাই করা হয়েছে',
+                          style: AppTextStyles.label
+                              .copyWith(color: AppColors.primary)),
+                    ),
+                    TextButton(
+                      onPressed: () => _runBulk(context, ctrl, true),
+                      child: Text('সক্রিয়',
+                          style: AppTextStyles.label
+                              .copyWith(color: AppColors.safeGreen)),
+                    ),
+                    TextButton(
+                      onPressed: () => _runBulk(context, ctrl, false),
+                      child: Text('নিষ্ক্রিয়',
+                          style: AppTextStyles.label
+                              .copyWith(color: AppColors.emergencyRed)),
+                    ),
+                    IconButton(
+                      onPressed: ctrl.clearSelection,
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      color: AppColors.textSecondary,
+                      tooltip: 'বাতিল',
+                    ),
+                  ],
+                ),
+              );
+            }),
+
             // ── List ────────────────────────────────────────────
             Expanded(
               child: Obx(() {
@@ -94,28 +164,44 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                     ),
                   );
                 }
+                final list = ctrl.visibleWorkers;
+                if (list.isEmpty) {
+                  return Center(
+                    child: Text('"${ctrl.workerQuery.value}" — কিছু পাওয়া যায়নি',
+                        style: AppTextStyles.bodySm),
+                  );
+                }
                 return RefreshIndicator(
                   color: AppColors.primary,
                   onRefresh: ctrl.loadAshaWorkers,
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                    itemCount: ctrl.ashaWorkers.length,
+                    itemCount: list.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (_, i) => _WorkerCard(
-                      worker: ctrl.ashaWorkers[i],
-                      ctrl: ctrl,
-                      onTap: () {
-                        final w = ctrl.ashaWorkers[i];
-                        // A sub-supervisor (ANM/BMHO) → drill into their team;
-                        // an ASHA leaf → show her patients & reports.
-                        if (w.manages.isNotEmpty) {
-                          _showTeamSheet(context, w, ctrl);
-                        } else {
-                          _showWorkerDetail(context, w, ctrl);
-                        }
-                      },
-                    ),
+                    itemBuilder: (_, i) {
+                      final w = list[i];
+                      final selecting = ctrl.selectedWorkers.isNotEmpty;
+                      return _WorkerCard(
+                        worker: w,
+                        ctrl: ctrl,
+                        selected: ctrl.selectedWorkers.contains(w.id),
+                        onLongPress: () => ctrl.toggleSelect(w.id),
+                        onTap: () {
+                          // Once a selection is running, a tap toggles rather
+                          // than navigating — standard multi-select behaviour.
+                          if (selecting) {
+                            ctrl.toggleSelect(w.id);
+                          } else if (w.manages.isNotEmpty) {
+                            // Sub-supervisor → drill into their team.
+                            _showTeamSheet(context, w, ctrl);
+                          } else {
+                            // ASHA leaf → her patients & reports.
+                            _showWorkerDetail(context, w, ctrl);
+                          }
+                        },
+                      );
+                    },
                   ),
                 );
               }),
@@ -418,6 +504,28 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
     );
   }
 
+  // ── Bulk activate / deactivate the current selection ──────────────────────
+  // Reports the honest count (ok/total) — a partial failure must not read as
+  // a clean success when someone's account was left untouched.
+  Future<void> _runBulk(
+      BuildContext context, AdminController ctrl, bool active) async {
+    final n = ctrl.selectedWorkers.length;
+    final ok = await ctrl.bulkSetActive(active);
+    if (!context.mounted) return;
+    final allGood = ok == n;
+    Get.snackbar(
+      active ? 'সক্রিয় করা হয়েছে' : 'নিষ্ক্রিয় করা হয়েছে',
+      allGood ? '$ok জন সম্পন্ন' : '$n জনের মধ্যে $ok জন সম্পন্ন',
+      backgroundColor: allGood
+          ? (active ? AppColors.safeGreen : AppColors.emergencyRed)
+          : AppColors.warningYellow,
+      colorText: AppColors.onPrimary,
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
+  }
+
   // ── Team drill-down sheet (a sub-supervisor's direct reports) ──────────────
   // Recurses down the tree: tapping a member who is themselves a supervisor
   // opens their team; an ASHA leaf opens her patients & reports.
@@ -565,9 +673,16 @@ class _WorkerCard extends StatelessWidget {
   final UserModel worker;
   final AdminController ctrl;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress; // long-press starts multi-select
+  final bool selected;
 
-  const _WorkerCard(
-      {required this.worker, required this.ctrl, required this.onTap});
+  const _WorkerCard({
+    required this.worker,
+    required this.ctrl,
+    required this.onTap,
+    this.onLongPress,
+    this.selected = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -579,28 +694,52 @@ class _WorkerCard extends StatelessWidget {
       borderRadius: AppRadius.xlR,
       child: InkWell(
         onTap: onTap,
+        onLongPress: onLongPress,
         borderRadius: AppRadius.xlR,
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: selected
+                ? AppColors.primary.withValues(alpha: 0.06)
+                : AppColors.surface,
             borderRadius: AppRadius.xlR,
             boxShadow: AppShadows.low,
+            border: selected
+                ? Border.all(color: AppColors.primary, width: 1.5)
+                : null,
           ),
           child: Row(
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.08),
-                    shape: BoxShape.circle),
-                child: UserAvatar(
-                  user: worker,
-                  size: 46,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.08),
-                  textColor: AppColors.primary,
-                ),
+              Stack(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.08),
+                        shape: BoxShape.circle),
+                    child: UserAvatar(
+                      user: worker,
+                      size: 46,
+                      backgroundColor:
+                          AppColors.primary.withValues(alpha: 0.08),
+                      textColor: AppColors.primary,
+                    ),
+                  ),
+                  if (selected)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: const BoxDecoration(
+                            color: AppColors.primary, shape: BoxShape.circle),
+                        child: const Icon(Icons.check_rounded,
+                            size: 12, color: AppColors.onPrimary),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(width: 14),
               Expanded(
