@@ -10,6 +10,8 @@ import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/pdf_helper.dart';
 import '../../../admin/controller/admin_controller.dart';
+import '../../../../shared/widgets/skeleton.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import 'admin_deleted_reports_screen.dart';
 import 'admin_report_detail.dart';
 
@@ -192,23 +194,17 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
             Expanded(
               child: Obx(() {
                 if (ctrl.isLoading.value) {
-                  return const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.primary, strokeWidth: 3));
+                  return SkeletonList(
+                    count: 5,
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                    builder: (_) => const SkeletonReportCard(),
+                  );
                 }
                 if (ctrl.filteredReports.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.bar_chart_outlined,
-                            size: 64,
-                            color: AppColors.textSecondary
-                                .withValues(alpha: 0.4)),
-                        const SizedBox(height: 12),
-                        Text('admin_no_reports'.tr, style: AppTextStyles.bodySm),
-                      ],
-                    ),
+                  return EmptyState(
+                    icon: Icons.bar_chart_outlined,
+                    title: 'admin_no_reports'.tr,
+                    subtitle: 'ফিল্টার বদলান, বা নতুন চেকআপের অপেক্ষা করুন',
                   );
                 }
                 return RefreshIndicator(

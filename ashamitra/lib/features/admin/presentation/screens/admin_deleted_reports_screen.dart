@@ -7,6 +7,8 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../admin/controller/admin_controller.dart';
+import '../../../../shared/widgets/skeleton.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import 'admin_report_detail.dart';
 
 /// Admin audit view of every soft-deleted report. The list is loaded on
@@ -47,23 +49,17 @@ class _AdminDeletedReportsScreenState extends State<AdminDeletedReportsScreen> {
         child: SafeArea(
           child: Obx(() {
             if (ctrl.isLoadingDeleted.value) {
-              return const Center(
-                child: CircularProgressIndicator(
-                    color: AppColors.primary, strokeWidth: 3),
+              return SkeletonList(
+                count: 4,
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                builder: (_) => const SkeletonReportCard(),
               );
             }
             if (ctrl.deletedReports.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.delete_outline_rounded,
-                        size: 64,
-                        color: AppColors.textSecondary.withValues(alpha: 0.4)),
-                    const SizedBox(height: 12),
-                    Text('no_deleted_reports'.tr, style: AppTextStyles.bodySm),
-                  ],
-                ),
+              return EmptyState(
+                icon: Icons.delete_outline_rounded,
+                title: 'no_deleted_reports'.tr,
+                subtitle: 'মুছে ফেলা রিপোর্ট এখানে জমা থাকে — ফেরানো যায়',
               );
             }
             return RefreshIndicator(
