@@ -9,6 +9,7 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../../../features/auth/controller/auth_controller.dart';
 import '../../../../shared/widgets/user_avatar.dart';
 import '../../../admin/controller/admin_controller.dart';
+import '../widgets/analytics_charts.dart';
 
 class AdminOverviewTab extends StatefulWidget {
   const AdminOverviewTab({super.key});
@@ -61,7 +62,10 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('admin_panel'.tr, style: AppTextStyles.h3),
+                          Obx(() => Text(
+                                '${auth.user.value?.roleShort ?? 'ANM'} প্যানেল',
+                                style: AppTextStyles.h3,
+                              )),
                           Obx(() => Text(
                                 auth.user.value?.name ?? 'Admin',
                                 style: AppTextStyles.caption,
@@ -96,6 +100,79 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                             Icons.check_circle_rounded, AppColors.safeGreen),
                       ],
                     )),
+                const SizedBox(height: 28),
+
+                // ── Analytics — the server scopes these numbers to this
+                // supervisor's own subtree, so a CMHO sees the district curve
+                // and an ANM sees only her ASHAs. ─────────────────
+                Obx(() {
+                  final trend = ctrl.reportsTrend(days: 14);
+                  final last14 = trend.fold(0, (a, b) => a + b);
+                  final red = ctrl.redReports.value;
+                  final yellow = ctrl.yellowReports.value;
+                  final green = ctrl.greenReports.value;
+                  return Container(
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppRadius.xxlR,
+                      boxShadow: AppShadows.low,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('রিপোর্টের ধারা',
+                                      style: AppTextStyles.label),
+                                  const SizedBox(height: 2),
+                                  Text('গত ১৪ দিনে $last14 টি',
+                                      style: AppTextStyles.caption),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.08),
+                                borderRadius: AppRadius.smR,
+                              ),
+                              child: Text('১৪ দিন',
+                                  style: AppTextStyles.overline
+                                      .copyWith(color: AppColors.primary)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        TrendAreaChart(values: trend, color: AppColors.purple),
+                        const SizedBox(height: 18),
+                        const Divider(height: 1),
+                        const SizedBox(height: 16),
+                        Text('ঝুঁকির ভাগ', style: AppTextStyles.label),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            BandDonut(
+                                red: red,
+                                yellow: yellow,
+                                green: green,
+                                size: 116),
+                            const SizedBox(width: 18),
+                            Expanded(
+                              child: BandLegend(
+                                  red: red, yellow: yellow, green: green),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                }),
                 const SizedBox(height: 28),
 
                 // ── Recent reports ───────────────────────────────

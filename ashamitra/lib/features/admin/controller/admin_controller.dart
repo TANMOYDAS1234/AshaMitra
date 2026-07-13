@@ -327,6 +327,30 @@ class AdminController extends GetxController {
     }
   }
 
+  // ── Analytics ──────────────────────────────────────────────────────────
+  // Derived from the reports already loaded for this panel — which the server
+  // has scoped to the supervisor's own subtree — so a CMHO's curve is their
+  // district, an ANM's is her ASHAs. No extra round-trip.
+
+  /// Reports per day over the last [days] days, oldest → newest.
+  List<int> reportsTrend({int days = 14}) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final counts = List<int>.filled(days, 0);
+    for (final r in reports) {
+      final ts = DateTime.tryParse((r['createdAt'] ?? '').toString());
+      if (ts == null) continue;
+      final d = DateTime(ts.year, ts.month, ts.day);
+      final idx = days - 1 - today.difference(d).inDays; // last slot = today
+      if (idx >= 0 && idx < days) counts[idx]++;
+    }
+    return counts;
+  }
+
+  /// Total reports captured in the last [days] days.
+  int reportsInLast({int days = 14}) =>
+      reportsTrend(days: days).fold(0, (a, b) => a + b);
+
   /// Loads district + block distinct lists for the filter dropdowns.
   Future<void> loadLocations() async {
     try {
