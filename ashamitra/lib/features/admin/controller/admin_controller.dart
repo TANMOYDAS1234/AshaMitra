@@ -52,6 +52,7 @@ class AdminController extends GetxController {
     loadAshaWorkers();
     loadReports();
     loadLocations();
+    loadUnassigned();
   }
 
   void _handleUnauth() {
@@ -325,6 +326,46 @@ class AdminController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  // ── Unassigned members (adoptable into my team) ────────────────────────
+  // The migration leaves the legacy ANM with no supervisor. A newly created
+  // BMHO adopts her from here — otherwise the tree could never be assembled
+  // above the ANM.
+  final unassigned = <UserModel>[].obs;
+
+  Future<void> loadUnassigned() async {
+    try {
+      final res = await ApiService.getUnassigned();
+      if (res['success'] == true) {
+        unassigned.value = (res['data'] as List)
+            .map((d) => UserModel.fromJson(d as Map<String, dynamic>))
+            .toList();
+      }
+    } on UnauthorizedException {
+      _handleUnauth();
+    } catch (_) {}
+  }
+
+  /// Adopt an unattached member into my team (I become their supervisor).
+  Future<bool> adopt(String workerId) async {
+    final me = Get.find<AuthController>().user.value;
+    if (me == null) return false;
+    try {
+      final res = await ApiService.setWorkerSupervisor(workerId, me.id);
+      if (res['success'] == true) {
+        await loadAshaWorkers();
+        await loadUnassigned();
+        await loadStats();
+        return true;
+      }
+      errorMsg.value = res['message']?.toString() ?? 'দলে যোগ করা যায়নি।';
+    } on UnauthorizedException {
+      _handleUnauth();
+    } catch (_) {
+      errorMsg.value = 'সংযোগ ব্যর্থ।';
+    }
+    return false;
   }
 
   // ── Team search ────────────────────────────────────────────────────────

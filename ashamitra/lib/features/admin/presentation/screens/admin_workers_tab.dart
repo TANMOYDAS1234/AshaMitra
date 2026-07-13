@@ -128,6 +128,67 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
               );
             }),
 
+            // ── Unassigned members you can adopt ────────────────────────
+            // The migration leaves the legacy ANM with no supervisor; this is
+            // how a newly created BMHO pulls her into the tree.
+            Obx(() {
+              final free = ctrl.unassigned;
+              if (free.isEmpty) return const SizedBox.shrink();
+              return Container(
+                margin: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.warningYellow.withValues(alpha: 0.10),
+                  borderRadius: AppRadius.mdR,
+                  border: Border.all(
+                      color: AppColors.warningYellow.withValues(alpha: 0.35)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.person_search_rounded,
+                            size: 16, color: AppColors.warningYellow),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text('${free.length} জন $child কোনো দলে নেই',
+                              style: AppTextStyles.label),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ...free.map((u) => Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text('${u.name} · ${u.phone}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTextStyles.caption),
+                              ),
+                              TextButton(
+                                onPressed: () => _adopt(ctrl, u),
+                                style: TextButton.styleFrom(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 10),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text('দলে নিন',
+                                    style: AppTextStyles.label
+                                        .copyWith(color: AppColors.primary)),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
+                ),
+              );
+            }),
+
             // ── List ────────────────────────────────────────────
             Expanded(
               child: Obx(() {
@@ -504,6 +565,20 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
     );
   }
 
+  // ── Adopt an unattached member into my team ───────────────────────────────
+  Future<void> _adopt(AdminController ctrl, UserModel u) async {
+    final ok = await ctrl.adopt(u.id);
+    Get.snackbar(
+      ok ? 'দলে যোগ হয়েছে' : 'যোগ করা যায়নি',
+      ok ? '${u.name} এখন আপনার দলে' : ctrl.errorMsg.value,
+      backgroundColor: ok ? AppColors.safeGreen : AppColors.emergencyRed,
+      colorText: AppColors.onPrimary,
+      snackPosition: SnackPosition.BOTTOM,
+      margin: const EdgeInsets.all(16),
+      borderRadius: 12,
+    );
+  }
+
   // ── Bulk activate / deactivate the current selection ──────────────────────
   // Reports the honest count (ok/total) — a partial failure must not read as
   // a clean success when someone's account was left untouched.
@@ -746,7 +821,32 @@ class _WorkerCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(worker.name, style: AppTextStyles.labelLg),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(worker.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTextStyles.labelLg),
+                        ),
+                        // Role tag — tells a CMHO at a glance whether this row
+                        // is a BMHO, an ANM or an ASHA.
+                        if (worker.manages.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                                color:
+                                    AppColors.primary.withValues(alpha: 0.10),
+                                borderRadius: AppRadius.smR),
+                            child: Text(worker.roleShort,
+                                style: AppTextStyles.overline
+                                    .copyWith(color: AppColors.primary)),
+                          ),
+                        ],
+                      ],
+                    ),
                     const SizedBox(height: 2),
                     Text(worker.phone, style: AppTextStyles.caption),
                     if (worker.block.isNotEmpty) ...[
@@ -756,6 +856,26 @@ class _WorkerCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.caption),
                     ],
+                    const SizedBox(height: 5),
+                    // Aggregates from the server: a supervisor row summarises
+                    // their WHOLE subtree; an ASHA row is her own numbers.
+                    Row(
+                      children: [
+                        if (worker.teamSize > 0)
+                          _MiniStat(Icons.groups_rounded, '${worker.teamSize} ASHA')
+                        else
+                          _MiniStat(
+                              Icons.people_alt_rounded, '${worker.patientCount}'),
+                        const SizedBox(width: 12),
+                        _MiniStat(
+                            Icons.analytics_rounded, '${worker.reportCount}'),
+                        if (worker.redCount > 0) ...[
+                          const SizedBox(width: 12),
+                          _MiniStat(Icons.gpp_bad_rounded, '${worker.redCount}',
+                              color: AppColors.emergencyRed),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -784,6 +904,29 @@ class _WorkerCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Mini stat (icon + number) used on the worker cards ────────────────────────
+class _MiniStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final Color? color;
+  const _MiniStat(this.icon, this.value, {this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? AppColors.textSecondary;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: c.withValues(alpha: 0.85)),
+        const SizedBox(width: 3),
+        Text(value,
+            style: AppTextStyles.overline
+                .copyWith(color: c, fontWeight: FontWeight.w700)),
+      ],
     );
   }
 }

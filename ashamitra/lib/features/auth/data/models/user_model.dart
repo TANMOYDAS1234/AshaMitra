@@ -10,6 +10,14 @@ class UserModel {
   final String? profileImagePath;
   final bool isActive;
 
+  // Aggregates supplied by /admin/workers so a supervisor's list is useful at a
+  // glance. For a supervisor row these cover their WHOLE subtree; for an ASHA
+  // row they are her own numbers. Zero when the server didn't send them.
+  final int teamSize; // ASHAs anywhere below this person (0 for an ASHA)
+  final int patientCount;
+  final int reportCount;
+  final int redCount;
+
   final bool _isAdminFlag;
 
   const UserModel({
@@ -23,6 +31,10 @@ class UserModel {
     this.language = 'Bengali (বাংলা)',
     this.profileImagePath,
     this.isActive = true,
+    this.teamSize = 0,
+    this.patientCount = 0,
+    this.reportCount = 0,
+    this.redCount = 0,
     bool isAdminFlag = false,
   }) : _isAdminFlag = isAdminFlag;
 
@@ -102,6 +114,10 @@ class UserModel {
       language: json['language'] as String? ?? 'Bengali (বাংলা)',
       profileImagePath: json['profileImagePath'] as String?,
       isActive: json['isActive'] as bool? ?? true,
+      teamSize: (json['teamSize'] as num?)?.toInt() ?? 0,
+      patientCount: (json['patientCount'] as num?)?.toInt() ?? 0,
+      reportCount: (json['reportCount'] as num?)?.toInt() ?? 0,
+      redCount: (json['redCount'] as num?)?.toInt() ?? 0,
       isAdminFlag: isAdminBool,
     );
   }

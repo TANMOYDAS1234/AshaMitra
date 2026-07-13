@@ -848,6 +848,29 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  /// Members at my child-level who aren't attached to anyone yet (adoptable).
+  static Future<Map<String, dynamic>> getUnassigned() async {
+    final res = await http.get(
+      Uri.parse('$baseUrl/admin/unassigned'),
+      headers: _headers,
+    ).timeout(const Duration(seconds: 15));
+    _guard(res.statusCode);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// Re-parent a member under [supervisorId] — adopt an unattached one, or move
+  /// someone already inside my subtree.
+  static Future<Map<String, dynamic>> setWorkerSupervisor(
+      String id, String supervisorId) async {
+    final res = await http.patch(
+      Uri.parse('$baseUrl/admin/workers/$id/supervisor'),
+      headers: _headers,
+      body: jsonEncode({'supervisorId': supervisorId}),
+    ).timeout(const Duration(seconds: 15));
+    _guard(res.statusCode);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   static Future<Map<String, dynamic>> getWorkerReports(String id) async {
     final res = await http.get(
       Uri.parse('$baseUrl/admin/workers/$id/reports'),
