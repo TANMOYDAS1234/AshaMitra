@@ -266,7 +266,9 @@ Option C: Skip confirmation entirely, trust the detection and go straight to que
 
 Which one?
 
-AIzaSyAza9BlFFmv9uSpd93g-ibAK6IcbgtIxic
+[REDACTED — Gemini API key removed from source. It lives in backend/.env
+(GEMINI_API_KEY), which is git-ignored. This key was exposed in git history and
+MUST be rotated in Google AI Studio.]
 
 this my gemini api key
 
