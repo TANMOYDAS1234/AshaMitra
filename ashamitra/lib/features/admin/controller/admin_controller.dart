@@ -445,6 +445,35 @@ class AdminController extends GetxController {
   int reportsInLast({int days = 14}) =>
       reportsTrend(days: days).fold(0, (a, b) => a + b);
 
+  /// Reports per day for one band (RED / YELLOW / GREEN), oldest → newest.
+  List<int> bandTrend(String band, {int days = 14}) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final counts = List<int>.filled(days, 0);
+    final want = band.toUpperCase();
+    for (final r in reports) {
+      if ((r['finalBand']?.toString().toUpperCase() ?? '') != want) continue;
+      final ts = DateTime.tryParse((r['createdAt'] ?? '').toString());
+      if (ts == null) continue;
+      final d = DateTime(ts.year, ts.month, ts.day);
+      final idx = days - 1 - today.difference(d).inDays;
+      if (idx >= 0 && idx < days) counts[idx]++;
+    }
+    return counts;
+  }
+
+  /// Percent change of the last 7 days against the 7 before them.
+  /// Returns null when there's no meaningful baseline — better to show nothing
+  /// than to print a confident "+100%" off a single report.
+  double? trendDelta(List<int> series) {
+    if (series.length < 14) return null;
+    final n = series.length;
+    final recent = series.sublist(n - 7).fold<int>(0, (a, b) => a + b);
+    final prior = series.sublist(n - 14, n - 7).fold<int>(0, (a, b) => a + b);
+    if (prior == 0) return null;
+    return ((recent - prior) / prior) * 100;
+  }
+
   /// Loads district + block distinct lists for the filter dropdowns.
   Future<void> loadLocations() async {
     try {

@@ -10,6 +10,8 @@ import '../../../../features/auth/controller/auth_controller.dart';
 import '../../../../shared/widgets/user_avatar.dart';
 import '../../../admin/controller/admin_controller.dart';
 import '../widgets/analytics_charts.dart';
+import '../../../../shared/widgets/skeleton.dart';
+import '../../../../shared/widgets/empty_state.dart';
 
 class AdminOverviewTab extends StatefulWidget {
   const AdminOverviewTab({super.key});
@@ -78,28 +80,45 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                 const SizedBox(height: 24),
 
                 // ── Stats grid ───────────────────────────────────
-                Obx(() => GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.55,
-                      children: [
-                        _StatTile('admin_total_asha'.tr, '${ctrl.totalWorkers}',
-                            Icons.people_alt_rounded, AppColors.primary),
-                        _StatTile('admin_total_patients'.tr, '${ctrl.totalPatients}',
-                            Icons.groups_rounded, AppColors.sky),
-                        _StatTile('admin_total_reports'.tr, '${ctrl.totalReports}',
-                            Icons.analytics_rounded, AppColors.purple),
-                        _StatTile('admin_emergency_red'.tr, '${ctrl.redReports}',
-                            Icons.gpp_bad_rounded, AppColors.emergencyRed),
-                        _StatTile('admin_warning_yellow'.tr, '${ctrl.yellowReports}',
-                            Icons.warning_amber_rounded, AppColors.warningYellow),
-                        _StatTile('admin_safe_green'.tr, '${ctrl.greenReports}',
-                            Icons.check_circle_rounded, AppColors.safeGreen),
-                      ],
-                    )),
+                Obx(() {
+                  final rTrend = ctrl.reportsTrend();
+                  final redT = ctrl.bandTrend('RED');
+                  final yelT = ctrl.bandTrend('YELLOW');
+                  final grnT = ctrl.bandTrend('GREEN');
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.24, // room for the sparkline
+                    children: [
+                      _StatTile('admin_total_asha'.tr, '${ctrl.totalWorkers}',
+                          Icons.people_alt_rounded, AppColors.primary),
+                      _StatTile(
+                          'admin_total_patients'.tr, '${ctrl.totalPatients}',
+                          Icons.groups_rounded, AppColors.sky),
+                      _StatTile('admin_total_reports'.tr, '${ctrl.totalReports}',
+                          Icons.analytics_rounded, AppColors.purple,
+                          spark: rTrend, delta: ctrl.trendDelta(rTrend)),
+                      // More emergencies is BAD → inverse, so a rise shows red.
+                      _StatTile('admin_emergency_red'.tr, '${ctrl.redReports}',
+                          Icons.gpp_bad_rounded, AppColors.emergencyRed,
+                          spark: redT,
+                          delta: ctrl.trendDelta(redT),
+                          inverse: true),
+                      _StatTile(
+                          'admin_warning_yellow'.tr, '${ctrl.yellowReports}',
+                          Icons.warning_amber_rounded, AppColors.warningYellow,
+                          spark: yelT,
+                          delta: ctrl.trendDelta(yelT),
+                          inverse: true),
+                      _StatTile('admin_safe_green'.tr, '${ctrl.greenReports}',
+                          Icons.check_circle_rounded, AppColors.safeGreen,
+                          spark: grnT, delta: ctrl.trendDelta(grnT)),
+                    ],
+                  );
+                }),
                 const SizedBox(height: 28),
 
                 // ── Analytics — the server scopes these numbers to this
@@ -180,13 +199,23 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                 const SizedBox(height: 12),
                 Obx(() {
                   if (ctrl.isLoading.value) {
-                    return const Center(
-                        child: CircularProgressIndicator(
-                            color: AppColors.primary, strokeWidth: 2));
+                    // A Column (not SkeletonList) — this sits inside a scrolling
+                    // Column, where a nested ListView would be unbounded.
+                    return Column(
+                      children: List.generate(
+                        3,
+                        (_) => const Padding(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: SkeletonReportCard(),
+                        ),
+                      ),
+                    );
                   }
                   if (ctrl.reports.isEmpty) {
-                    return Center(
-                      child: Text('admin_no_reports'.tr, style: AppTextStyles.bodySm),
+                    return EmptyState(
+                      icon: Icons.inbox_rounded,
+                      title: 'admin_no_reports'.tr,
+                      subtitle: 'নতুন চেকআপ হলে এখানে দেখা যাবে',
                     );
                   }
                   final recent = ctrl.reports.take(5).toList();
@@ -214,10 +243,35 @@ class _StatTile extends StatelessWidget {
   final IconData icon;
   final Color color;
 
-  const _StatTile(this.label, this.value, this.icon, this.color);
+  /// Optional 14-day micro-trend drawn under the number.
+  final List<int>? spark;
+
+  /// Percent change (last 7 days vs the 7 before). Null = no baseline, so
+  /// nothing is shown rather than a misleading figure.
+  final double? delta;
+
+  /// True when a RISE is bad (emergencies, referrals). The arrow always shows
+  /// direction; the colour shows whether that direction is good — so a climbing
+  /// RED count reads red, never a reassuring green.
+  final bool inverse;
+
+  const _StatTile(
+    this.label,
+    this.value,
+    this.icon,
+    this.color, {
+    this.spark,
+    this.delta,
+    this.inverse = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final d = delta;
+    final rising = (d ?? 0) >= 0;
+    final good = inverse ? !rising : rising;
+    final deltaColor = good ? AppColors.safeGreen : AppColors.emergencyRed;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -229,12 +283,41 @@ class _StatTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: AppRadius.smR),
-            child: Icon(icon, color: color, size: 18),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: AppRadius.smR),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const Spacer(),
+              if (d != null && d.abs() >= 1)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: deltaColor.withValues(alpha: 0.10),
+                    borderRadius: AppRadius.smR,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                          rising
+                              ? Icons.trending_up_rounded
+                              : Icons.trending_down_rounded,
+                          size: 11,
+                          color: deltaColor),
+                      const SizedBox(width: 2),
+                      Text('${d.abs().round()}%',
+                          style: AppTextStyles.overline.copyWith(
+                              color: deltaColor, fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+            ],
           ),
           const Spacer(),
           Text(value,
@@ -245,9 +328,14 @@ class _StatTile extends StatelessWidget {
               )),
           const SizedBox(height: 2),
           Text(label,
-              maxLines: 2,
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600)),
+              style:
+                  AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600)),
+          if (spark != null && spark!.length > 1) ...[
+            const SizedBox(height: 7),
+            Sparkline(values: spark!, color: color),
+          ],
         ],
       ),
     );

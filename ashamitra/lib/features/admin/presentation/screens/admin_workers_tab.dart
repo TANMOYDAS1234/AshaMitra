@@ -10,6 +10,8 @@ import '../../../../shared/widgets/user_avatar.dart';
 import '../../../admin/controller/admin_controller.dart';
 import '../../../auth/controller/auth_controller.dart';
 import '../../../../app/routes.dart';
+import '../../../../shared/widgets/skeleton.dart';
+import '../../../../shared/widgets/empty_state.dart';
 import 'admin_report_detail.dart';
 
 class AdminWorkersTab extends StatefulWidget {
@@ -193,43 +195,37 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
             Expanded(
               child: Obx(() {
                 if (ctrl.isLoading.value) {
-                  return const Center(
-                      child: CircularProgressIndicator(
-                          color: AppColors.primary, strokeWidth: 3));
+                  return SkeletonList(
+                    count: 4,
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                    builder: (_) => const SkeletonPatientCard(),
+                  );
                 }
                 if (ctrl.ashaWorkers.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.people_outline_rounded,
-                            size: 64,
-                            color: AppColors.textSecondary
-                                .withValues(alpha: 0.4)),
-                        const SizedBox(height: 16),
-                        Text('এখনও কোনো $child যোগ করা হয়নি',
-                            style: AppTextStyles.labelLg),
-                        const SizedBox(height: 12),
-                        ElevatedButton.icon(
-                          onPressed: () => _showAddSheet(context, ctrl),
-                          icon: const Icon(Icons.add_rounded, size: 18),
-                          label: Text('নতুন $child যোগ করুন'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.onPrimary,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: AppRadius.mdR),
-                          ),
-                        ),
-                      ],
+                  return EmptyState(
+                    icon: Icons.people_outline_rounded,
+                    title: 'এখনও কোনো $child যোগ করা হয়নি',
+                    subtitle: 'উপরের + বোতাম দিয়ে আপনার দল তৈরি করুন',
+                    action: ElevatedButton.icon(
+                      onPressed: () => _showAddSheet(context, ctrl),
+                      icon: const Icon(Icons.add_rounded, size: 18),
+                      label: Text('নতুন $child যোগ করুন'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: AppColors.onPrimary,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: AppRadius.mdR),
+                      ),
                     ),
                   );
                 }
                 final list = ctrl.visibleWorkers;
                 if (list.isEmpty) {
-                  return Center(
-                    child: Text('"${ctrl.workerQuery.value}" — কিছু পাওয়া যায়নি',
-                        style: AppTextStyles.bodySm),
+                  return EmptyState(
+                    icon: Icons.search_off_rounded,
+                    title: '"${ctrl.workerQuery.value}" — কিছু পাওয়া যায়নি',
+                    subtitle: 'অন্য নাম, মোবাইল বা গ্রাম দিয়ে খুঁজুন',
                   );
                 }
                 return RefreshIndicator(
