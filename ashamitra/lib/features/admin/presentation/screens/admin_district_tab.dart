@@ -9,6 +9,7 @@ import '../../../../shared/widgets/skeleton.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../auth/controller/auth_controller.dart';
 import '../../../admin/controller/admin_controller.dart';
+import '../../services/district_report_pdf.dart';
 
 /// The district dashboard — what a CMHO (and a BMHO, for their block) actually
 /// manages on.
@@ -123,6 +124,38 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
     );
   }
 
+  // ── Monthly HMIS review report ─────────────────────────────────────────
+  // The review meeting is the ritual that structures a district officer's
+  // month, and it runs off HMIS numbers — so the export prints exactly what
+  // this tab shows, same formulas, same denominators.
+  Future<void> _exportPdf(
+      AdminController ctrl, String role, String scope) async {
+    final u = Get.find<AuthController>().user.value;
+    Get.snackbar('রিপোর্ট তৈরি হচ্ছে', 'একটু অপেক্ষা করুন…',
+        snackPosition: SnackPosition.BOTTOM,
+        margin: const EdgeInsets.all(16),
+        borderRadius: 12);
+    try {
+      await DistrictReportPdf.generate(
+        indicators: ctrl.dIndicators,
+        blocks: ctrl.dBlocks,
+        alerts: ctrl.dAlerts,
+        role: role,
+        scope: scope,
+        officer: u?.name ?? '',
+        district: u?.district ?? '',
+        months: _months,
+      );
+    } catch (e) {
+      Get.snackbar('রিপোর্ট তৈরি ব্যর্থ', e.toString(),
+          backgroundColor: AppColors.emergencyRed,
+          colorText: AppColors.onPrimary,
+          snackPosition: SnackPosition.BOTTOM,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12);
+    }
+  }
+
   // ── Header + period selector ───────────────────────────────────────────
   Widget _header(String scope, String role, AdminController ctrl) => Row(
         children: [
@@ -136,6 +169,18 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
               ],
             ),
           ),
+          // Monthly HMIS review report — carried into the review meeting.
+          IconButton(
+            onPressed: () => _exportPdf(ctrl, role, scope),
+            tooltip: 'HMIS পর্যালোচনা রিপোর্ট (PDF)',
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.primary.withValues(alpha: 0.10),
+              padding: const EdgeInsets.all(9),
+            ),
+            icon: const Icon(Icons.picture_as_pdf_rounded,
+                color: AppColors.primary, size: 19),
+          ),
+          const SizedBox(width: 8),
           // Period switcher — a CMHO reviews monthly, but reads trends yearly.
           Container(
             decoration: BoxDecoration(
