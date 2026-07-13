@@ -1,0 +1,556 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_gradients.dart';
+import '../../../../core/theme/app_radius.dart';
+import '../../../../core/theme/app_shadows.dart';
+import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/skeleton.dart';
+import '../../../../shared/widgets/empty_state.dart';
+import '../../../auth/controller/auth_controller.dart';
+import '../../../admin/controller/admin_controller.dart';
+
+/// The district dashboard — what a CMHO (and a BMHO, for their block) actually
+/// manages on.
+///
+/// Ordering is deliberate: **escalations first**. A CMHO opens this to find out
+/// what is on fire — a maternal death, a referral that never reached a facility,
+/// a vaccine stockout, an ASHA who has gone quiet — not to admire coverage
+/// percentages. Indicators and block ranking come after.
+///
+/// Every percentage follows MoHFW's HMIS formula and may be null when there is
+/// no denominator; those render "—", never a confident, wrong 0%.
+class AdminDistrictTab extends StatefulWidget {
+  const AdminDistrictTab({super.key});
+
+  @override
+  State<AdminDistrictTab> createState() => _AdminDistrictTabState();
+}
+
+class _AdminDistrictTabState extends State<AdminDistrictTab> {
+  int _months = 12;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => Get.find<AdminController>().loadDistrict(months: _months));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ctrl = Get.find<AdminController>();
+    final role = Get.find<AuthController>().user.value?.roleShort ?? 'ANM';
+    // A CMHO reads this as the district; a BMHO as their block.
+    final scope = switch (role) {
+      'CMHO' => 'জেলা',
+      'BMHO' => 'ব্লক',
+      _ => 'এলাকা',
+    };
+
+    return Container(
+      decoration: const BoxDecoration(gradient: AppGradients.background),
+      child: SafeArea(
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () => ctrl.loadDistrict(months: _months),
+          child: Obx(() {
+            if (ctrl.isLoadingDistrict.value && ctrl.district.value == null) {
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                children: const [
+                  SkeletonBox(width: 200, height: 26),
+                  SizedBox(height: 20),
+                  SkeletonBox(width: double.infinity, height: 96),
+                  SizedBox(height: 12),
+                  SkeletonBox(width: double.infinity, height: 180),
+                  SizedBox(height: 12),
+                  SkeletonBox(width: double.infinity, height: 160),
+                ],
+              );
+            }
+            if (ctrl.district.value == null) {
+              return ListView(
+                children: [
+                  const SizedBox(height: 80),
+                  EmptyState(
+                    icon: Icons.insights_rounded,
+                    title: '$scope বিশ্লেষণ পাওয়া যায়নি',
+                    subtitle: 'ইন্টারনেট দেখে আবার টানুন',
+                    action: FilledButton.icon(
+                      onPressed: () => ctrl.loadDistrict(months: _months),
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('আবার দেখুন'),
+                    ),
+                  ),
+                ],
+              );
+            }
+
+            final ind = ctrl.dIndicators;
+            final blocks = ctrl.dBlocks;
+
+            return ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+              children: [
+                _header(scope, role, ctrl),
+                const SizedBox(height: 18),
+
+                // ── 1. ESCALATIONS — what needs the CMHO today ────────────
+                _alerts(ctrl),
+
+                // ── 2. HMIS key indicators ───────────────────────────────
+                const SizedBox(height: 22),
+                _sectionTitle('HMIS মূল সূচক', 'সরকারি HMIS ফর্মুলা অনুযায়ী'),
+                const SizedBox(height: 12),
+                _indicatorGrid(ind),
+
+                // ── 3. Block-wise accountability ─────────────────────────
+                // Only meaningful when there is more than one block to compare.
+                if (blocks.length > 1) ...[
+                  const SizedBox(height: 24),
+                  _sectionTitle('ব্লক অনুযায়ী পারফরম্যান্স',
+                      'কোন ব্লক পিছিয়ে আছে — সেটাই এখানে দেখা যায়'),
+                  const SizedBox(height: 12),
+                  _blockTable(blocks),
+                ],
+              ],
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  // ── Header + period selector ───────────────────────────────────────────
+  Widget _header(String scope, String role, AdminController ctrl) => Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$scope বিশ্লেষণ', style: AppTextStyles.h2),
+                const SizedBox(height: 2),
+                Text('$role · গত $_months মাস', style: AppTextStyles.caption),
+              ],
+            ),
+          ),
+          // Period switcher — a CMHO reviews monthly, but reads trends yearly.
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: AppRadius.mdR,
+              boxShadow: AppShadows.low,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [3, 12].map((m) {
+                final on = _months == m;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _months = m);
+                    ctrl.loadDistrict(months: m);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: on ? AppColors.primary : Colors.transparent,
+                      borderRadius: AppRadius.mdR,
+                    ),
+                    child: Text('$m মাস',
+                        style: AppTextStyles.overline.copyWith(
+                          color: on
+                              ? AppColors.onPrimary
+                              : AppColors.textSecondary,
+                          fontWeight: FontWeight.w700,
+                        )),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      );
+
+  Widget _sectionTitle(String t, String sub) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(t, style: AppTextStyles.label),
+          const SizedBox(height: 2),
+          Text(sub, style: AppTextStyles.caption),
+        ],
+      );
+
+  // ── Escalations ────────────────────────────────────────────────────────
+  Widget _alerts(AdminController ctrl) {
+    final maternal = ctrl.dAlert('maternalDeaths');
+    final infant = ctrl.dAlert('infantDeaths');
+    final referrals = ctrl.dAlert('overdueReferrals');
+    final stock = ctrl.dAlert('stockouts');
+    final silent = ctrl.dAlert('silentAshas');
+
+    if (ctrl.dAlertCount == 0) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.safeGreen.withValues(alpha: 0.08),
+          borderRadius: AppRadius.xlR,
+          border:
+              Border.all(color: AppColors.safeGreen.withValues(alpha: 0.30)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.verified_rounded,
+                color: AppColors.safeGreen, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text('কোনো জরুরি বিষয় নেই — সব ঠিক আছে',
+                  style: AppTextStyles.label
+                      .copyWith(color: AppColors.safeGreen)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.priority_high_rounded,
+                size: 18, color: AppColors.emergencyRed),
+            const SizedBox(width: 6),
+            Text('জরুরি — এখনই দেখুন (${ctrl.dAlertCount})',
+                style: AppTextStyles.label
+                    .copyWith(color: AppColors.emergencyRed)),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Maternal death is the single hardest escalation a CMHO faces —
+        // it triggers a formal death review (MDSR). It always leads.
+        if (maternal.isNotEmpty)
+          _alertCard(
+            color: AppColors.emergencyRed,
+            icon: Icons.female_rounded,
+            title: '${maternal.length} টি মাতৃমৃত্যু',
+            subtitle: 'ডেথ রিভিউ (MDSR) দরকার',
+            lines: maternal
+                .map((m) =>
+                    '${m['name']} · ${m['block']}${(m['cause'] ?? '').toString().isNotEmpty ? ' · ${m['cause']}' : ''}')
+                .toList(),
+          ),
+        if (infant.isNotEmpty)
+          _alertCard(
+            color: AppColors.emergencyRed,
+            icon: Icons.child_care_rounded,
+            title: '${infant.length} টি শিশুমৃত্যু',
+            subtitle: 'শিশু ডেথ রিভিউ (CDR) দরকার',
+            lines: infant
+                .map((m) => '${m['name']} · ${m['block']} · ${m['age'] ?? ''}')
+                .toList(),
+          ),
+        if (referrals.isNotEmpty)
+          _alertCard(
+            color: AppColors.warningYellow,
+            icon: Icons.local_hospital_rounded,
+            title: '${referrals.length} টি রেফারেল হাসপাতালে পৌঁছয়নি',
+            subtitle: '৭ দিনের বেশি বাকি',
+            lines: referrals
+                .take(5)
+                .map((r) =>
+                    '${r['patientName']} · ${r['block']} · ${r['days']} দিন')
+                .toList(),
+          ),
+        if (stock.isNotEmpty)
+          _alertCard(
+            color: AppColors.warningYellow,
+            icon: Icons.inventory_2_rounded,
+            title: '${stock.length} টি ওষুধ শেষের পথে',
+            subtitle: 'স্টক পাঠাতে হবে',
+            lines: stock
+                .take(5)
+                .map((s) =>
+                    '${s['medicine']} · ${s['left']} বাকি · ${s['block']}')
+                .toList(),
+          ),
+        if (silent.isNotEmpty)
+          _alertCard(
+            color: AppColors.sky,
+            icon: Icons.person_off_rounded,
+            title: '${silent.length} জন ASHA ৩০ দিন নিষ্ক্রিয়',
+            subtitle: 'কোনো ভিজিট রেকর্ড হয়নি (zero-reporting)',
+            lines: silent
+                .take(5)
+                .map((s) => '${s['name']} · ${s['block']}')
+                .toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _alertCard({
+    required Color color,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required List<String> lines,
+  }) =>
+      Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: AppRadius.xlR,
+          border: Border.all(color: color.withValues(alpha: 0.30)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: AppTextStyles.label.copyWith(color: color)),
+                      Text(subtitle, style: AppTextStyles.caption),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...lines.map((l) => Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 5, right: 6),
+                        child: Container(
+                          width: 4,
+                          height: 4,
+                          decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.6),
+                              shape: BoxShape.circle),
+                        ),
+                      ),
+                      Expanded(
+                          child: Text(l,
+                              style: AppTextStyles.caption
+                                  .copyWith(fontWeight: FontWeight.w600))),
+                    ],
+                  ),
+                )),
+          ],
+        ),
+      );
+
+  // ── HMIS indicators ────────────────────────────────────────────────────
+  Widget _indicatorGrid(Map<String, dynamic> i) {
+    // A null percentage means "no denominator" — show "—", never 0%.
+    String p(String k) {
+      final v = i[k];
+      return v == null ? '—' : '${(v as num).toStringAsFixed(1)}%';
+    }
+
+    String n(String k) => '${(i[k] as num?)?.toInt() ?? 0}';
+
+    final tiles = <List<dynamic>>[
+      ['প্রসূতি নথিভুক্ত', n('pregnanciesRegistered'), Icons.pregnant_woman_rounded, AppColors.primary],
+      ['১ম ত্রৈমাসিকে ANC', p('ancFirstTrimesterPct'), Icons.event_available_rounded, AppColors.sky],
+      ['৪+ ANC ভিজিট', p('anc4PlusPct'), Icons.checklist_rounded, AppColors.purple],
+      ['উচ্চ ঝুঁকি প্রসূতি', n('highRiskPregnancies'), Icons.warning_amber_rounded, AppColors.warningYellow],
+      ['প্রাতিষ্ঠানিক প্রসব', p('institutionalDeliveryPct'), Icons.local_hospital_rounded, AppColors.safeGreen],
+      ['সিজার', p('cSectionPct'), Icons.medical_services_rounded, AppColors.sky],
+      ['কম ওজনের শিশু (<২.৫ কেজি)', p('lbwPct'), Icons.monitor_weight_rounded, AppColors.emergencyRed],
+      ['টিকা কভারেজ', p('immunizationCoveragePct'), Icons.vaccines_rounded, AppColors.safeGreen],
+      ['টিকা বাকি (Overdue)', n('immunizationDefaulters'), Icons.event_busy_rounded, AppColors.emergencyRed],
+      ['রেফারেল সম্পন্ন', p('referralClosurePct'), Icons.assignment_turned_in_rounded, AppColors.purple],
+    ];
+
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.45,
+      children: tiles
+          .map((t) => _kpiTile(
+              t[0] as String, t[1] as String, t[2] as IconData, t[3] as Color))
+          .toList(),
+    );
+  }
+
+  Widget _kpiTile(String label, String value, IconData icon, Color color) =>
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.xlR,
+          boxShadow: AppShadows.tinted(color),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: AppRadius.smR),
+              child: Icon(icon, color: color, size: 17),
+            ),
+            const Spacer(),
+            Text(value,
+                style: AppTextStyles.h2.copyWith(
+                    color: color, fontWeight: FontWeight.w800, height: 1.1)),
+            const SizedBox(height: 2),
+            Text(label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
+
+  // ── Block-wise accountability ──────────────────────────────────────────
+  Widget _blockTable(List<Map<String, dynamic>> blocks) {
+    // Rank by institutional-delivery % — the indicator a CMHO is judged on.
+    // Blocks with no births yet sort last rather than looking like 0%.
+    final ranked = [...blocks]..sort((a, b) {
+        final x = (a['institutionalPct'] as num?)?.toDouble();
+        final y = (b['institutionalPct'] as num?)?.toDouble();
+        if (x == null && y == null) return 0;
+        if (x == null) return 1;
+        if (y == null) return -1;
+        return y.compareTo(x);
+      });
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.xxlR,
+        boxShadow: AppShadows.low,
+      ),
+      child: Column(
+        children: ranked.map((b) {
+          final inst = (b['institutionalPct'] as num?)?.toDouble();
+          final imm = (b['immunizationPct'] as num?)?.toDouble();
+          final deaths = ((b['maternalDeaths'] as num?)?.toInt() ?? 0) +
+              ((b['infantDeaths'] as num?)?.toInt() ?? 0);
+          // "Underperforming" isn't a vibe — it's a threshold a CMHO defends:
+          // institutional delivery under 80%, or any death in the block.
+          final lagging = (inst != null && inst < 80) || deaths > 0;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Text('${b['block']}',
+                              style: AppTextStyles.label
+                                  .copyWith(fontWeight: FontWeight.w700)),
+                          if (lagging) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.emergencyRed
+                                    .withValues(alpha: 0.10),
+                                borderRadius: AppRadius.smR,
+                              ),
+                              child: Text('পিছিয়ে',
+                                  style: AppTextStyles.overline.copyWith(
+                                      color: AppColors.emergencyRed,
+                                      fontWeight: FontWeight.w700)),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Text(
+                      inst == null ? '—' : '${inst.toStringAsFixed(0)}%',
+                      style: AppTextStyles.label.copyWith(
+                        color: lagging
+                            ? AppColors.emergencyRed
+                            : AppColors.safeGreen,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                // Bar = institutional delivery. Grey when there's no denominator.
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: (inst ?? 0) / 100,
+                    minHeight: 6,
+                    backgroundColor:
+                        AppColors.textSecondary.withValues(alpha: 0.10),
+                    valueColor: AlwaysStoppedAnimation(
+                      inst == null
+                          ? AppColors.textSecondary.withValues(alpha: 0.25)
+                          : (lagging
+                              ? AppColors.emergencyRed
+                              : AppColors.safeGreen),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Row(
+                  children: [
+                    _chip(Icons.people_alt_rounded,
+                        '${(b['ashas'] as num?)?.toInt() ?? 0} ASHA'),
+                    const SizedBox(width: 10),
+                    _chip(Icons.child_friendly_rounded,
+                        '${(b['births'] as num?)?.toInt() ?? 0} জন্ম'),
+                    const SizedBox(width: 10),
+                    _chip(Icons.vaccines_rounded,
+                        imm == null ? '—' : '${imm.toStringAsFixed(0)}% টিকা'),
+                    if (deaths > 0) ...[
+                      const SizedBox(width: 10),
+                      _chip(Icons.gpp_bad_rounded, '$deaths মৃত্যু',
+                          color: AppColors.emergencyRed),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _chip(IconData i, String t, {Color? color}) {
+    final c = color ?? AppColors.textSecondary;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(i, size: 12, color: c.withValues(alpha: 0.85)),
+        const SizedBox(width: 3),
+        Text(t,
+            style: AppTextStyles.overline
+                .copyWith(color: c, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+}

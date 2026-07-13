@@ -848,6 +848,18 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  /// District / block HMIS analytics for my subtree — the CMHO dashboard.
+  /// Indicators follow MoHFW's HMIS formulas; percentages may be null when
+  /// there is no denominator (the UI must render "—", not 0%).
+  static Future<Map<String, dynamic>> getDistrict({int months = 12}) async {
+    final res = await http.get(
+      Uri.parse('$baseUrl/admin/district?months=$months'),
+      headers: _headers,
+    ).timeout(const Duration(seconds: 30));
+    _guard(res.statusCode);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   /// Members at my child-level who aren't attached to anyone yet (adoptable).
   static Future<Map<String, dynamic>> getUnassigned() async {
     final res = await http.get(

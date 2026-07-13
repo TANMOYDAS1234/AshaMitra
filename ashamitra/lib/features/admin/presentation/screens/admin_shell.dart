@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../admin/controller/admin_controller.dart';
 import 'admin_overview_tab.dart';
+import 'admin_district_tab.dart';
 import 'admin_workers_tab.dart';
 import 'admin_reports_tab.dart';
 import 'admin_settings_tab.dart';
@@ -19,6 +20,7 @@ class _AdminShellState extends State<AdminShell> {
 
   final _tabs = const [
     AdminOverviewTab(),
+    AdminDistrictTab(),
     AdminWorkersTab(),
     AdminReportsTab(),
     AdminSettingsTab(),
@@ -31,6 +33,9 @@ class _AdminShellState extends State<AdminShell> {
     ctrl.loadStats();
     ctrl.loadAshaWorkers();
     ctrl.loadReports();
+    // Pulled on open so the escalation badge is accurate before the CMHO ever
+    // taps the District tab — the whole point is that they don't have to look.
+    ctrl.loadDistrict();
   }
 
   void _onTabChanged(int i) {
@@ -41,14 +46,18 @@ class _AdminShellState extends State<AdminShell> {
         ctrl.loadStats();
         ctrl.loadReports();
       case 1:
-        ctrl.loadAshaWorkers();
+        ctrl.loadDistrict();
       case 2:
+        ctrl.loadAshaWorkers();
+      case 3:
         ctrl.loadReports();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final ctrl = Get.find<AdminController>();
+
     return Scaffold(
       body: IndexedStack(index: _index, children: _tabs),
       bottomNavigationBar: NavigationBar(
@@ -59,25 +68,52 @@ class _AdminShellState extends State<AdminShell> {
         shadowColor: Colors.black12,
         indicatorColor: AppColors.primary.withValues(alpha: 0.12),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded, color: AppColors.primary),
+            selectedIcon:
+                Icon(Icons.dashboard_rounded, color: AppColors.primary),
             label: 'Overview',
           ),
           NavigationDestination(
+            // Badge carries the open-escalation count (maternal/infant deaths,
+            // stranded referrals, stockouts, silent ASHAs).
+            icon: Obx(() {
+              final n = ctrl.dAlertCount;
+              return Badge(
+                isLabelVisible: n > 0,
+                label: Text('$n'),
+                backgroundColor: AppColors.emergencyRed,
+                child: const Icon(Icons.insights_outlined),
+              );
+            }),
+            selectedIcon: Obx(() {
+              final n = ctrl.dAlertCount;
+              return Badge(
+                isLabelVisible: n > 0,
+                label: Text('$n'),
+                backgroundColor: AppColors.emergencyRed,
+                child: const Icon(Icons.insights_rounded,
+                    color: AppColors.primary),
+              );
+            }),
+            label: 'District',
+          ),
+          const NavigationDestination(
             icon: Icon(Icons.people_outline_rounded),
             selectedIcon: Icon(Icons.people_rounded, color: AppColors.primary),
             label: 'Workers',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart_rounded, color: AppColors.primary),
+            selectedIcon:
+                Icon(Icons.bar_chart_rounded, color: AppColors.primary),
             label: 'Reports',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings_rounded, color: AppColors.primary),
+            selectedIcon:
+                Icon(Icons.settings_rounded, color: AppColors.primary),
             label: 'Settings',
           ),
         ],

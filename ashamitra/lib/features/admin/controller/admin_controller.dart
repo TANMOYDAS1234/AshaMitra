@@ -328,6 +328,50 @@ class AdminController extends GetxController {
     }
   }
 
+  // ── District / block HMIS analytics (the CMHO dashboard) ───────────────
+  final district = Rxn<Map<String, dynamic>>();
+  final isLoadingDistrict = false.obs;
+
+  Future<void> loadDistrict({int months = 12}) async {
+    isLoadingDistrict.value = true;
+    try {
+      final res = await ApiService.getDistrict(months: months);
+      if (res['success'] == true) {
+        district.value = Map<String, dynamic>.from(res['data'] as Map);
+      }
+    } on UnauthorizedException {
+      _handleUnauth();
+    } catch (_) {
+      errorMsg.value = 'বিশ্লেষণ লোড ব্যর্থ।';
+    } finally {
+      isLoadingDistrict.value = false;
+    }
+  }
+
+  Map<String, dynamic> get dIndicators =>
+      Map<String, dynamic>.from((district.value?['indicators'] as Map?) ?? {});
+
+  List<Map<String, dynamic>> get dBlocks =>
+      ((district.value?['blocks'] as List?) ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
+  Map<String, dynamic> get dAlerts =>
+      Map<String, dynamic>.from((district.value?['alerts'] as Map?) ?? {});
+
+  List<Map<String, dynamic>> dAlert(String key) =>
+      ((dAlerts[key] as List?) ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
+  /// Total open escalations — drives the badge on the District tab.
+  int get dAlertCount =>
+      dAlert('maternalDeaths').length +
+      dAlert('infantDeaths').length +
+      dAlert('stockouts').length +
+      dAlert('silentAshas').length +
+      dAlert('overdueReferrals').length;
+
   // ── Unassigned members (adoptable into my team) ────────────────────────
   // The migration leaves the legacy ANM with no supervisor. A newly created
   // BMHO adopts her from here — otherwise the tree could never be assembled
