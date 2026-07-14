@@ -27,27 +27,106 @@ class _HomeScreenState extends State<HomeScreen> {
   final _svc = CaseDetectionService();
   int _dueCount = 0;
 
+  /// The actual worklist — due/overdue visits, most urgent first.
+  List<Map<String, dynamic>> _work = [];
+
+  /// Honest activity, not vanity: visits completed in the last 7 days, and a
+  /// run of consecutive days worked.
+  int _weekVisits = 0;
+  int _streak = 0;
+
+  String _query = '';
+
   @override
   void initState() {
     super.initState();
     _svc.loadCases(); // pre-warm cache
     _loadDueCount();
+    _loadActivity();
   }
 
   /// Count of UNIQUE patients with a due/overdue item (within 14 days) — the
   /// banner reads "X জন রোগীর", so it must count patients, not events (one
   /// patient with ANC + 2 vaccines due is one person, not three).
+  /// Also builds the worklist, ordered by urgency.
   /// Best-effort: 0 when offline or logged out.
   Future<void> _loadDueCount() async {
     final due = await ApiService.getScheduleDue(withinDays: 14);
-    final patients = due
+    final items = due
         .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+
+    final patients = items
         .map((e) => (e['patientId'] ?? '').toString())
         .where((s) => s.isNotEmpty)
         .toSet();
-    if (mounted) {
-      setState(() => _dueCount = patients.isNotEmpty ? patients.length : due.length);
+
+    // Urgency = how many days past the clinical window. Overdue items sort
+    // first (most overdue at the top), then items due now, then upcoming.
+    final t0 = _today();
+    int overdueBy(Map<String, dynamic> e) {
+      final end = DateTime.tryParse((e['windowEnd'] ?? '').toString()) ??
+          DateTime.tryParse((e['dueDate'] ?? '').toString());
+      if (end == null) return -9999;
+      return t0.difference(DateTime(end.year, end.month, end.day)).inDays;
     }
+
+    items.sort((a, b) => overdueBy(b).compareTo(overdueBy(a)));
+
+    if (mounted) {
+      setState(() {
+        _dueCount = patients.isNotEmpty ? patients.length : items.length;
+        _work = items;
+      });
+    }
+  }
+
+  /// Streak + this week's visits, computed from her own completed visits.
+  ///
+  /// Deliberately forgiving: the streak is counted from YESTERDAY when nothing
+  /// is done yet today, so simply opening the app in the morning cannot appear
+  /// to "break" a run she hasn't had a chance to continue. It is only shown at
+  /// 2+ days — a "1-day streak" is not an achievement, it's noise.
+  Future<void> _loadActivity() async {
+    try {
+      final all = await ApiService.getAllSchedule();
+      final done = all
+          .whereType<Map>()
+          .where((e) => (e['status'] ?? '') == 'done')
+          .map((e) => DateTime.tryParse((e['doneDate'] ?? '').toString()))
+          .whereType<DateTime>()
+          .toList();
+
+      final t0 = _today();
+      final days = done.map((d) => DateTime(d.year, d.month, d.day)).toSet();
+
+      final week = done.where((d) {
+        final dd = DateTime(d.year, d.month, d.day);
+        return !dd.isAfter(t0) && t0.difference(dd).inDays < 7;
+      }).length;
+
+      var cursor = days.contains(t0) ? t0 : t0.subtract(const Duration(days: 1));
+      var streak = 0;
+      while (days.contains(cursor)) {
+        streak++;
+        cursor = cursor.subtract(const Duration(days: 1));
+      }
+
+      if (mounted) {
+        setState(() {
+          _weekVisits = week;
+          _streak = streak;
+        });
+      }
+    } catch (_) {
+      // Offline — leave the strip empty rather than showing a wrong zero.
+    }
+  }
+
+  static DateTime _today() {
+    final n = DateTime.now();
+    return DateTime(n.year, n.month, n.day);
   }
 
   /// Polished "due reminders" banner — soft gradient card, circular glassy
@@ -177,6 +256,278 @@ class _HomeScreenState extends State<HomeScreen> {
   /// (registers, referral, family-planning, birth/death) as 2-per-row tiles so
   /// they don't each claim a hero banner and the daily case grid stays near the
   /// top. The referral tile carries the open-count badge.
+  // ── Quick search ────────────────────────────────────────────────────────
+  // Finding one mother used to mean: leave home → patient list → scroll/search.
+  // From here it is two taps.
+  Widget _quickSearch() {
+    final pc = Get.find<PatientController>();
+    final q = _query.trim().toLowerCase();
+    final results = q.isEmpty
+        ? const []
+        : pc.patients
+            .where((p) =>
+                p.name.toLowerCase().contains(q) ||
+                p.village.toLowerCase().contains(q) ||
+                p.mobile.contains(q))
+            .take(5)
+            .toList();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        children: [
+          TextField(
+            onChanged: (v) => setState(() => _query = v),
+            style: AppTextStyles.body,
+            decoration: InputDecoration(
+              hintText: 'রোগী খুঁজুন — নাম, গ্রাম বা মোবাইল',
+              hintStyle: AppTextStyles.caption,
+              prefixIcon: const Icon(Icons.search_rounded,
+                  color: AppColors.primary, size: 20),
+              suffixIcon: q.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      onPressed: () => setState(() => _query = ''),
+                    ),
+              isDense: true,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none),
+              enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      const BorderSide(color: AppColors.primary, width: 1.5)),
+            ),
+          ),
+          if (q.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            if (results.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Text('"$q" — কেউ পাওয়া যায়নি',
+                    style: AppTextStyles.caption),
+              )
+            else
+              ...results.map((p) => Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () {
+                        setState(() => _query = '');
+                        Get.toNamed(AppRoutes.patientProfile, arguments: p);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.person_rounded,
+                                size: 16, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(p.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.label),
+                            ),
+                            Text(p.village, style: AppTextStyles.caption),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right_rounded,
+                                size: 16, color: AppColors.textSecondary),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Activity: streak + this week ────────────────────────────────────────
+  // Kept honest. A 1-day "streak" is noise, so it only appears at 2+. And the
+  // week count is visits actually completed — not tasks pending, which would
+  // reward having a backlog.
+  Widget _activityStrip() {
+    if (_weekVisits == 0 && _streak < 2) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: [
+          if (_streak >= 2) ...[
+            _statPill(Icons.local_fire_department_rounded,
+                '$_streak দিন টানা', const Color(0xFFF97316)),
+            const SizedBox(width: 10),
+          ],
+          _statPill(Icons.task_alt_rounded, 'এই সপ্তাহে $_weekVisits টি ভিজিট',
+              AppColors.safeGreen),
+        ],
+      ),
+    );
+  }
+
+  Widget _statPill(IconData icon, String text, Color color) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 6),
+            Text(text,
+                style: AppTextStyles.caption
+                    .copyWith(color: color, fontWeight: FontWeight.w700)),
+          ],
+        ),
+      );
+
+  // ── The REAL worklist ───────────────────────────────────────────────────
+  // The case grid below sits under a heading that claims to be "today's tasks",
+  // but it is a launcher menu — it never told her WHO needs visiting. This does:
+  // most-overdue first, one tap to the mother.
+  Widget _worklist() {
+    if (_work.isEmpty) return const SizedBox.shrink();
+    final t0 = _today();
+    final top = _work.take(4).toList();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 22,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppColors.primary, AppColors.accent],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text('আজকের কাজ', style: AppTextStyles.h3),
+              const Spacer(),
+              if (_work.length > top.length)
+                GestureDetector(
+                  onTap: () async {
+                    await Get.toNamed(AppRoutes.dueList);
+                    _loadDueCount();
+                  },
+                  child: Text('সব দেখুন (${_work.length})',
+                      style: AppTextStyles.caption.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700)),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ...top.map((e) => _workRow(e, t0)),
+        ],
+      ),
+    );
+  }
+
+  Widget _workRow(Map<String, dynamic> e, DateTime t0) {
+    final end = DateTime.tryParse((e['windowEnd'] ?? '').toString()) ??
+        DateTime.tryParse((e['dueDate'] ?? '').toString());
+    final due = DateTime.tryParse((e['dueDate'] ?? '').toString());
+    final lateBy = end == null
+        ? 0
+        : t0.difference(DateTime(end.year, end.month, end.day)).inDays;
+    final startsIn = due == null
+        ? 0
+        : DateTime(due.year, due.month, due.day).difference(t0).inDays;
+
+    final (String status, Color color) = lateBy > 0
+        ? ('$lateBy দিন Overdue', AppColors.emergencyRed)
+        : startsIn <= 0
+            ? ('আজই করুন', AppColors.primary)
+            : ('$startsIn দিন বাকি', AppColors.textSecondary);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => _openWorkItem(e),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: color.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 34,
+                  decoration: BoxDecoration(
+                      color: color, borderRadius: BorderRadius.circular(2)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text((e['patientName'] ?? '—').toString(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.label
+                              .copyWith(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text((e['label'] ?? '').toString(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(status,
+                    style: AppTextStyles.caption.copyWith(
+                        color: color, fontWeight: FontWeight.w700)),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 16, color: AppColors.textSecondary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Open the mother this task belongs to. Falls back to the full due list if
+  /// her record isn't cached locally (e.g. first run after a fresh install).
+  void _openWorkItem(Map<String, dynamic> e) {
+    final pid = (e['patientId'] ?? '').toString();
+    final matches =
+        Get.find<PatientController>().patients.where((p) => p.id == pid).toList();
+    if (matches.isNotEmpty) {
+      Get.toNamed(AppRoutes.patientProfile, arguments: matches.first);
+    } else {
+      Get.toNamed(AppRoutes.dueList)?.then((_) => _loadDueCount());
+    }
+  }
+
   Widget _recordsSection() {
     final refCtrl = Get.isRegistered<ReferralController>()
         ? Get.find<ReferralController>()
@@ -492,6 +843,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const SizedBox(height: 4),
                       _dueBanner(),
+                      _activityStrip(),
+                      // Her actual work — who needs visiting, most overdue
+                      // first. This is what "আজকের কাজ" always should have been.
+                      _worklist(),
+                      _quickSearch(),
                       _recordsSection(),
                       Align(
                         alignment: Alignment.centerLeft,
@@ -511,7 +867,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             const SizedBox(width: 10),
-                            Text('todays_tasks'.tr, style: AppTextStyles.h3),
+                            // Honest label: this grid is a LAUNCHER, not a task
+                            // list. Calling it "today's tasks" told her she had
+                            // work to pick from when it was just a menu.
+                            Text('নতুন চেকআপ শুরু করুন',
+                                style: AppTextStyles.h3),
                           ],
                         ),
                       ),
