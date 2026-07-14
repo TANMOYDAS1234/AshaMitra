@@ -61,7 +61,7 @@ class PushService {
       // device with no Play Services. Push is a bonus channel — every alert is
       // ALSO written to the in-app notification list by the backend, so the app
       // must keep working without it.
-      AppLogger.e('[push] Firebase init failed, push disabled', e);
+      AppLogger.prod('[push] Firebase init failed, push disabled: $e');
       return;
     }
     _wired = true;
@@ -86,21 +86,39 @@ class PushService {
   /// Ask for permission, fetch the token, attach it to the logged-in account.
   /// Called on login and on a restored session. Fire-and-forget: a failure here
   /// must never block the user from getting into the app.
+  ///
+  /// Every exit path logs via [AppLogger.prod], i.e. it survives into release
+  /// builds. That is deliberate: a handset that fails to register is a handset
+  /// that will never ring for a maternal emergency, and there is no UI anywhere
+  /// that would reveal it. Debug-only logging here means the failure is
+  /// invisible precisely where it matters. No PII is logged.
   static Future<void> registerWithBackend() async {
-    if (!_wired || ApiService.token == null) return;
+    if (!_wired) {
+      AppLogger.prod('[push] skipped: Firebase not initialised');
+      return;
+    }
+    if (ApiService.token == null) {
+      AppLogger.prod('[push] skipped: no session');
+      return;
+    }
     try {
       final settings = await FirebaseMessaging.instance.requestPermission();
       if (settings.authorizationStatus == AuthorizationStatus.denied) {
-        AppLogger.i('[push] notification permission denied');
+        AppLogger.prod('[push] notification permission denied by user');
         return;
       }
       final t = _fcmToken ?? await FirebaseMessaging.instance.getToken();
-      if (t == null) return;
+      if (t == null) {
+        AppLogger.prod('[push] FCM returned no token for this device');
+        return;
+      }
       _fcmToken = t;
-      await ApiService.registerFcmToken(t);
-      AppLogger.i('[push] device registered');
+      final ok = await ApiService.registerFcmToken(t);
+      AppLogger.prod(ok
+          ? '[push] device registered'
+          : '[push] backend refused the token');
     } catch (e) {
-      AppLogger.e('[push] register failed', e);
+      AppLogger.prod('[push] register failed: $e');
     }
   }
 
