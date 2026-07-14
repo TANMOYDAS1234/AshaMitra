@@ -296,7 +296,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                             color: AppColors.primary.withValues(alpha: 0.08),
                             borderRadius: AppRadius.smR,
                           ),
-                          child: Text('role_admin'.tr,
+                          // Her actual rank (CMHO / BMHO / ANM), not a flat
+                          // "অ্যাডমিন" — a district officer and a sub-centre ANM
+                          // are not the same job, and the panel says so everywhere
+                          // else.
+                          child: Text(u?.roleShort ?? 'role_admin'.tr,
                               style: AppTextStyles.overline.copyWith(color: AppColors.primary)),
                         ),
                         if (photoPath != null) ...[

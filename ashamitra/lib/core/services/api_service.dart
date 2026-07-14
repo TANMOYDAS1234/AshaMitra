@@ -109,6 +109,16 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  /// Re-read the logged-in user from the server. The cached copy is written at
+  /// login and the JWT lasts 30 days, so it can be a month out of date.
+  static Future<Map<String, dynamic>> getMe() async {
+    final res = await http
+        .get(Uri.parse('$baseUrl/auth/me'), headers: _headers)
+        .timeout(const Duration(seconds: 15));
+    _guard(res.statusCode);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   static Future<Map<String, dynamic>> updateProfile(Map<String, dynamic> data) async {
     final res = await http.put(
       Uri.parse('$baseUrl/auth/profile'),

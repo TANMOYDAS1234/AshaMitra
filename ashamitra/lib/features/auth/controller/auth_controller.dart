@@ -61,7 +61,37 @@ class AuthController extends GetxController {
     // arrives, so we re-register rather than assume the login-time one still
     // holds. $addToSet server-side, so this is idempotent.
     unawaited(PushService.registerWithBackend());
+    unawaited(refreshUser());
     return true;
+  }
+
+  /// Re-read who we are from the server. The user object is cached at login and
+  /// the JWT lives for 30 days, so the cached copy can be a month stale — which
+  /// is precisely what showed the pilot CMHO an "ANM" panel: her session was
+  /// saved before roles existed, so the model fell back to isAdmin => anm.
+  ///
+  /// Non-blocking and failure-tolerant: offline, we simply keep the cached user.
+  Future<void> refreshUser() async {
+    if (ApiService.token == null) return;
+    try {
+      final res = await ApiService.getMe();
+      if (res['success'] != true) return;
+      final fresh = UserModel.fromJson(res['user'] as Map<String, dynamic>);
+      final wasSupervisor = user.value?.isSupervisor ?? false;
+      user.value = fresh;
+      await LocalStorageService.saveUser(fresh.toJson());
+      // A promotion or demotion changes which app they should even be in. Without
+      // this they'd sit on the wrong panel until the next manual logout — an ASHA
+      // stuck on a supervisor dashboard whose every request the server rejects.
+      if (fresh.isSupervisor != wasSupervisor && Get.currentRoute != AppRoutes.splash) {
+        Get.offAllNamed(
+            fresh.isSupervisor ? AppRoutes.adminDashboard : AppRoutes.home);
+      }
+    } on UnauthorizedException {
+      // handled by the 401 hook
+    } catch (_) {
+      // offline — the cached user stands
+    }
   }
 
   /// Step 1 — send OTP via backend (works for admin and ASHA worker).
