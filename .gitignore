@@ -5,6 +5,19 @@ mongo*.txt
 *.pem
 *-key.json
 gcp-tts-key.json
+
+# Firebase. The service-account JSON grants FULL send access to the FCM project
+# and downloads as "<project>-firebase-adminsdk-xxxxx-yyyy.json" — which the
+# *-key.json rule above does NOT match. It must never reach this public repo;
+# only three values from it belong in backend/.env.
+*firebase-adminsdk*.json
+*serviceAccount*.json
+serviceAccountKey.json
+# Not strictly a secret (it ships inside the APK), but this repo is public and
+# the file is one click to re-download, so keep the project config out of it.
+google-services.json
+android/app/google-services.json
+
 .env
 .env.local
 .env.*.local
