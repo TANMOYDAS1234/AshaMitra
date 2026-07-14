@@ -102,6 +102,39 @@ class ReadinessBlock {
   int get unknown => stale + never;
 }
 
+/// How many people in one block answered ok / low / out for one item.
+class ReadinessCell {
+  final int ok;
+  final int low;
+  final int out;
+
+  const ReadinessCell({this.ok = 0, this.low = 0, this.out = 0});
+
+  factory ReadinessCell.fromJson(Map<String, dynamic> j) => ReadinessCell(
+        ok: (j['ok'] as num?)?.toInt() ?? 0,
+        low: (j['low'] as num?)?.toInt() ?? 0,
+        out: (j['out'] as num?)?.toInt() ?? 0,
+      );
+}
+
+/// One column of the heatmap: a block, and its answer for each item.
+///
+/// A code MISSING from `cells` means nobody reported it — which the UI renders
+/// grey (unknown), never green. Absence of a report is not a report of absence.
+class ReadinessMatrixRow {
+  final String block;
+  final Map<String, ReadinessCell> cells;
+
+  const ReadinessMatrixRow({required this.block, required this.cells});
+
+  factory ReadinessMatrixRow.fromJson(Map<String, dynamic> j) => ReadinessMatrixRow(
+        block: j['block']?.toString() ?? 'অজানা',
+        cells: ((j['cells'] as Map<String, dynamic>?) ?? {}).map(
+          (k, v) => MapEntry(k, ReadinessCell.fromJson(v as Map<String, dynamic>)),
+        ),
+      );
+}
+
 class CriticalGap {
   final String code;
   final String label;
@@ -145,6 +178,10 @@ class ReadinessController extends GetxController {
   final staleDays = 10.obs;
   final loadingSummary = false.obs;
   final summaryError = ''.obs;
+
+  /// Heatmap rows (items) and columns (blocks).
+  final gridItems = <ReadinessItem>[].obs;
+  final matrix = <ReadinessMatrixRow>[].obs;
 
   int get criticalCount =>
       critical.fold<int>(0, (s, c) => s + c.count);
@@ -221,6 +258,12 @@ class ReadinessController extends GetxController {
           .toList();
       blocks.value = ((d['blocks'] as List?) ?? [])
           .map((e) => ReadinessBlock.fromJson(e as Map<String, dynamic>))
+          .toList();
+      gridItems.value = ((d['items'] as List?) ?? [])
+          .map((e) => ReadinessItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+      matrix.value = ((d['matrix'] as List?) ?? [])
+          .map((e) => ReadinessMatrixRow.fromJson(e as Map<String, dynamic>))
           .toList();
       final c = (d['coverage'] as Map<String, dynamic>?) ?? {};
       coverage.value = {

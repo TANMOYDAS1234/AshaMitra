@@ -10,6 +10,7 @@ import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../auth/controller/auth_controller.dart';
 import '../../controller/readiness_controller.dart';
+import '../widgets/readiness_charts.dart';
 
 /// What is missing, where, and who has told us nothing at all.
 ///
@@ -87,6 +88,34 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
                           _criticalPanel(),
                           const SizedBox(height: 18),
                         ],
+
+                        // The picture. Rows are supplies, columns are blocks —
+                        // "MgSO4 is red across three blocks" without reading a
+                        // single number.
+                        if (c.matrix.isNotEmpty) ...[
+                          _card(
+                            title: '${lv.mid} × ওষুধ/যন্ত্র',
+                            subtitle: 'লাল = নেই · ধূসর = খবরই আসেনি',
+                            child: SupplyHeatmap(
+                              items: c.gridItems,
+                              matrix: c.matrix,
+                              onBlockTap: (b) =>
+                                  _open.contains(b) ? _open.remove(b) : _open.add(b),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          _card(
+                            title: '${lv.mid} অনুযায়ী অবস্থা',
+                            subtitle: 'খারাপ আগে',
+                            child: BlockBars(
+                              blocks: c.blocks,
+                              onTap: (b) =>
+                                  _open.contains(b) ? _open.remove(b) : _open.add(b),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+
                         _geoTitle(lv),
                         const SizedBox(height: 8),
                         ...c.blocks.map(_blockCard),
@@ -116,10 +145,40 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
   // A sub-centre that has never reported is not a sub-centre that is fine. If
   // this strip only counted stockouts, a district where nobody reports would
   // read as a perfect district — the most dangerous possible lie.
+  /// A generic titled card, so every chart on this screen frames the same way.
+  Widget _card({
+    required String title,
+    String? subtitle,
+    required Widget child,
+  }) =>
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.xlR,
+          boxShadow: AppShadows.low,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: AppTextStyles.h3),
+            if (subtitle != null) ...[
+              const SizedBox(height: 2),
+              Text(subtitle,
+                  style: AppTextStyles.caption
+                      .copyWith(color: AppColors.textSecondary)),
+            ],
+            const SizedBox(height: 14),
+            child,
+          ],
+        ),
+      );
+
   Widget _coverageStrip() {
     final cov = c.coverage;
-    final expected = cov['expected'] ?? 0;
     final reported = cov['reported'] ?? 0;
+    final stale = cov['stale'] ?? 0;
+    final never = cov['never'] ?? 0;
     final unknown = c.unknownCount;
     return Container(
       padding: const EdgeInsets.all(16),
@@ -130,16 +189,21 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
       ),
       child: Row(
         children: [
-          _stat('$reported/$expected', 'খবর দিয়েছে',
-              reported == expected && expected > 0
-                  ? AppColors.safeGreen
-                  : AppColors.primary),
-          _divider(),
-          _stat('${c.criticalCount}', 'জরুরি ঘাটতি',
-              c.criticalCount > 0 ? AppColors.emergencyRed : AppColors.safeGreen),
-          _divider(),
-          _stat('$unknown', 'খবর নেই',
-              unknown > 0 ? AppColors.warning : AppColors.safeGreen),
+          CoverageDonut(reported: reported, stale: stale, never: never),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              children: [
+                _stat('${c.criticalCount}', 'জরুরি ঘাটতি',
+                    c.criticalCount > 0
+                        ? AppColors.emergencyRed
+                        : AppColors.safeGreen),
+                const SizedBox(height: 10),
+                _stat('$unknown', 'খবর নেই',
+                    unknown > 0 ? AppColors.warning : AppColors.safeGreen),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -159,9 +223,6 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
           ],
         ),
       );
-
-  Widget _divider() => Container(
-      width: 1, height: 34, color: AppColors.onBackground.withValues(alpha: 0.06));
 
   // ── What's missing, worst first ────────────────────────────────────────────
   Widget _criticalPanel() => Container(

@@ -263,15 +263,22 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
   Widget _readinessAlert() => Obx(() {
         final gaps = _readiness.critical;
         final unknown = _readiness.unknownCount;
-        if (gaps.isEmpty && unknown == 0) return const SizedBox.shrink();
+
+        // Always rendered, even when everything is fine — otherwise a district in
+        // good shape has no way into the supply screen at all, and the CMHO can
+        // never go LOOK. An all-clear is a state worth showing, not a reason to
+        // disappear.
+        final Color tone = gaps.isNotEmpty
+            ? AppColors.emergencyRed
+            : unknown > 0
+                ? AppColors.warning
+                : AppColors.safeGreen;
 
         final worst = gaps.take(3).toList();
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Material(
-            color: gaps.isNotEmpty
-                ? AppColors.emergencyRed.withValues(alpha: 0.05)
-                : AppColors.warning.withValues(alpha: 0.06),
+            color: tone.withValues(alpha: 0.05),
             borderRadius: AppRadius.xlR,
             child: InkWell(
               borderRadius: AppRadius.xlR,
@@ -280,12 +287,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   borderRadius: AppRadius.xlR,
-                  border: Border.all(
-                    color: (gaps.isNotEmpty
-                            ? AppColors.emergencyRed
-                            : AppColors.warning)
-                        .withValues(alpha: 0.28),
-                  ),
+                  border: Border.all(color: tone.withValues(alpha: 0.28)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,22 +297,22 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                         Icon(
                           gaps.isNotEmpty
                               ? Icons.medication_liquid_rounded
-                              : Icons.help_outline_rounded,
+                              : unknown > 0
+                                  ? Icons.help_outline_rounded
+                                  : Icons.verified_rounded,
                           size: 20,
-                          color: gaps.isNotEmpty
-                              ? AppColors.emergencyRed
-                              : AppColors.warning,
+                          color: tone,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             gaps.isNotEmpty
                                 ? 'প্রাণরক্ষাকারী ওষুধ/যন্ত্র নেই (${_readiness.criticalCount})'
-                                : 'ওষুধ-যন্ত্রের খবর নেই ($unknown)',
+                                : unknown > 0
+                                    ? 'ওষুধ-যন্ত্রের খবর নেই ($unknown)'
+                                    : 'ওষুধ ও যন্ত্রপাতি — সব ঠিক আছে',
                             style: AppTextStyles.label.copyWith(
-                              color: gaps.isNotEmpty
-                                  ? AppColors.emergencyRed
-                                  : AppColors.warning,
+                              color: tone,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
