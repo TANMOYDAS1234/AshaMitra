@@ -356,6 +356,14 @@ class AdminController extends GetxController {
           .map((e) => Map<String, dynamic>.from(e as Map))
           .toList();
 
+  /// The level directly below me, with the same HMIS indicators. This is what
+  /// makes the BMHO and ANM panels real: a BMHO ranks his ANMs, an ANM ranks
+  /// her ASHAs. Blocks only mean something to a CMHO.
+  List<Map<String, dynamic>> get dTeam =>
+      ((district.value?['team'] as List?) ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
   Map<String, dynamic> get dAlerts =>
       Map<String, dynamic>.from((district.value?['alerts'] as Map?) ?? {});
 

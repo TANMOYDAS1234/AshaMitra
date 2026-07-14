@@ -41,7 +41,10 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
   @override
   Widget build(BuildContext context) {
     final ctrl = Get.find<AdminController>();
-    final role = Get.find<AuthController>().user.value?.roleShort ?? 'ANM';
+    final me = Get.find<AuthController>().user.value;
+    final role = me?.roleShort ?? 'ANM';
+    // The level directly below this officer — who they are accountable for.
+    final child = me?.manages ?? 'ASHA';
     // A CMHO reads this as the district; a BMHO as their block.
     final scope = switch (role) {
       'CMHO' => 'জেলা',
@@ -90,6 +93,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
 
             final ind = ctrl.dIndicators;
             final blocks = ctrl.dBlocks;
+            final team = ctrl.dTeam;
 
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -107,14 +111,25 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                 const SizedBox(height: 12),
                 _indicatorGrid(ind),
 
-                // ── 3. Block-wise accountability ─────────────────────────
-                // Only meaningful when there is more than one block to compare.
+                // ── 3. Accountability: rank the level directly below me ──
+                // This is what makes the BMHO and ANM panels real. A BMHO's
+                // whole subtree IS one block, so a block table tells him
+                // nothing — he needs his ANMs ranked; an ANM needs her ASHAs.
+                if (team.isNotEmpty) ...[
+                  const SizedBox(height: 24),
+                  _sectionTitle('$child অনুযায়ী পারফরম্যান্স',
+                      'কে পিছিয়ে আছে — সেটাই এখানে দেখা যায়'),
+                  const SizedBox(height: 12),
+                  _rankTable(team, labelKey: 'name'),
+                ],
+
+                // ── 4. Geographic view — only a CMHO manages on this axis.
                 if (blocks.length > 1) ...[
                   const SizedBox(height: 24),
                   _sectionTitle('ব্লক অনুযায়ী পারফরম্যান্স',
-                      'কোন ব্লক পিছিয়ে আছে — সেটাই এখানে দেখা যায়'),
+                      'ভৌগোলিক ভাগ — জেলা → ব্লক'),
                   const SizedBox(height: 12),
-                  _blockTable(blocks),
+                  _rankTable(blocks, labelKey: 'block'),
                 ],
               ],
             );
@@ -468,11 +483,15 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
         ),
       );
 
-  // ── Block-wise accountability ──────────────────────────────────────────
-  Widget _blockTable(List<Map<String, dynamic>> blocks) {
-    // Rank by institutional-delivery % — the indicator a CMHO is judged on.
-    // Blocks with no births yet sort last rather than looking like 0%.
-    final ranked = [...blocks]..sort((a, b) {
+  // ── Accountability ranking ─────────────────────────────────────────────
+  // Used twice: to rank the people directly below (labelKey 'name') and, for a
+  // CMHO, to rank blocks geographically (labelKey 'block'). Same indicators,
+  // same thresholds — so a BMHO judges his ANMs exactly as he is judged.
+  Widget _rankTable(List<Map<String, dynamic>> rows,
+      {required String labelKey}) {
+    // Rank by institutional-delivery % — the indicator officers are judged on.
+    // Rows with no births yet sort LAST rather than masquerading as 0%.
+    final ranked = [...rows]..sort((a, b) {
         final x = (a['institutionalPct'] as num?)?.toDouble();
         final y = (b['institutionalPct'] as num?)?.toDouble();
         if (x == null && y == null) return 0;
@@ -494,8 +513,9 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
           final imm = (b['immunizationPct'] as num?)?.toDouble();
           final deaths = ((b['maternalDeaths'] as num?)?.toInt() ?? 0) +
               ((b['infantDeaths'] as num?)?.toInt() ?? 0);
-          // "Underperforming" isn't a vibe — it's a threshold a CMHO defends:
-          // institutional delivery under 80%, or any death in the block.
+          final ashas = (b['ashas'] as num?)?.toInt() ?? 0;
+          // "Underperforming" isn't a vibe — it's a threshold an officer can
+          // defend: institutional delivery under 80%, or any death.
           final lagging = (inst != null && inst < 80) || deaths > 0;
 
           return Padding(
@@ -508,9 +528,13 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                     Expanded(
                       child: Row(
                         children: [
-                          Text('${b['block']}',
-                              style: AppTextStyles.label
-                                  .copyWith(fontWeight: FontWeight.w700)),
+                          Flexible(
+                            child: Text('${b[labelKey]}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.label
+                                    .copyWith(fontWeight: FontWeight.w700)),
+                          ),
                           if (lagging) ...[
                             const SizedBox(width: 6),
                             Container(
@@ -562,14 +586,20 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                 const SizedBox(height: 5),
                 Row(
                   children: [
-                    _chip(Icons.people_alt_rounded,
-                        '${(b['ashas'] as num?)?.toInt() ?? 0} ASHA'),
-                    const SizedBox(width: 10),
+                    // A team-size chip only makes sense for a supervisor row —
+                    // an ASHA leaf would otherwise read "1 ASHA".
+                    if (ashas > 1) ...[
+                      _chip(Icons.people_alt_rounded, '$ashas ASHA'),
+                      const SizedBox(width: 10),
+                    ],
                     _chip(Icons.child_friendly_rounded,
                         '${(b['births'] as num?)?.toInt() ?? 0} জন্ম'),
                     const SizedBox(width: 10),
                     _chip(Icons.vaccines_rounded,
                         imm == null ? '—' : '${imm.toStringAsFixed(0)}% টিকা'),
+                    const SizedBox(width: 10),
+                    _chip(Icons.analytics_rounded,
+                        '${(b['reports'] as num?)?.toInt() ?? 0} রিপোর্ট'),
                     if (deaths > 0) ...[
                       const SizedBox(width: 10),
                       _chip(Icons.gpp_bad_rounded, '$deaths মৃত্যু',
