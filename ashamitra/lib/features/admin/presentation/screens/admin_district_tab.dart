@@ -431,9 +431,16 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
       ['প্রাতিষ্ঠানিক প্রসব', p('institutionalDeliveryPct'), Icons.local_hospital_rounded, AppColors.safeGreen],
       ['সিজার', p('cSectionPct'), Icons.medical_services_rounded, AppColors.sky],
       ['কম ওজনের শিশু (<২.৫ কেজি)', p('lbwPct'), Icons.monitor_weight_rounded, AppColors.emergencyRed],
-      ['টিকা কভারেজ', p('immunizationCoveragePct'), Icons.vaccines_rounded, AppColors.safeGreen],
-      ['টিকা বাকি (Overdue)', n('immunizationDefaulters'), Icons.event_busy_rounded, AppColors.emergencyRed],
-      ['রেফারেল সম্পন্ন', p('referralClosurePct'), Icons.assignment_turned_in_rounded, AppColors.purple],
+      ['টিকা কভারেজ', p('immunizationCoveragePct'), Icons.vaccines_rounded, AppColors.safeGreen, null],
+      // The one tile that is a work order, not a statistic — tap it to see WHO.
+      [
+        'টিকা বাকি (Overdue)',
+        n('immunizationDefaulters'),
+        Icons.event_busy_rounded,
+        AppColors.emergencyRed,
+        _showDefaulters,
+      ],
+      ['রেফারেল সম্পন্ন', p('referralClosurePct'), Icons.assignment_turned_in_rounded, AppColors.purple, null],
     ];
 
     return GridView.count(
@@ -444,44 +451,227 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
       mainAxisSpacing: 12,
       childAspectRatio: 1.45,
       children: tiles
-          .map((t) => _kpiTile(
-              t[0] as String, t[1] as String, t[2] as IconData, t[3] as Color))
+          .map((t) => _kpiTile(t[0] as String, t[1] as String,
+              t[2] as IconData, t[3] as Color,
+              onTap: t.length > 4 ? t[4] as VoidCallback? : null))
           .toList(),
     );
   }
 
-  Widget _kpiTile(String label, String value, IconData icon, Color color) =>
-      Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.xlR,
-          boxShadow: AppShadows.tinted(color),
+  Widget _kpiTile(String label, String value, IconData icon, Color color,
+      {VoidCallback? onTap}) {
+    final tile = Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.xlR,
+        boxShadow: AppShadows.tinted(color),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.10),
+                    borderRadius: AppRadius.smR),
+                child: Icon(icon, color: color, size: 17),
+              ),
+              const Spacer(),
+              // Affordance — otherwise nobody discovers the tile is drillable.
+              if (onTap != null)
+                Icon(Icons.chevron_right_rounded,
+                    size: 17, color: color.withValues(alpha: 0.55)),
+            ],
+          ),
+          const Spacer(),
+          Text(value,
+              style: AppTextStyles.h2.copyWith(
+                  color: color, fontWeight: FontWeight.w800, height: 1.1)),
+          const SizedBox(height: 2),
+          Text(label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+
+    if (onTap == null) return tile;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: AppRadius.xlR,
+      child: InkWell(
+          borderRadius: AppRadius.xlR, onTap: onTap, child: tile),
+    );
+  }
+
+  // ── Defaulter drill-down ───────────────────────────────────────────────
+  // Grouped BY ASHA, worst first: an officer chases the ASHA, not the child, so
+  // that is the shape the work actually takes. Within each ASHA, the
+  // longest-overdue child leads.
+  void _showDefaulters() {
+    final ctrl = Get.find<AdminController>();
+    final groups = ctrl.dDefaultersByAsha;
+    final shown = ctrl.dDefaulters.length;
+    final total = ctrl.dDefaultersTotal;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.8,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        builder: (sheetCtx, scrollCtrl) => Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppRadius.xxl)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 8),
+                child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2))),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.event_busy_rounded,
+                        color: AppColors.emergencyRed, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('$total টি টিকা বাকি',
+                              style: AppTextStyles.h3),
+                          Text(
+                            shown < total
+                                ? '$total টির মধ্যে $shown টি দেখানো হচ্ছে · বেশি দেরি আগে'
+                                : 'যত দিন দেরি, তত উপরে',
+                            style: AppTextStyles.caption,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: groups.isEmpty
+                    ? EmptyState(
+                        icon: Icons.verified_rounded,
+                        title: 'কোনো টিকা বাকি নেই',
+                        subtitle: 'সব শিশুর টিকা সময়মতো হয়েছে',
+                      )
+                    : ListView(
+                        controller: scrollCtrl,
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                        children: groups.map((g) {
+                          final asha = g.key;
+                          final rows = [...g.value]..sort((a, b) =>
+                              ((b['daysOverdue'] as num?)?.toInt() ?? 0)
+                                  .compareTo((a['daysOverdue'] as num?)?.toInt() ??
+                                      0));
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 18),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.person_rounded,
+                                        size: 15, color: AppColors.primary),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(asha,
+                                          style: AppTextStyles.label.copyWith(
+                                              fontWeight: FontWeight.w700)),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.emergencyRed
+                                            .withValues(alpha: 0.10),
+                                        borderRadius: AppRadius.smR,
+                                      ),
+                                      child: Text('${rows.length} টি বাকি',
+                                          style: AppTextStyles.overline.copyWith(
+                                              color: AppColors.emergencyRed,
+                                              fontWeight: FontWeight.w700)),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                ...rows.map((d) => Container(
+                                      margin: const EdgeInsets.only(bottom: 6),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 9),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF8FAFC),
+                                        borderRadius: AppRadius.mdR,
+                                        border: Border.all(
+                                            color: AppColors.emergencyRed
+                                                .withValues(alpha: 0.18)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                    '${d['patientName']}',
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: AppTextStyles.label),
+                                                Text(
+                                                    '${d['label']} · ${d['block']}',
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style:
+                                                        AppTextStyles.caption),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text('${d['daysOverdue']} দিন',
+                                              style: AppTextStyles.label.copyWith(
+                                                  color: AppColors.emergencyRed,
+                                                  fontWeight: FontWeight.w700)),
+                                        ],
+                                      ),
+                                    )),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+              ),
+            ],
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(7),
-              decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.10),
-                  borderRadius: AppRadius.smR),
-              child: Icon(icon, color: color, size: 17),
-            ),
-            const Spacer(),
-            Text(value,
-                style: AppTextStyles.h2.copyWith(
-                    color: color, fontWeight: FontWeight.w800, height: 1.1)),
-            const SizedBox(height: 2),
-            Text(label,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style:
-                    AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
+      ),
+    );
+  }
 
   // ── Accountability ranking ─────────────────────────────────────────────
   // Used twice: to rank the people directly below (labelKey 'name') and, for a

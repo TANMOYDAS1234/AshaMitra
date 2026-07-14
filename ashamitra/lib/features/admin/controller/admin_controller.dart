@@ -367,6 +367,31 @@ class AdminController extends GetxController {
   Map<String, dynamic> get dAlerts =>
       Map<String, dynamic>.from((district.value?['alerts'] as Map?) ?? {});
 
+  /// The immunisation defaulters themselves — WHO is overdue, for what, how
+  /// long, and whose ASHA. An officer cannot act on the number "13".
+  List<Map<String, dynamic>> get dDefaulters =>
+      ((district.value?['defaulters'] as List?) ?? [])
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
+
+  /// TRUE total, which may exceed the rows returned (server caps at 100). The
+  /// UI must say "showing 100 of 240" rather than let the list look complete.
+  int get dDefaultersTotal =>
+      (district.value?['defaultersTotal'] as num?)?.toInt() ??
+      dDefaulters.length;
+
+  /// Defaulters grouped by ASHA, worst first — the officer chases the ASHA,
+  /// not the child, so this is the shape the work actually takes.
+  List<MapEntry<String, List<Map<String, dynamic>>>> get dDefaultersByAsha {
+    final byAsha = <String, List<Map<String, dynamic>>>{};
+    for (final d in dDefaulters) {
+      byAsha.putIfAbsent((d['asha'] ?? '—').toString(), () => []).add(d);
+    }
+    final entries = byAsha.entries.toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+    return entries;
+  }
+
   List<Map<String, dynamic>> dAlert(String key) =>
       ((dAlerts[key] as List?) ?? [])
           .map((e) => Map<String, dynamic>.from(e as Map))
