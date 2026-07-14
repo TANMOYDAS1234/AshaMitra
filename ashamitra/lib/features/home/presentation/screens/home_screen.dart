@@ -631,6 +631,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Low-stock lines flag red; otherwise the module colour.
                     countColor: msCtrl.lowStockCount > 0 ? AppColors.emergencyRed : null,
                   )),
+              // Not the monthly stock ledger above — this is "is the life-saving
+              // kit here TODAY". A missing MgSO4 or a dead BP machine goes
+              // straight to her ANM/BMHO's phone.
+              _recordTile(
+                icon: Icons.medication_liquid_rounded,
+                color: const Color(0xFF0EA5E9), // sky
+                title: 'ওষুধ ও যন্ত্রপাতি',
+                route: AppRoutes.readinessCheck,
+              ),
             ],
           ),
         ],

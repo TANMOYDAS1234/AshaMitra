@@ -48,6 +48,7 @@ class PushService {
     AppRoutes.reports,
     AppRoutes.adminReports,
     AppRoutes.dueList,
+    AppRoutes.readinessSummary,
   };
 
   /// Wire up the listeners. Safe to call before login — it does not prompt for

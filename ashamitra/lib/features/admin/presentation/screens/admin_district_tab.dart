@@ -9,6 +9,8 @@ import '../../../../shared/widgets/skeleton.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../auth/controller/auth_controller.dart';
 import '../../../admin/controller/admin_controller.dart';
+import '../../../readiness/controller/readiness_controller.dart';
+import '../../../../app/routes.dart';
 import '../../services/district_report_pdf.dart';
 
 /// The district dashboard — what a CMHO (and a BMHO, for their block) actually
@@ -31,11 +33,19 @@ class AdminDistrictTab extends StatefulWidget {
 class _AdminDistrictTabState extends State<AdminDistrictTab> {
   int _months = 12;
 
+  /// Supply/equipment readiness. Kept as its own controller and its own request:
+  /// the district route is already heavy, and this answers a different question
+  /// ("is the kit there NOW") from every indicator on this screen ("what did the
+  /// numbers do last quarter").
+  final _readiness = Get.put(ReadinessController(), tag: 'readiness');
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-        (_) => Get.find<AdminController>().loadDistrict(months: _months));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Get.find<AdminController>().loadDistrict(months: _months);
+      _readiness.loadSummary();
+    });
   }
 
   @override
@@ -244,6 +254,101 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
       );
 
   // ── Escalations ────────────────────────────────────────────────────────
+  /// Missing life-saving supplies, above every indicator on this screen.
+  ///
+  /// The rest of the dashboard is a report card: it tells a CMHO how last quarter
+  /// went. This tells her what to fix before tonight. A sub-centre with no MgSO4
+  /// is a woman who will fit and not be treated — and it's a problem she can
+  /// actually solve in a day, which is more than can be said for a coverage rate.
+  Widget _readinessAlert() => Obx(() {
+        final gaps = _readiness.critical;
+        final unknown = _readiness.unknownCount;
+        if (gaps.isEmpty && unknown == 0) return const SizedBox.shrink();
+
+        final worst = gaps.take(3).toList();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Material(
+            color: gaps.isNotEmpty
+                ? AppColors.emergencyRed.withValues(alpha: 0.05)
+                : AppColors.warning.withValues(alpha: 0.06),
+            borderRadius: AppRadius.xlR,
+            child: InkWell(
+              borderRadius: AppRadius.xlR,
+              onTap: () => Get.toNamed(AppRoutes.readinessSummary),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  borderRadius: AppRadius.xlR,
+                  border: Border.all(
+                    color: (gaps.isNotEmpty
+                            ? AppColors.emergencyRed
+                            : AppColors.warning)
+                        .withValues(alpha: 0.28),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          gaps.isNotEmpty
+                              ? Icons.medication_liquid_rounded
+                              : Icons.help_outline_rounded,
+                          size: 20,
+                          color: gaps.isNotEmpty
+                              ? AppColors.emergencyRed
+                              : AppColors.warning,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            gaps.isNotEmpty
+                                ? 'প্রাণরক্ষাকারী ওষুধ/যন্ত্র নেই (${_readiness.criticalCount})'
+                                : 'ওষুধ-যন্ত্রের খবর নেই ($unknown)',
+                            style: AppTextStyles.label.copyWith(
+                              color: gaps.isNotEmpty
+                                  ? AppColors.emergencyRed
+                                  : AppColors.warning,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded,
+                            color: AppColors.textSecondary),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ...worst.map((g) => Padding(
+                          padding: const EdgeInsets.only(left: 28, top: 2),
+                          child: Text(
+                            '${g.label} — ${g.count} জায়গায় নেই'
+                            '${g.places.isNotEmpty ? ' (${g.places.first.block})' : ''}',
+                            style: AppTextStyles.bodySm
+                                .copyWith(color: AppColors.onBackground),
+                          ),
+                        )),
+                    // Silence is not safety. A sub-centre that never reports is
+                    // exactly as dangerous as one reporting a stockout — and far
+                    // easier to overlook — so it is stated, never omitted.
+                    if (unknown > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 28, top: 4),
+                        child: Text(
+                          '$unknown জন কোনও খবর দেয়নি — "খবর নেই" মানে "ঠিক আছে" নয়',
+                          style: AppTextStyles.caption
+                              .copyWith(color: AppColors.textSecondary),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      });
+
   Widget _alerts(AdminController ctrl) {
     final maternal = ctrl.dAlert('maternalDeaths');
     final infant = ctrl.dAlert('infantDeaths');
@@ -252,27 +357,40 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
     final silent = ctrl.dAlert('silentAshas');
 
     if (ctrl.dAlertCount == 0) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.safeGreen.withValues(alpha: 0.08),
-          borderRadius: AppRadius.xlR,
-          border:
-              Border.all(color: AppColors.safeGreen.withValues(alpha: 0.30)),
-        ),
-        child: Row(
+      return Obx(() {
+        // Even with every clinical indicator clean, a missing MgSO4 means this
+        // district is NOT "সব ঠিক আছে". The all-clear must not outrank an empty
+        // drug shelf.
+        final quiet = _readiness.critical.isEmpty && _readiness.unknownCount == 0;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.verified_rounded,
-                color: AppColors.safeGreen, size: 20),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text('কোনো জরুরি বিষয় নেই — সব ঠিক আছে',
-                  style: AppTextStyles.label
-                      .copyWith(color: AppColors.safeGreen)),
-            ),
+            _readinessAlert(),
+            if (quiet)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.safeGreen.withValues(alpha: 0.08),
+                  borderRadius: AppRadius.xlR,
+                  border: Border.all(
+                      color: AppColors.safeGreen.withValues(alpha: 0.30)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.verified_rounded,
+                        color: AppColors.safeGreen, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text('কোনো জরুরি বিষয় নেই — সব ঠিক আছে',
+                          style: AppTextStyles.label
+                              .copyWith(color: AppColors.safeGreen)),
+                    ),
+                  ],
+                ),
+              ),
           ],
-        ),
-      );
+        );
+      });
     }
 
     return Column(
@@ -289,6 +407,10 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
           ],
         ),
         const SizedBox(height: 10),
+
+        // Supplies lead. Every other card here reports something that has already
+        // gone wrong; this one names something still preventable.
+        _readinessAlert(),
 
         // Maternal death is the single hardest escalation a CMHO faces —
         // it triggers a formal death review (MDSR). It always leads.

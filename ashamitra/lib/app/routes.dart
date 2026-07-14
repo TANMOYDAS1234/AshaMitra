@@ -21,6 +21,8 @@ import '../features/vital_events/presentation/screens/vital_event_screen.dart';
 import '../features/ncd_cbac/presentation/screens/ncd_cbac_screen.dart';
 import '../features/tb_cases/presentation/screens/tb_case_screen.dart';
 import '../features/medicine_stock/presentation/screens/medicine_stock_screen.dart';
+import '../features/readiness/presentation/screens/readiness_check_screen.dart';
+import '../features/readiness/presentation/screens/readiness_summary_screen.dart';
 import '../features/emergency/presentation/screens/emergency_screen.dart';
 import '../features/emergency/presentation/screens/nearby_facilities_screen.dart';
 import '../features/reports/presentation/screens/checkup_log_screen.dart';
@@ -71,6 +73,10 @@ class AppRoutes {
   static const ncdCbac         = '/ncd-cbac';
   static const tbCases         = '/tb-cases';
   static const medicineStock   = '/medicine-stock';
+  // Readiness pulse — "is the life-saving kit actually here, right now?".
+  // Distinct from medicineStock, which is the monthly stock LEDGER.
+  static const readinessCheck   = '/readiness';
+  static const readinessSummary = '/readiness/summary';
   static const development      = '/development';
   // Admin
   static const adminDashboard  = '/admin';
@@ -227,6 +233,20 @@ class AppRoutes {
     GetPage(
       name: medicineStock,
       page: () => const MedicineStockListScreen(),
+      transition: Transition.rightToLeftWithFade,
+      transitionDuration: _medium,
+      curve: Curves.easeOutCubic,
+    ),
+    GetPage(
+      name: readinessCheck,
+      page: () => const ReadinessCheckScreen(),
+      transition: Transition.rightToLeftWithFade,
+      transitionDuration: _medium,
+      curve: Curves.easeOutCubic,
+    ),
+    GetPage(
+      name: readinessSummary,
+      page: () => const ReadinessSummaryScreen(),
       transition: Transition.rightToLeftWithFade,
       transitionDuration: _medium,
       curve: Curves.easeOutCubic,
