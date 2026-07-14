@@ -109,7 +109,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                 const SizedBox(height: 22),
                 _sectionTitle('HMIS মূল সূচক', 'সরকারি HMIS ফর্মুলা অনুযায়ী'),
                 const SizedBox(height: 12),
-                _indicatorGrid(ind),
+                _indicatorGrid(ind, ctrl.dPrev),
 
                 // ── 3. Accountability: rank the level directly below me ──
                 // This is what makes the BMHO and ANM panels real. A BMHO's
@@ -414,7 +414,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
       );
 
   // ── HMIS indicators ────────────────────────────────────────────────────
-  Widget _indicatorGrid(Map<String, dynamic> i) {
+  Widget _indicatorGrid(Map<String, dynamic> i, Map<String, dynamic> prev) {
     // A null percentage means "no denominator" — show "—", never 0%.
     String p(String k) {
       final v = i[k];
@@ -423,25 +423,13 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
 
     String n(String k) => '${(i[k] as num?)?.toInt() ?? 0}';
 
-    final tiles = <List<dynamic>>[
-      ['প্রসূতি নথিভুক্ত', n('pregnanciesRegistered'), Icons.pregnant_woman_rounded, AppColors.primary],
-      ['১ম ত্রৈমাসিকে ANC', p('ancFirstTrimesterPct'), Icons.event_available_rounded, AppColors.sky],
-      ['৪+ ANC ভিজিট', p('anc4PlusPct'), Icons.checklist_rounded, AppColors.purple],
-      ['উচ্চ ঝুঁকি প্রসূতি', n('highRiskPregnancies'), Icons.warning_amber_rounded, AppColors.warningYellow],
-      ['প্রাতিষ্ঠানিক প্রসব', p('institutionalDeliveryPct'), Icons.local_hospital_rounded, AppColors.safeGreen],
-      ['সিজার', p('cSectionPct'), Icons.medical_services_rounded, AppColors.sky],
-      ['কম ওজনের শিশু (<২.৫ কেজি)', p('lbwPct'), Icons.monitor_weight_rounded, AppColors.emergencyRed],
-      ['টিকা কভারেজ', p('immunizationCoveragePct'), Icons.vaccines_rounded, AppColors.safeGreen, null],
-      // The one tile that is a work order, not a statistic — tap it to see WHO.
-      [
-        'টিকা বাকি (Overdue)',
-        n('immunizationDefaulters'),
-        Icons.event_busy_rounded,
-        AppColors.emergencyRed,
-        _showDefaulters,
-      ],
-      ['রেফারেল সম্পন্ন', p('referralClosurePct'), Icons.assignment_turned_in_rounded, AppColors.purple, null],
-    ];
+    // This window minus the one before it. Null when either side is missing, so
+    // a tile with no baseline shows no arrow rather than inventing one.
+    double? d(String k) {
+      final a = i[k], b = prev[k];
+      if (a is! num || b is! num) return null;
+      return (a - b).toDouble();
+    }
 
     return GridView.count(
       crossAxisCount: 2,
@@ -449,17 +437,63 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
-      childAspectRatio: 1.45,
-      children: tiles
-          .map((t) => _kpiTile(t[0] as String, t[1] as String,
-              t[2] as IconData, t[3] as Color,
-              onTap: t.length > 4 ? t[4] as VoidCallback? : null))
-          .toList(),
+      childAspectRatio: 1.32,
+      children: [
+        _kpiTile('প্রসূতি নথিভুক্ত', n('pregnanciesRegistered'),
+            Icons.pregnant_woman_rounded, AppColors.primary,
+            delta: d('pregnanciesRegistered'), polarity: 1),
+        _kpiTile('১ম ত্রৈমাসিকে ANC', p('ancFirstTrimesterPct'),
+            Icons.event_available_rounded, AppColors.sky,
+            delta: d('ancFirstTrimesterPct'), polarity: 1),
+        _kpiTile('৪+ ANC ভিজিট', p('anc4PlusPct'), Icons.checklist_rounded,
+            AppColors.purple,
+            delta: d('anc4PlusPct'), polarity: 1),
+        // Finding MORE high-risk women can mean better screening OR worse
+        // outcomes. The direction alone cannot tell you which, so it gets no
+        // good/bad verdict — only the movement.
+        _kpiTile('উচ্চ ঝুঁকি প্রসূতি', n('highRiskPregnancies'),
+            Icons.warning_amber_rounded, AppColors.warningYellow,
+            delta: d('highRiskPregnancies'), polarity: 0),
+        _kpiTile('প্রাতিষ্ঠানিক প্রসব', p('institutionalDeliveryPct'),
+            Icons.local_hospital_rounded, AppColors.safeGreen,
+            delta: d('institutionalDeliveryPct'), polarity: 1),
+        // C-section: too high signals overuse, too low signals unmet need.
+        // Neither direction is simply "good" — colouring it would be a lie.
+        _kpiTile('সিজার', p('cSectionPct'), Icons.medical_services_rounded,
+            AppColors.sky,
+            delta: d('cSectionPct'), polarity: 0),
+        _kpiTile('কম ওজনের শিশু (<২.৫ কেজি)', p('lbwPct'),
+            Icons.monitor_weight_rounded, AppColors.emergencyRed,
+            delta: d('lbwPct'), polarity: -1), // rising = worse
+        _kpiTile('টিকা কভারেজ', p('immunizationCoveragePct'),
+            Icons.vaccines_rounded, AppColors.safeGreen,
+            delta: d('immunizationCoveragePct'), polarity: 1),
+        // Not a windowed figure — it is who is overdue RIGHT NOW, so a
+        // period-over-period arrow would be meaningless. Tap it for the names.
+        _kpiTile('টিকা বাকি (Overdue)', n('immunizationDefaulters'),
+            Icons.event_busy_rounded, AppColors.emergencyRed,
+            onTap: _showDefaulters, badge: 'এখন'),
+        _kpiTile('রেফারেল সম্পন্ন', p('referralClosurePct'),
+            Icons.assignment_turned_in_rounded, AppColors.purple,
+            delta: d('referralClosurePct'), polarity: 1),
+      ],
     );
   }
 
+  /// [polarity]: 1 = a rise is good, -1 = a rise is bad, 0 = show the direction
+  /// but pass no judgement. The ARROW shows movement; the COLOUR is the verdict
+  /// — so a climbing low-birth-weight rate can never render a reassuring green.
   Widget _kpiTile(String label, String value, IconData icon, Color color,
-      {VoidCallback? onTap}) {
+      {VoidCallback? onTap, double? delta, int polarity = 0, String? badge}) {
+    // A hair's movement is not a trend — don't dress noise up as signal.
+    final show = delta != null && delta.abs() >= 0.5;
+    final rising = (delta ?? 0) >= 0;
+    final verdict = polarity == 0
+        ? AppColors.textSecondary
+        : (rising == (polarity == 1)
+            ? AppColors.safeGreen
+            : AppColors.emergencyRed);
+
     final tile = Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -481,10 +515,39 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                 child: Icon(icon, color: color, size: 17),
               ),
               const Spacer(),
+              // "এখন" marks a figure that is a snapshot of NOW, not of the
+              // selected window — so nobody reads it as a 12-month trend.
+              if (badge != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                      color: AppColors.textSecondary.withValues(alpha: 0.10),
+                      borderRadius: AppRadius.smR),
+                  child: Text(badge,
+                      style: AppTextStyles.overline.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w700)),
+                )
+              else if (show)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                        rising
+                            ? Icons.arrow_upward_rounded
+                            : Icons.arrow_downward_rounded,
+                        size: 11,
+                        color: verdict),
+                    Text(delta.abs().toStringAsFixed(1),
+                        style: AppTextStyles.overline.copyWith(
+                            color: verdict, fontWeight: FontWeight.w700)),
+                  ],
+                ),
               // Affordance — otherwise nobody discovers the tile is drillable.
               if (onTap != null)
                 Icon(Icons.chevron_right_rounded,
-                    size: 17, color: color.withValues(alpha: 0.55)),
+                    size: 16, color: color.withValues(alpha: 0.55)),
             ],
           ),
           const Spacer(),

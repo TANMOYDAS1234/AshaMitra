@@ -367,6 +367,11 @@ class AdminController extends GetxController {
   Map<String, dynamic> get dAlerts =>
       Map<String, dynamic>.from((district.value?['alerts'] as Map?) ?? {});
 
+  /// The same indicators over the previous equivalent window — the baseline for
+  /// "are we improving?", which a snapshot can never answer.
+  Map<String, dynamic> get dPrev =>
+      Map<String, dynamic>.from((district.value?['prev'] as Map?) ?? {});
+
   /// The immunisation defaulters themselves — WHO is overdue, for what, how
   /// long, and whose ASHA. An officer cannot act on the number "13".
   List<Map<String, dynamic>> get dDefaulters =>
