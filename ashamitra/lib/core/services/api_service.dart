@@ -119,6 +119,44 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  // ── Push registration ──────────────────────────────────────────────────────
+
+  /// Attach this handset's FCM token to the logged-in user. Idempotent server
+  /// side ($addToSet), so calling it on every app start is fine.
+  static Future<bool> registerFcmToken(String fcmToken) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/auth/fcm-token'),
+      headers: _headers,
+      body: jsonEncode({'token': fcmToken}),
+    ).timeout(const Duration(seconds: 15));
+    _guard(res.statusCode);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return body['success'] == true;
+  }
+
+  /// Detach on logout. These phones get shared and handed on, so leaving the
+  /// token attached would ring the *previous* worker's alerts on someone else's
+  /// device. Must run while the JWT is still valid — the route is authenticated.
+  static Future<void> unregisterFcmToken(String fcmToken) async {
+    await http.delete(
+      Uri.parse('$baseUrl/auth/fcm-token'),
+      headers: _headers,
+      body: jsonEncode({'token': fcmToken}),
+    ).timeout(const Duration(seconds: 10));
+  }
+
+  /// Fires a push at my own registered devices. Returns the raw body so the
+  /// caller can surface *why* it failed (no token / FCM not configured).
+  static Future<Map<String, dynamic>> testPush() async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/auth/test-push'),
+      headers: _headers,
+      body: jsonEncode({}),
+    ).timeout(const Duration(seconds: 20));
+    _guard(res.statusCode);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   // ── Patients ───────────────────────────────────────────────────────────────
 
   /// Throws on failure so the caller can distinguish "offline / cold-start" from

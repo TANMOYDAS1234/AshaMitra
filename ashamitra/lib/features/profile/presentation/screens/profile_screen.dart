@@ -3,7 +3,9 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../core/services/api_service.dart';
 import '../../../../core/services/language_controller.dart';
+import '../../../../core/services/push_service.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -326,14 +328,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: 12);
   }
 
-  void _toggleNotifications() {
-    Get.snackbar('notifications_updated'.tr, 'notifications_updated_msg'.tr,
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: AppColors.primary.withValues(alpha: 0.9),
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(16),
-        borderRadius: 12,
-        duration: const Duration(seconds: 2));
+  /// Sends a real push to this handset and reports what actually happened.
+  ///
+  /// This row used to be a placebo — it popped "notifications updated" and did
+  /// nothing at all. A worker who needs to know whether emergency alerts will
+  /// reach her phone deserves a real answer, so it now round-trips the server
+  /// and surfaces the true failure reason (permission off, no device
+  /// registered, FCM misconfigured) instead of a reassuring lie.
+  Future<void> _testNotification() async {
+    void say(String msg, {bool ok = true}) => Get.snackbar(
+          ok ? 'পাঠানো হয়েছে' : 'পাঠানো যায়নি',
+          msg,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: (ok ? AppColors.primary : AppColors.emergencyRed)
+              .withValues(alpha: 0.95),
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          duration: const Duration(seconds: 4),
+        );
+
+    try {
+      // Make sure this device is attached before asking the server to push to
+      // it — covers the worker who denied the prompt at login and later turned
+      // notifications on in Android settings.
+      await PushService.registerWithBackend();
+      final res = await ApiService.testPush();
+      if (res['success'] == true) {
+        say('পরীক্ষামূলক নোটিফিকেশন পাঠানো হয়েছে — কয়েক সেকেন্ডের মধ্যে আসবে।');
+      } else {
+        say(res['message']?.toString() ?? 'অজানা সমস্যা।', ok: false);
+      }
+    } catch (_) {
+      say('সার্ভারে পৌঁছানো যায়নি। ইন্টারনেট দেখুন।', ok: false);
+    }
   }
 
   @override
@@ -433,8 +461,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       _Section(title: 'settings'.tr, items: [
                         _ActionRow(Icons.edit_rounded, 'edit_profile'.tr,
                             () => _showEditProfile()),
-                        _ActionRow(Icons.notifications_rounded,
-                            'notifications'.tr, _toggleNotifications),
+                        _ActionRow(Icons.notifications_active_rounded,
+                            'নোটিফিকেশন পরীক্ষা করুন', _testNotification),
                         _ActionRow(Icons.language_rounded, 'change_language'.tr,
                             () => _showLanguageDialog()),
                         _ActionRow(Icons.cloud_download_rounded, 'sync_data'.tr,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:get/get.dart';
@@ -5,6 +6,7 @@ import '../data/models/user_model.dart';
 import '../../../app/routes.dart';
 import '../../../core/services/local_storage_service.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/push_service.dart';
 import '../../patients/controller/patient_controller.dart';
 
 class AuthController extends GetxController {
@@ -54,6 +56,11 @@ class AuthController extends GetxController {
     final token = LocalStorageService.get('jwt_token');
     if (token != null) ApiService.setTokenInMemory(token);
     _sessionExpiring = false; // a restored session re-arms the 401 handler
+    // Re-attach this handset on every launch. FCM rotates tokens (reinstall,
+    // backup-restore, app-data clear) and a stale token is an alert that never
+    // arrives, so we re-register rather than assume the login-time one still
+    // holds. $addToSet server-side, so this is idempotent.
+    unawaited(PushService.registerWithBackend());
     return true;
   }
 
@@ -120,6 +127,10 @@ class AuthController extends GetxController {
         ApiService.setToken(res['token'] as String);
         _sessionExpiring = false; // re-arm the 401 handler for this new session
         await LocalStorageService.saveUser(u.toJson());
+        // Attach this handset for push. First point in the app where asking for
+        // notification permission means something to the worker — she has just
+        // signed in, so the prompt has context.
+        unawaited(PushService.registerWithBackend());
         // Reload persisted data for this session
         Get.find<PatientController>().reloadFromStorage();
         Get.find<PatientController>().syncFromServer();
@@ -189,6 +200,10 @@ class AuthController extends GetxController {
 
   void logout() {
     _sessionExpiring = false; // reset the 401 debounce on a clean logout
+    // BEFORE clearToken() — the detach route is authenticated. These phones get
+    // handed between workers; leaving the token attached would ring the previous
+    // worker's RED alerts on a device that now belongs to someone else.
+    PushService.detach();
     user.value = null;
     ApiService.clearToken();
     LocalStorageService.clearUser();

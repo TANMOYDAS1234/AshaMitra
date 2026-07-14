@@ -6,7 +6,9 @@ import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/services/api_service.dart';
 import '../../../../core/services/language_controller.dart';
+import '../../../../core/services/push_service.dart';
 import '../../../../shared/components/app_header.dart';
 import '../../../../shared/widgets/user_avatar.dart';
 import '../../../auth/controller/auth_controller.dart';
@@ -22,6 +24,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   final _auth = Get.find<AuthController>();
   final _lang = Get.find<LanguageController>();
   final _formKey = GlobalKey<FormState>();
+
+  bool _testingPush = false;
 
   late final TextEditingController _name;
   late final TextEditingController _block;
@@ -84,6 +88,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       _editCard(),
                       const SizedBox(height: 16),
                       _languageCard(),
+                      const SizedBox(height: 16),
+                      _alertsCard(),
                       const SizedBox(height: 16),
                       _logoutCard(),
                     ],
@@ -418,6 +424,99 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           ],
         ),
       );
+
+  /// A supervisor is the person a RED alert is *escalated to*. If push is
+  /// silently broken on her handset — permission denied at login, notifications
+  /// switched off in Android settings, a token that rotated after a restore —
+  /// the escalation chain is dead and nothing in the app would tell her. This
+  /// card is how she checks, and it reports the real reason when it fails.
+  Widget _alertsCard() => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.xlR,
+          boxShadow: AppShadows.low,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.emergencyRed.withValues(alpha: 0.10),
+                    borderRadius: AppRadius.mdR,
+                  ),
+                  child: const Icon(Icons.notifications_active_rounded,
+                      color: AppColors.emergencyRed, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('জরুরি অ্যালার্ট', style: AppTextStyles.h3),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'আপনার টিমের কোনও বিপদচিহ্ন (RED) ধরা পড়লে সঙ্গে সঙ্গে এই ফোনে '
+              'নোটিফিকেশন আসবে — অ্যাপ বন্ধ থাকলেও।',
+              style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _testingPush ? null : _testNotification,
+                icon: _testingPush
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.send_rounded, size: 18),
+                label: const Text('নোটিফিকেশন পরীক্ষা করুন'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.lgR),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Future<void> _testNotification() async {
+    setState(() => _testingPush = true);
+    void say(String msg, {bool ok = true}) => Get.snackbar(
+          ok ? 'পাঠানো হয়েছে' : 'পাঠানো যায়নি',
+          msg,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: (ok ? AppColors.primary : AppColors.emergencyRed)
+              .withValues(alpha: 0.95),
+          colorText: Colors.white,
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+          duration: const Duration(seconds: 4),
+        );
+    try {
+      // Re-attach first: covers the supervisor who denied the prompt at login
+      // and has since enabled notifications in Android settings.
+      await PushService.registerWithBackend();
+      final res = await ApiService.testPush();
+      if (res['success'] == true) {
+        say('পরীক্ষামূলক নোটিফিকেশন পাঠানো হয়েছে — কয়েক সেকেন্ডের মধ্যে আসবে।');
+      } else {
+        say(res['message']?.toString() ?? 'অজানা সমস্যা।', ok: false);
+      }
+    } catch (_) {
+      say('সার্ভারে পৌঁছানো যায়নি। ইন্টারনেট দেখুন।', ok: false);
+    } finally {
+      if (mounted) setState(() => _testingPush = false);
+    }
+  }
 
   Widget _logoutCard() => Container(
         padding: const EdgeInsets.all(20),

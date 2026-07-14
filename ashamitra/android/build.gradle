@@ -37,6 +37,23 @@ allprojects {
             }
         }
 
+        // Firebase / Play Services resolve from Google's own Maven, ahead of
+        // the Aliyun mirror — same reason as the gms pin in settings.gradle:
+        // the mirror intermittently 502s on artifacts in these groups, and
+        // Gradle responds to a 5xx by disabling the whole repository, which
+        // takes the entire build down rather than just one dependency. The
+        // content{} filter keeps this repo out of the way of everything else.
+        maven {
+            name 'googleFirebase'
+            url 'https://maven.google.com'
+            content {
+                includeGroupByRegex("com\\.google\\.firebase.*")
+                includeGroupByRegex("com\\.google\\.gms.*")
+                includeGroupByRegex("com\\.google\\.android\\.gms.*")
+                includeGroupByRegex("com\\.google\\.android\\.datatransport.*")
+            }
+        }
+
         // Aliyun mirrors first — they serve the same artifacts as
         // Maven Central + Google but use a different SSL certificate
         // chain. On Windows machines where antivirus / proxy SSL

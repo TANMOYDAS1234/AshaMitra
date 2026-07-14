@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/services/language_controller.dart';
+import '../../../../core/services/push_service.dart';
 import '../../../../app/routes.dart';
 import '../../../../features/auth/controller/auth_controller.dart';
 
@@ -67,9 +68,19 @@ class _SplashScreenState extends State<SplashScreen> {
     AuthController.splashActive = false;
     final auth = Get.find<AuthController>();
     if (auth.restoreSession()) {
-      Get.offAllNamed(auth.user.value?.isAdmin == true
+      // isSupervisor, not isAdmin — same predicate the login path uses. The
+      // seeded CMHO/BMHO carry the legacy isAdmin flag too, but one created
+      // through the app may not, and they'd have landed on the ASHA home.
+      Get.offAllNamed(auth.user.value?.isSupervisor == true
           ? AppRoutes.adminDashboard
           : AppRoutes.home);
+      // The app was launched by tapping a notification while it was closed. Now
+      // that home exists underneath, push the screen the alert pointed at — so
+      // the tap lands on the alert itself, and Back still returns home.
+      final link = PushService.takePendingLink();
+      if (link != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => Get.toNamed(link));
+      }
     } else {
       // Onboarded worker who's logged out → login; first-ever launch → language.
       Get.offAllNamed(

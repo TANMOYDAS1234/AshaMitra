@@ -4,12 +4,19 @@ import 'package:get/get.dart';
 import 'app/app.dart';
 import 'core/services/local_storage_service.dart';
 import 'core/services/language_controller.dart';
+import 'core/services/push_service.dart';
 import 'core/services/rule_executor.dart';
 import 'core/services/tts_prewarm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await LocalStorageService.init();
+
+  // Wires the FCM listeners and picks up a notification tap that launched the
+  // app. Does NOT prompt for permission — that happens after login, where the
+  // ask makes sense. Swallows its own failures, so a device without Play
+  // Services still boots.
+  await PushService.init();
 
   // Register LanguageController before App builds so Obx can find it
   Get.put(LanguageController(), permanent: true);
