@@ -1,3 +1,4 @@
+import '../../../../core/theme/panel_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -79,7 +80,7 @@ class _AdminAddAshaScreenState extends State<AdminAddAshaScreen> {
     final child = Get.find<AuthController>().user.value?.manages ?? 'ASHA';
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.background),
+        decoration: BoxDecoration(gradient: PanelPalette.background),
         child: SafeArea(
           child: Column(
             children: [

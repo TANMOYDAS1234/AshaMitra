@@ -285,7 +285,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(gradient: AppGradients.background),
+      decoration: BoxDecoration(gradient: PanelPalette.background),
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
@@ -355,7 +355,11 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                                   color: PanelPalette.primary
                                       .withValues(alpha: 0.08),
                                   borderRadius: AppRadius.smR),
-                              child: Text('role_admin'.tr,
+                              // Her actual rank (CMHO / BMHO / ANM), not a flat
+                              // "অ্যাডমিন". A district officer and a sub-centre
+                              // ANM are not the same job, and every other screen
+                              // in the panel already says so.
+                              child: Text(u?.roleShort ?? 'role_admin'.tr,
                                   style: AppTextStyles.overline.copyWith(color: PanelPalette.primary)),
                             ),
                           ],

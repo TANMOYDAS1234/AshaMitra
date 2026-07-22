@@ -1,3 +1,4 @@
+import '../../../../core/theme/panel_palette.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
@@ -45,7 +46,7 @@ class _AdminDeletedReportsScreenState extends State<AdminDeletedReportsScreen> {
         foregroundColor: AppColors.onBackground,
       ),
       body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.background),
+        decoration: BoxDecoration(gradient: PanelPalette.background),
         child: SafeArea(
           child: Obx(() {
             if (ctrl.isLoadingDeleted.value) {

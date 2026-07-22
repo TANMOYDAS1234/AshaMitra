@@ -648,7 +648,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                     size: 17, color: AppColors.emergencyRed),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(' টি জরুরি বিষয় — ড্যাশবোর্ডে দেখুন',
+                  child: Text('$n টি জরুরি বিষয় — ড্যাশবোর্ডে দেখুন',
                       style: AppTextStyles.label
                           .copyWith(color: AppColors.emergencyRed)),
                 ),

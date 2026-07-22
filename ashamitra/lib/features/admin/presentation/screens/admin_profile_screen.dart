@@ -73,7 +73,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppGradients.background),
+        decoration: BoxDecoration(gradient: PanelPalette.background),
         child: SafeArea(
           child: Column(
             children: [

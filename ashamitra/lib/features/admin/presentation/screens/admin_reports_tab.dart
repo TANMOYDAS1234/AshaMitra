@@ -36,7 +36,7 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
     final ctrl = Get.find<AdminController>();
 
     return Container(
-      decoration: const BoxDecoration(gradient: AppGradients.background),
+      decoration: BoxDecoration(gradient: PanelPalette.background),
       child: SafeArea(
         child: Column(
           children: [

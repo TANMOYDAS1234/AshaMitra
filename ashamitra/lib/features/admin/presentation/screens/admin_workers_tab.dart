@@ -35,7 +35,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
     final child = Get.find<AuthController>().user.value?.manages ?? 'ASHA';
 
     return Container(
-      decoration: const BoxDecoration(gradient: AppGradients.background),
+      decoration: BoxDecoration(gradient: PanelPalette.background),
       child: SafeArea(
         child: Column(
           children: [
