@@ -7,28 +7,40 @@ Verified against the codebase, not from memory. Last checked: 2026-07-22.
 
 ---
 
-## Scorecard
+## Scorecard — updated 2026-07-22 after the district-operations build
 
 | # | Responsibility area | Status | Where it stands |
 |---|---|---|---|
-| 1 | Administrative (facilities) | ❌ | No facility model exists at all |
-| 2 | Human Resource Management | 🟡 | Roster + performance only |
-| 3 | Drug & Logistics | 🟡 | Sub-centre level solid; facility level absent |
-| 4 | Immunization Programme | 🟡 | Coverage yes; **cold chain no** |
-| 5 | National Health Programmes | 🟡 | **5 of 8 done** |
-| 6 | Disease Surveillance | ❌ | No fever/diarrhoea pathway |
-| 7 | Outbreak Investigation | ❌ | Depends on #6 |
-| 8 | Budget & Financial | ❌ | Out of scope for a field app |
-| 9 | Monitoring & Evaluation | ✅ | Strongest area |
-| 10 | Health Data Management | 🟡 | **Stillbirths missing**; no state export |
-| 11 | Training & Capacity Building | ❌ | No training model |
-| 12 | Disaster & Emergency | ❌ | No model |
-| 13 | Hospital Inspection & QA | ❌ | Needs #1 |
-| 14 | Meetings & Coordination | ❌ | No meeting model |
+| 1 | Administrative (facilities) | ✅ | `Facility` model — type, services, staffing, incharge |
+| 2 | Human Resource Management | 🟡 | Roster, performance, **sanctioned vs in-post gap**. No leave/salary — deliberate |
+| 3 | Drug & Logistics | ✅ | Readiness pulse + monthly ledger + facility services |
+| 4 | Immunization Programme | ✅ | Coverage, defaulters by name, **cold chain (ILR temp, power cuts)** |
+| 5 | National Health Programmes | 🟡 | **7 of 8** — leprosy and blindness still absent |
+| 6 | Disease Surveillance | ✅ | `Surveillance` + village-level cluster detection |
+| 7 | Outbreak Investigation | ✅ | `Outbreak` + RRT response checklist |
+| 8 | Budget & Financial | 🟡 | Visibility only — allocation vs spend. **No approval/audit/payment, by design** |
+| 9 | Monitoring & Evaluation | ✅ | Indicators, monthly trends, benchmark gaps, ranking, PDF |
+| 10 | Health Data Management | 🟡 | **Stillbirths now countable**; state export format still missing |
+| 11 | Training & Capacity Building | ✅ | `Training` — sessions, attendance vs invited |
+| 12 | Disaster & Emergency | ✅ | `Outbreak` covers flood/cyclone/epidemic with the same checklist |
+| 13 | Hospital Inspection & QA | ✅ | `Inspection` — checklist, score, never-inspected list |
+| 14 | Meetings & Coordination | ✅ | `Meeting` + open action items with owner and due date |
 
-**Roughly 3 of 14 areas are meaningfully served today.** That is not a criticism of
-the app — it is a field-worker tool being measured against a district
-administrator's whole job. The question is which gaps are worth closing.
+**10 of 14 fully served, 4 partial.** Was 3 of 14.
+
+### What is deliberately still open
+
+- **5 — leprosy and blindness.** No collection. Both are screening-and-referral
+  programmes that would fit the existing module pattern, but neither has been
+  asked for and inventing the fields would be guessing.
+- **2 — leave, postings, salary, promotions.** Still argued against. These belong
+  in a government HR system with legal records; a parallel copy creates disputes
+  about which is authoritative.
+- **8 — budget beyond visibility.** Approval workflow and treasury integration
+  need audit trails this app cannot provide.
+- **10 — state export.** The data is all there; what is missing is the specific
+  HMIS/state upload format, which has to be taken from the actual state template
+  rather than assumed.
 
 ---
 
