@@ -6,15 +6,39 @@
 
 ## Who this is for
 
-The **Chief Medical Officer of Health** runs a whole district. She is not looking for a report
-card — she signs off maternal death reviews (MDSR) and child death reviews (CDR), answers to the
-state on HMIS indicators, and controls the two things that actually save lives: **supplies and
-transport**.
+The **Chief Medical Officer of Health** is the head of the public health system for an entire
+district. Her official remit spans fourteen areas: administration of every facility (DH, SDH,
+BPHC, PHC, HWC, SC), human resources, drug and logistics, immunization, **all National Health
+Programmes**, disease surveillance, outbreak response, budget, monitoring and evaluation, health
+data, training, disaster response, hospital inspection, and review meetings.
 
 She opens this app for about ninety seconds, standing up, between meetings.
 
 **The screen must answer one question: _what must I fix before tonight?_**
-Everything else — coverage rates, totals, history — is secondary and belongs below the fold.
+
+### What this app can honestly serve — and what it cannot
+
+This is a **field-worker app**. It sees what ASHAs record. Designing the panel as if it were a
+district ERP would produce screens that can never be filled.
+
+| CMHO responsibility | In this app? |
+|---|---|
+| Maternal health (ANC/PNC, high-risk, MDSR) | ✅ full |
+| Child health + immunization | ✅ full |
+| **NTEP (TB)** — DOTS, adherence, Nikshay | ✅ `TbCase` |
+| **NCD** — diabetes, HTN, cancers (CBAC) | ✅ `NcdCbac` |
+| **Family Planning** — methods, unmet need | ✅ `EligibleCouple` |
+| **CRS** — birth/death registration | ✅ `VitalEvent` |
+| Drug & logistics | ✅ `MedicineStock` + readiness pulse |
+| Vector-borne (malaria, dengue), leprosy, blindness | ❌ **no data** — triage has 7 RCH case types, no fever pathway |
+| Disease surveillance / outbreak / RRT | ❌ no data |
+| HR (postings, leave, salary), budget, training records | ❌ not a field-app function |
+| Facility inspection, OT/labour-room QA | ❌ no facility model exists |
+
+**Do not design a screen for a row marked ❌.** An empty "Malaria: 0" tile implies zero cases in a
+district that has simply never been asked — the same class of lie as rendering a null percentage
+as `0%`. The programmes screen ends with a visible note naming what is absent, so a missing
+programme cannot read as a healthy one.
 
 Scope: `জেলা → ব্লক → উপকেন্দ্র`. Her direct reports are **BMHOs**.
 
@@ -134,6 +158,32 @@ Reached from the escalation card, and always reachable even when green.
 5. **Block bars** — one stacked bar per block, worst on top.
 6. **Drill-down** — tap a block → the people inside, each with state
    (`fresh` / `stale (n দিন আগে)` / `কখনও খবর দেয়নি`).
+
+---
+
+### 3b · Health Programmes — *the other six sevenths*
+
+`GET /api/admin/programmes?months=3|12` → `programmes[]`, each:
+`key · name · icon · headline[{label, value (nullable), suffix, alarm}] ·
+actions[{title, severity: high|medium|none, rows[{name, detail, village, block, mobile}]}] ·
+blocks[{block, total, flagged}]`
+
+Five programme cards, collapsed by default, each expanding to its action lists:
+
+| Card | Headline | What it makes her do |
+|---|---|---|
+| **যক্ষ্মা (NTEP)** | on treatment · presumptive · **doses missed** · **not in Nikshay** | Missed doses = drug resistance forming. No Nikshay ID = invisible to the state and drugs not requisitioned. Both listed by name. |
+| **NCD স্ক্রিনিং** | screened · **CBAC ≥ 4** · known diabetes · known HTN | High-risk people needing confirmatory testing; referred-with-no-follow-up-date. |
+| **পরিবার পরিকল্পনা** | eligible couples · adopted · **unmet need** · coverage % | Unmet need is *the* FP indicator. Prioritised by youngest child < 1 year — a short birth interval is the highest-risk next pregnancy. |
+| **জন্ম-মৃত্যু নিবন্ধন (CRS)** | births · deaths · **unregistered** · registered % | Deaths needing MDSR/CDR; unregistered events (a child with no legal identity). |
+| **ওষুধ ও সরবরাহ** | lines below threshold | Points at the readiness pulse, which is the better live signal. |
+
+Rules specific to this screen:
+- Every action row ends in a **phone icon**. Naming a person is pointless if you can't reach them.
+- An action with **zero rows is not rendered** — an empty "0 people" list trains the eye to skip.
+  A programme with no live actions shows a single calm green "এই মুহূর্তে কিছু করার নেই".
+- A `null` headline (e.g. FP coverage with no eligible couples) is a grey **`—`**, never `0%`.
+- The screen **ends with the absence note** (see §"What this app can honestly serve").
 
 ---
 
@@ -263,4 +313,67 @@ inside — a coloured status dot, name · sub-centre, and a status line like "�
 "3 দিন আগের খবর".
 
 Clean, premium, purple-on-sage-green. The heatmap is the hero — give it room to breathe.
+```
+
+### Prompt D — Health Programmes
+
+```
+Design a "National Health Programmes" screen for a district health officer (CMHO).
+720x1600 phone. This is where she checks every government programme she runs, other
+than maternal/child health which has its own screen.
+
+HEADER: back arrow, title "স্বাস্থ্য কর্মসূচি" 24px bold, grey subtitle
+"CMHO · জেলা · জাতীয় কর্মসূচির অবস্থা", refresh icon right. Beneath, right-aligned, a
+small segmented pill "3 মাস | 12 মাস" (active filled purple #791C87, white text).
+
+THEN a vertical stack of five collapsible PROGRAMME CARDS. Each is white, radius 20,
+soft shadow. A card with urgent work has a thin red border and a red count badge.
+
+Collapsed card layout: a pastel rounded icon chip on the left, the programme name in
+17px semibold, a red count badge if urgent, a chevron; then BELOW that, a row of 3-4
+headline stats — each a large 20px number above a 12px grey Bengali label. A stat that
+is alarming shows its number in red; a stat with no data shows a grey em-dash "—".
+
+  CARD 1 "যক্ষ্মা (NTEP)" — RED BORDER, badge "5"
+     stats: "12 চিকিৎসাধীন" | "3 সন্দেহভাজন" | "4 ডোজ বাদ পড়েছে" (RED) |
+            "1 Nikshay-এ নেই" (RED)
+     EXPANDED, showing two action groups. Each group: a thin coloured vertical bar,
+     a bold coloured title, a count on the right, then rows of named people:
+       ▌ডোজ বাদ পড়েছে — চিকিৎসা ভেঙে যাচ্ছে          4
+           Rahim Sheikh
+           4 ডোজ বাদ · Ghosalpur · Kolkata            [phone icon]
+           Anima Das
+           2 ডোজ বাদ · Baruipara · Kalyani            [phone icon]
+       ▌Nikshay ID নেই — রাজ্যের হিসাবে নেই            1
+           Sabina Bibi
+           Pulmonary TB · Newtown                     [phone icon]
+     Then a small "ব্লক অনুযায়ী" list: "Kolkata 3/7", "Kalyani 1/4" (flagged/total, red).
+
+  CARD 2 "NCD স্ক্রিনিং" — collapsed
+     stats: "148 স্ক্রিন করা হয়েছে" | "22 উচ্চ ঝুঁকি (CBAC ≥ 4)" (RED) |
+            "9 জানা ডায়াবেটিস" | "14 জানা উচ্চ রক্তচাপ"
+
+  CARD 3 "পরিবার পরিকল্পনা" — collapsed
+     stats: "64 যোগ্য দম্পতি" | "41 পদ্ধতি নিয়েছেন" | "23 পদ্ধতি নেননি" (RED) |
+            "64.1% কভারেজ"
+
+  CARD 4 "জন্ম-মৃত্যু নিবন্ধন (CRS)" — collapsed
+     stats: "18 জন্ম" | "3 মৃত্যু" | "5 নিবন্ধন বাকি" (RED) | "76.2% নিবন্ধিত"
+
+  CARD 5 "ওষুধ ও সরবরাহ" — collapsed, calm
+     stats: "0 কম স্টক লাইন"; expanded shows a green line "এই মুহূর্তে কিছু করার নেই"
+     with a check-circle icon.
+
+Icons: TB = virus, NCD = heart-monitor, family planning = family, CRS = verified-person,
+drugs = pill.
+
+AT THE BOTTOM, a quiet grey rounded box (NOT a white card, no shadow) with a small info
+icon and 12px grey text: "এখানে শুধু সেই কর্মসূচি দেখানো হয় যেগুলোর তথ্য ASHA কর্মীরা এই
+অ্যাপে তোলেন। ম্যালেরিয়া/ডেঙ্গু সার্ভেইল্যান্স, কুষ্ঠ, অন্ধত্ব — এগুলোর তথ্য এখনও সংগ্রহ করা
+হয় না, তাই দেখানো হয়নি।"
+This note is deliberate and must not be removed — it stops a missing programme from
+looking like a healthy one.
+
+Calm, premium, purple-on-sage-green. The named people are the point: make them legible,
+never fine print.
 ```
