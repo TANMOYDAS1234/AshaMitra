@@ -6,6 +6,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/theme/panel_palette.dart';
+import '../../../../shared/widgets/motion.dart';
 import '../../../readiness/controller/readiness_controller.dart';
 import '../../controller/admin_controller.dart';
 import '../../controller/operations_controller.dart';
@@ -206,59 +208,88 @@ class ActionQueue extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          ...shown.map((i) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Material(
-                  color: AppColors.surface,
-                  borderRadius: AppRadius.lgR,
-                  child: InkWell(
-                    borderRadius: AppRadius.lgR,
-                    onTap: i.route.isEmpty
-                        ? null
-                        : () => Get.toNamed(i.route),
-                    child: Container(
-                      padding: const EdgeInsets.all(13),
-                      decoration: BoxDecoration(
-                        borderRadius: AppRadius.lgR,
-                        boxShadow: AppShadows.low,
-                        border: Border.all(
-                            color: i.color.withValues(alpha: 0.22)),
-                      ),
+          // Staggered so the reading order is FELT, not just laid out — the most
+          // urgent card arrives first. The severity is carried by a solid bar on
+          // the leading edge rather than a tinted outline: it survives at a
+          // glance, in sunlight, on a cheap panel.
+          ...shown.asMap().entries.map((e) {
+            final i = e.value;
+            final card = Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Material(
+                color: AppColors.surface,
+                borderRadius: AppRadius.lgR,
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: i.route.isEmpty ? null : () => Get.toNamed(i.route),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: AppRadius.lgR,
+                      boxShadow: AppShadows.low,
+                    ),
+                    child: IntrinsicHeight(
                       child: Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(7),
-                            decoration: BoxDecoration(
-                              color: i.color.withValues(alpha: 0.10),
-                              borderRadius: AppRadius.mdR,
-                            ),
-                            child: Icon(i.icon, size: 17, color: i.color),
-                          ),
-                          const SizedBox(width: 11),
+                          Container(width: 4, color: i.color),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(i.title,
-                                    style: AppTextStyles.bodySm.copyWith(
-                                        fontWeight: FontWeight.w700)),
-                                Text(i.detail,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTextStyles.caption.copyWith(
-                                        color: AppColors.textSecondary)),
-                              ],
+                            child: Padding(
+                              padding: const EdgeInsets.fromLTRB(11, 13, 12, 13),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(7),
+                                    decoration: BoxDecoration(
+                                      color: i.color.withValues(alpha: 0.10),
+                                      borderRadius: AppRadius.mdR,
+                                    ),
+                                    child:
+                                        Icon(i.icon, size: 17, color: i.color),
+                                  ),
+                                  const SizedBox(width: 11),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(i.title,
+                                            style: AppTextStyles.bodySm.copyWith(
+                                                fontWeight: FontWeight.w700,
+                                                color:
+                                                    PanelPalette.onBackground)),
+                                        Text(i.detail,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: AppTextStyles.caption
+                                                .copyWith(
+                                                    color: PanelPalette
+                                                        .textSecondary)),
+                                      ],
+                                    ),
+                                  ),
+                                  if (i.route.isNotEmpty)
+                                    Icon(Icons.chevron_right_rounded,
+                                        color: PanelPalette.textSecondary,
+                                        size: 20),
+                                ],
+                              ),
                             ),
                           ),
-                          if (i.route.isNotEmpty)
-                            const Icon(Icons.chevron_right_rounded,
-                                color: AppColors.textSecondary, size: 20),
                         ],
                       ),
                     ),
                   ),
                 ),
-              )),
+              ),
+            );
+            // Only the single most urgent card breathes, and only once. More than
+            // that and the emphasis cancels itself out.
+            return RevealIn(
+              index: e.key,
+              child: e.key == 0 && i.rank <= 2
+                  ? AttentionPulse(child: card)
+                  : card,
+            );
+          }),
           if (items.length > shown.length)
             Padding(
               padding: const EdgeInsets.only(top: 2, left: 4),

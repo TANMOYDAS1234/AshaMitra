@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
-import '../../../../core/theme/app_text_styles.dart';
+import "../../../../core/theme/app_text_styles.dart";
+import "../../../../core/theme/panel_palette.dart";
 import '../../../../shared/widgets/skeleton.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../auth/controller/auth_controller.dart';
@@ -66,7 +66,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
     };
 
     return Container(
-      decoration: const BoxDecoration(gradient: AppGradients.background),
+      decoration: BoxDecoration(gradient: PanelPalette.background),
       child: SafeArea(
         child: RefreshIndicator(
           color: AppColors.primary,
