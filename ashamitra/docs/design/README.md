@@ -6,12 +6,22 @@ drill-downs — without inventing data the backend can't provide.
 
 ## The files
 
+**Start here — CMHO**
+
 | File | What it is |
 |---|---|
-| **PANEL_DESIGN_SYSTEM.md** | Read first. Exact colours, type, shadows, spacing, the 7 non-negotiable rules, the Stitch preamble (§6), and the traps to reject (§7). |
-| **PANEL_CMHO.md** | District officer — full data contract + 3 Stitch prompts. |
+| **CMHO.md** | What a CMHO **does** — every workflow and task, what triggers it, which screen, what she does next. No design content. |
+| **CMHO_UI_PROMPTS.md** | The CMHO's own colour identity (deep petrol teal, distinct from the ASHA purple) + 8 Stitch prompts, one per screen. |
+| **CMHO_GAP_ANALYSIS.md** | Coverage against the official 14-area role: what is built, what is pending, what should deliberately never be built here. |
+
+**Shared + the other panels**
+
+| File | What it is |
+|---|---|
+| **PANEL_DESIGN_SYSTEM.md** | The shared tokens — type, radius, shadow, spacing, the 7 non-negotiable rules, and the traps to reject. Applies to every panel. |
 | **PANEL_BMHO.md** | Block officer — deltas from CMHO + 3 prompts. |
 | **PANEL_ANM.md** | Sub-centre nurse — deltas + 3 prompts. |
+| **PANEL_CMHO.md** | *Superseded* by `CMHO.md` + `CMHO_UI_PROMPTS.md`. Kept for its endpoint field listings, which the newer files reference rather than repeat. |
 
 ## Workflow for each screen
 
