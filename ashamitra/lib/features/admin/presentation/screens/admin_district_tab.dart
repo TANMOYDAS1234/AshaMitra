@@ -11,6 +11,7 @@ import '../../../auth/controller/auth_controller.dart';
 import '../../../admin/controller/admin_controller.dart';
 import '../../../readiness/controller/readiness_controller.dart';
 import '../../controller/programmes_controller.dart';
+import '../widgets/district_charts.dart';
 import '../../../../app/routes.dart';
 import '../../services/district_report_pdf.dart';
 
@@ -121,6 +122,18 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                 _sectionTitle('HMIS মূল সূচক', 'সরকারি HMIS ফর্মুলা অনুযায়ী'),
                 const SizedBox(height: 12),
                 _indicatorGrid(ind, ctrl.dPrev),
+
+                // ── 2a. Direction, not level ─────────────────────────────
+                // The tiles above are a snapshot. These answer the question a
+                // snapshot cannot: is it getting worse, and since when.
+                if (ctrl.dTrendMonths.length > 1) ...[
+                  const SizedBox(height: 22),
+                  _trendSection(ctrl),
+                ],
+                if (ctrl.dBenchmarks.isNotEmpty) ...[
+                  const SizedBox(height: 22),
+                  _benchmarkSection(ctrl, ind),
+                ],
 
                 // ── 2b. The rest of the job ──────────────────────────────
                 // Everything above is RCH. A CMHO also runs NTEP, NCD, family
@@ -251,6 +264,173 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
           ),
         ],
       );
+
+  /// Month-by-month activity. The indicator tiles are a snapshot; this answers
+  /// the question a snapshot never can — is it getting worse, and since when.
+  ///
+  /// Reports and RED are overlaid on one chart deliberately: the ratio between
+  /// them is the thing worth seeing, and putting them on separate charts makes
+  /// the reader compute it.
+  Widget _trendSection(AdminController ctrl) {
+    final months = ctrl.dTrendMonths;
+    final reports = ctrl.dSeries('reports');
+    final red = ctrl.dSeries('redReports');
+    final imm = ctrl.dSeries('immunization');
+    final preg = ctrl.dSeries('pregnancies');
+
+    // A district that has stopped reporting is the single most important thing
+    // on this screen, and a chart alone will not say it out loud.
+    final lastIdx = reports.length - 1;
+    final quietNow = lastIdx >= 0 && reports[lastIdx] == 0;
+    final everActive = reports.any((v) => v > 0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle('মাসে মাসে কাজ', 'কোন মাসে কী হয়েছে — নিচে নামছে কি না'),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppRadius.xlR,
+            boxShadow: AppShadows.low,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('রিপোর্ট ও জরুরি (RED)',
+                        style: AppTextStyles.label),
+                  ),
+                  _legendDot(AppColors.primary.withValues(alpha: 0.30), 'মোট'),
+                  const SizedBox(width: 10),
+                  _legendDot(AppColors.emergencyRed, 'RED'),
+                ],
+              ),
+              const SizedBox(height: 10),
+              MonthlySeriesChart(
+                  months: months, primary: reports, secondary: red),
+              if (quietNow && everActive) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Icon(Icons.trending_down_rounded,
+                        size: 16, color: AppColors.emergencyRed),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'এই মাসে এখনও কোনও রিপোর্ট আসেনি — কর্মীদের সঙ্গে কথা বলুন',
+                        style: AppTextStyles.caption
+                            .copyWith(color: AppColors.emergencyRed),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 18),
+              Text('টিকা দেওয়া হয়েছে', style: AppTextStyles.label),
+              const SizedBox(height: 10),
+              MonthlySeriesChart(
+                  months: months, primary: imm,
+                  primaryColor: AppColors.sky, height: 96),
+              const SizedBox(height: 18),
+              Text('নতুন প্রসূতি নথিভুক্ত', style: AppTextStyles.label),
+              const SizedBox(height: 10),
+              MonthlySeriesChart(
+                  months: months, primary: preg,
+                  primaryColor: AppColors.purple, height: 96),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _legendDot(Color c, String t) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 10, height: 10,
+              decoration: BoxDecoration(
+                  color: c, borderRadius: BorderRadius.circular(3))),
+          const SizedBox(width: 4),
+          Text(t,
+              style: AppTextStyles.caption
+                  .copyWith(color: AppColors.textSecondary)),
+        ],
+      );
+
+  /// Indicators against their reference levels, worst gap first.
+  ///
+  /// This is what a CMHO is actually asked in a state review — not "what is
+  /// immunization" but "why is it 79 points below reference". Sorting by gap
+  /// puts the answer to the first question she'll be asked at the top.
+  Widget _benchmarkSection(AdminController ctrl, Map<String, dynamic> ind) {
+    const labels = {
+      'immunizationCoveragePct': 'টিকা কভারেজ',
+      'institutionalDeliveryPct': 'প্রাতিষ্ঠানিক প্রসব',
+      'ancFirstTrimesterPct': '১ম ত্রৈমাসিকে ANC',
+      'anc4PlusPct': '8+ ANC ভিজিট',
+      'sbaAttendedPct': 'দক্ষ হাতে প্রসব (SBA)',
+      'lbwPct': 'কম ওজনের শিশু',
+      'referralClosurePct': 'রেফারেল সম্পন্ন',
+      'cSectionPct': 'সিজার',
+    };
+    final bm = ctrl.dBenchmarks;
+
+    num? gapOf(String k) {
+      final b = Map<String, dynamic>.from(bm[k] as Map);
+      final v = ind[k] as num?;
+      if (v == null) return null; // unmeasured sorts last, not worst
+      final dir = b['dir']?.toString() ?? 'up';
+      if (dir == 'range') {
+        final lo = (b['min'] as num?) ?? 0, hi = (b['max'] as num?) ?? 100;
+        return v < lo ? lo - v : (v > hi ? v - hi : 0);
+      }
+      final t = (b['target'] as num?) ?? 0;
+      return dir == 'down' ? v - t : t - v;
+    }
+
+    final keys = bm.keys.where(labels.containsKey).toList()
+      ..sort((a, b) {
+        final ga = gapOf(a), gb = gapOf(b);
+        if (ga == null && gb == null) return 0;
+        if (ga == null) return 1;   // unmeasured to the bottom
+        if (gb == null) return -1;
+        return gb.compareTo(ga);    // biggest shortfall first
+      });
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle('লক্ষ্যের তুলনায়', 'সবচেয়ে বেশি পিছিয়ে যেটা — সেটা আগে'),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppRadius.xlR,
+            boxShadow: AppShadows.low,
+          ),
+          child: Column(
+            children: keys.map((k) {
+              final b = Map<String, dynamic>.from(bm[k] as Map);
+              return BenchmarkBar(
+                label: labels[k]!,
+                value: ind[k] as num?,
+                target: b['target'] as num?,
+                min: b['min'] as num?,
+                max: b['max'] as num?,
+                dir: b['dir']?.toString() ?? 'up',
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
 
   /// Entry to the National Health Programmes screen.
   ///

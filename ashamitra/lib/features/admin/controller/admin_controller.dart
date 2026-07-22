@@ -372,6 +372,24 @@ class AdminController extends GetxController {
   Map<String, dynamic> get dPrev =>
       Map<String, dynamic>.from((district.value?['prev'] as Map?) ?? {});
 
+  /// Month-by-month counts across the window. A real series, bucketed server-
+  /// side from the underlying rows — not the two-point current-vs-previous
+  /// comparison, which cannot show that something has been falling for three
+  /// months straight.
+  Map<String, dynamic> get dTrend =>
+      Map<String, dynamic>.from((district.value?['trend'] as Map?) ?? {});
+
+  List<String> get dTrendMonths =>
+      ((dTrend['months'] as List?) ?? []).map((e) => e.toString()).toList();
+
+  List<int> dSeries(String key) =>
+      ((dTrend[key] as List?) ?? []).map((e) => (e as num).toInt()).toList();
+
+  /// Reference levels per indicator, so a value can be shown as a GAP.
+  /// "18 points below reference" is an instruction; "58.1%" is trivia.
+  Map<String, dynamic> get dBenchmarks =>
+      Map<String, dynamic>.from((district.value?['benchmarks'] as Map?) ?? {});
+
   /// The immunisation defaulters themselves — WHO is overdue, for what, how
   /// long, and whose ASHA. An officer cannot act on the number "13".
   List<Map<String, dynamic>> get dDefaulters =>
