@@ -36,11 +36,23 @@ class _AdminShellState extends State<AdminShell> {
     // Pulled on open so the escalation badge is accurate before the CMHO ever
     // taps the District tab — the whole point is that they don't have to look.
     ctrl.loadDistrict();
+    _syncFromController();
+  }
+
+  /// Mirrors the controller's tab index into local state, so a child screen can
+  /// navigate the shell (the analytics tab's "see the dashboard" pointer) without
+  /// the shell having to know that screen exists.
+  void _syncFromController() {
+    final ctrl = Get.find<AdminController>();
+    ever<int>(ctrl.tabIndex, (i) {
+      if (mounted && i != _index) _onTabChanged(i);
+    });
   }
 
   void _onTabChanged(int i) {
     setState(() => _index = i);
     final ctrl = Get.find<AdminController>();
+    if (ctrl.tabIndex.value != i) ctrl.tabIndex.value = i;
     switch (i) {
       case 0:
         ctrl.loadStats();

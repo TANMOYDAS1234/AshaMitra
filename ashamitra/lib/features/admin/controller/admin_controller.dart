@@ -348,6 +348,13 @@ class AdminController extends GetxController {
     }
   }
 
+  /// Which shell tab is showing. Lives here rather than in the shell's local
+  /// state so a child screen can send the officer somewhere — the analytics tab
+  /// links back to the dashboard rather than repeating the escalation list.
+  final tabIndex = 0.obs;
+
+  void goToTab(int i) => tabIndex.value = i;
+
   Map<String, dynamic> get dIndicators =>
       Map<String, dynamic>.from((district.value?['indicators'] as Map?) ?? {});
 

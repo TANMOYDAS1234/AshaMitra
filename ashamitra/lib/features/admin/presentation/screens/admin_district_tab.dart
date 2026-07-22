@@ -115,8 +115,18 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                 _header(scope, role, ctrl),
                 const SizedBox(height: 18),
 
-                // ── 1. ESCALATIONS — what needs the CMHO today ────────────
-                _alerts(ctrl),
+                // ── 1. A POINTER, not a copy ──────────────────────────────
+                // The escalation cards used to be repeated here in full. They
+                // now live on the dashboard as the action queue, and two copies
+                // of the same list is two places to read, two to maintain, and
+                // an invitation to fix one and forget the other.
+                //
+                // This screen answers "how are we doing", which is a monthly
+                // question asked sitting down. The dashboard answers "what must
+                // I fix today". Keeping them apart is the point — but somebody
+                // deep in the charts should still be TOLD when something is on
+                // fire, so a single tappable line stays.
+                _urgentPointer(ctrl),
 
                 // ── 2. HMIS key indicators ───────────────────────────────
                 const SizedBox(height: 22),
@@ -605,284 +615,53 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
   /// went. This tells her what to fix before tonight. A sub-centre with no MgSO4
   /// is a woman who will fit and not be treated — and it's a problem she can
   /// actually solve in a day, which is more than can be said for a coverage rate.
-  Widget _readinessAlert() => Obx(() {
-        final gaps = _readiness.critical;
-        final unknown = _readiness.unknownCount;
-
-        // Always rendered, even when everything is fine — otherwise a district in
-        // good shape has no way into the supply screen at all, and the CMHO can
-        // never go LOOK. An all-clear is a state worth showing, not a reason to
-        // disappear.
-        final Color tone = gaps.isNotEmpty
-            ? AppColors.emergencyRed
-            : unknown > 0
-                ? AppColors.warning
-                : AppColors.safeGreen;
-
-        final worst = gaps.take(3).toList();
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Material(
-            color: tone.withValues(alpha: 0.05),
-            borderRadius: AppRadius.xlR,
-            child: InkWell(
-              borderRadius: AppRadius.xlR,
-              onTap: () => Get.toNamed(AppRoutes.readinessSummary),
-              child: Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  borderRadius: AppRadius.xlR,
-                  border: Border.all(color: tone.withValues(alpha: 0.28)),
+  /// A single tappable line, not a copy of the escalation list.
+  ///
+  /// The full alert cards used to be repeated on this screen. They now live on
+  /// the dashboard as the action queue. Two copies of the same list is two places
+  /// to read, two to maintain, and an invitation to fix one and forget the other.
+  ///
+  /// But somebody deep in the charts should still be TOLD when something is on
+  /// fire — so this stays as a pointer that jumps to the dashboard, and shows
+  /// nothing at all when there is nothing to say.
+  Widget _urgentPointer(AdminController ctrl) {
+    final n = ctrl.dAlertCount;
+    if (n == 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: AppColors.emergencyRed.withValues(alpha: 0.06),
+        borderRadius: AppRadius.lgR,
+        child: InkWell(
+          borderRadius: AppRadius.lgR,
+          onTap: () => Get.find<AdminController>().goToTab(0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.lgR,
+              border: Border.all(
+                  color: AppColors.emergencyRed.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.bolt_rounded,
+                    size: 17, color: AppColors.emergencyRed),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(' টি জরুরি বিষয় — ড্যাশবোর্ডে দেখুন',
+                      style: AppTextStyles.label
+                          .copyWith(color: AppColors.emergencyRed)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          gaps.isNotEmpty
-                              ? Icons.medication_liquid_rounded
-                              : unknown > 0
-                                  ? Icons.help_outline_rounded
-                                  : Icons.verified_rounded,
-                          size: 20,
-                          color: tone,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            gaps.isNotEmpty
-                                ? 'প্রাণরক্ষাকারী ওষুধ/যন্ত্র নেই (${_readiness.criticalCount})'
-                                : unknown > 0
-                                    ? 'ওষুধ-যন্ত্রের খবর নেই ($unknown)'
-                                    : 'ওষুধ ও যন্ত্রপাতি — সব ঠিক আছে',
-                            style: AppTextStyles.label.copyWith(
-                              color: tone,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded,
-                            color: AppColors.textSecondary),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    ...worst.map((g) => Padding(
-                          padding: const EdgeInsets.only(left: 28, top: 2),
-                          child: Text(
-                            '${g.label} — ${g.count} জায়গায় নেই'
-                            '${g.places.isNotEmpty ? ' (${g.places.first.block})' : ''}',
-                            style: AppTextStyles.bodySm
-                                .copyWith(color: AppColors.onBackground),
-                          ),
-                        )),
-                    // Silence is not safety. A sub-centre that never reports is
-                    // exactly as dangerous as one reporting a stockout — and far
-                    // easier to overlook — so it is stated, never omitted.
-                    if (unknown > 0)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 28, top: 4),
-                        child: Text(
-                          '$unknown জন কোনও খবর দেয়নি — "খবর নেই" মানে "ঠিক আছে" নয়',
-                          style: AppTextStyles.caption
-                              .copyWith(color: AppColors.textSecondary),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 18, color: AppColors.emergencyRed),
+              ],
             ),
           ),
-        );
-      });
-
-  Widget _alerts(AdminController ctrl) {
-    final maternal = ctrl.dAlert('maternalDeaths');
-    final infant = ctrl.dAlert('infantDeaths');
-    final referrals = ctrl.dAlert('overdueReferrals');
-    final stock = ctrl.dAlert('stockouts');
-    final silent = ctrl.dAlert('silentAshas');
-
-    if (ctrl.dAlertCount == 0) {
-      return Obx(() {
-        // Even with every clinical indicator clean, a missing MgSO4 means this
-        // district is NOT "সব ঠিক আছে". The all-clear must not outrank an empty
-        // drug shelf.
-        final quiet = _readiness.critical.isEmpty && _readiness.unknownCount == 0;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _readinessAlert(),
-            if (quiet)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.safeGreen.withValues(alpha: 0.08),
-                  borderRadius: AppRadius.xlR,
-                  border: Border.all(
-                      color: AppColors.safeGreen.withValues(alpha: 0.30)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.verified_rounded,
-                        color: AppColors.safeGreen, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text('কোনো জরুরি বিষয় নেই — সব ঠিক আছে',
-                          style: AppTextStyles.label
-                              .copyWith(color: AppColors.safeGreen)),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        );
-      });
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.priority_high_rounded,
-                size: 18, color: AppColors.emergencyRed),
-            const SizedBox(width: 6),
-            Text('জরুরি — এখনই দেখুন (${ctrl.dAlertCount})',
-                style: AppTextStyles.label
-                    .copyWith(color: AppColors.emergencyRed)),
-          ],
         ),
-        const SizedBox(height: 10),
-
-        // Supplies lead. Every other card here reports something that has already
-        // gone wrong; this one names something still preventable.
-        _readinessAlert(),
-
-        // Maternal death is the single hardest escalation a CMHO faces —
-        // it triggers a formal death review (MDSR). It always leads.
-        if (maternal.isNotEmpty)
-          _alertCard(
-            color: AppColors.emergencyRed,
-            icon: Icons.female_rounded,
-            title: '${maternal.length} টি মাতৃমৃত্যু',
-            subtitle: 'ডেথ রিভিউ (MDSR) দরকার',
-            lines: maternal
-                .map((m) =>
-                    '${m['name']} · ${m['block']}${(m['cause'] ?? '').toString().isNotEmpty ? ' · ${m['cause']}' : ''}')
-                .toList(),
-          ),
-        if (infant.isNotEmpty)
-          _alertCard(
-            color: AppColors.emergencyRed,
-            icon: Icons.child_care_rounded,
-            title: '${infant.length} টি শিশুমৃত্যু',
-            subtitle: 'শিশু ডেথ রিভিউ (CDR) দরকার',
-            lines: infant
-                .map((m) => '${m['name']} · ${m['block']} · ${m['age'] ?? ''}')
-                .toList(),
-          ),
-        if (referrals.isNotEmpty)
-          _alertCard(
-            color: AppColors.warningYellow,
-            icon: Icons.local_hospital_rounded,
-            title: '${referrals.length} টি রেফারেল হাসপাতালে পৌঁছয়নি',
-            subtitle: '৭ দিনের বেশি বাকি',
-            lines: referrals
-                .take(5)
-                .map((r) =>
-                    '${r['patientName']} · ${r['block']} · ${r['days']} দিন')
-                .toList(),
-          ),
-        if (stock.isNotEmpty)
-          _alertCard(
-            color: AppColors.warningYellow,
-            icon: Icons.inventory_2_rounded,
-            title: '${stock.length} টি ওষুধ শেষের পথে',
-            subtitle: 'স্টক পাঠাতে হবে',
-            lines: stock
-                .take(5)
-                .map((s) =>
-                    '${s['medicine']} · ${s['left']} বাকি · ${s['block']}')
-                .toList(),
-          ),
-        if (silent.isNotEmpty)
-          _alertCard(
-            color: AppColors.sky,
-            icon: Icons.person_off_rounded,
-            title: '${silent.length} জন ASHA ৩০ দিন নিষ্ক্রিয়',
-            subtitle: 'কোনো ভিজিট রেকর্ড হয়নি (zero-reporting)',
-            lines: silent
-                .take(5)
-                .map((s) => '${s['name']} · ${s['block']}')
-                .toList(),
-          ),
-      ],
+      ),
     );
   }
 
-  Widget _alertCard({
-    required Color color,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required List<String> lines,
-  }) =>
-      Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.07),
-          borderRadius: AppRadius.xlR,
-          border: Border.all(color: color.withValues(alpha: 0.30)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 18, color: color),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: AppTextStyles.label.copyWith(color: color)),
-                      Text(subtitle, style: AppTextStyles.caption),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ...lines.map((l) => Padding(
-                  padding: const EdgeInsets.only(top: 3),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 5, right: 6),
-                        child: Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.6),
-                              shape: BoxShape.circle),
-                        ),
-                      ),
-                      Expanded(
-                          child: Text(l,
-                              style: AppTextStyles.caption
-                                  .copyWith(fontWeight: FontWeight.w600))),
-                    ],
-                  ),
-                )),
-          ],
-        ),
-      );
-
-  // ── HMIS indicators ────────────────────────────────────────────────────
   Widget _indicatorGrid(Map<String, dynamic> i, Map<String, dynamic> prev) {
     // A null percentage means "no denominator" — show "—", never 0%.
     String p(String k) {
