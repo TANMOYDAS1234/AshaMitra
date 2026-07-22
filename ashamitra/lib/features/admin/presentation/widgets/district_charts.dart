@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/panel_palette.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/motion.dart';
 
 /// A real monthly series with month labels.
 ///
@@ -58,13 +59,19 @@ class MonthlySeriesChart extends StatelessWidget {
         SizedBox(
           height: height,
           width: double.infinity,
-          child: CustomPaint(
-            painter: _MonthlyPainter(
-              primary: primary,
-              secondary: secondary,
-              primaryColor: primaryColor ?? PanelPalette.primary,
-              secondaryColor: secondaryColor,
-              maxV: maxV,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: Motion.slow,
+            curve: Curves.easeOutCubic,
+            builder: (ctx, t, _) => CustomPaint(
+              painter: _MonthlyPainter(
+                primary: primary,
+                secondary: secondary,
+                primaryColor: primaryColor ?? PanelPalette.primary,
+                secondaryColor: secondaryColor,
+                maxV: maxV,
+                t: Motion.reduced(ctx) ? 1 : t,
+              ),
             ),
           ),
         ),
@@ -98,12 +105,18 @@ class _MonthlyPainter extends CustomPainter {
   final Color secondaryColor;
   final int maxV;
 
+  /// 0..1 — bars grow up from the baseline. Growth reads as accumulation, which
+  /// is what a monthly count IS; fading in would read as "appearing", which is
+  /// not the same idea.
+  final double t;
+
   _MonthlyPainter({
     required this.primary,
     required this.secondary,
     required this.primaryColor,
     required this.secondaryColor,
     required this.maxV,
+    this.t = 1,
   });
 
   @override
@@ -126,19 +139,27 @@ class _MonthlyPainter extends CustomPainter {
       final w = barW * 0.56;
       final cx = i * barW + (barW - w) / 2;
 
-      final hP = (primary[i] / maxV) * (size.height - 4);
+      final hP = (primary[i] / maxV) * (size.height - 4) * t;
       if (hP > 0) {
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromLTWH(cx, size.height - hP, w, hP),
             const Radius.circular(3),
           ),
-          Paint()..color = primaryColor.withValues(alpha: 0.30),
+          Paint()
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                primaryColor.withValues(alpha: 0.42),
+                primaryColor.withValues(alpha: 0.16),
+              ],
+            ).createShader(Rect.fromLTWH(cx, size.height - hP, w, hP)),
         );
       }
       final s = secondary;
       if (s != null && i < s.length) {
-        final hS = (s[i] / maxV) * (size.height - 4);
+        final hS = (s[i] / maxV) * (size.height - 4) * t;
         if (hS > 0) {
           canvas.drawRRect(
             RRect.fromRectAndRadius(
@@ -154,7 +175,7 @@ class _MonthlyPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MonthlyPainter old) =>
-      old.primary != primary || old.secondary != secondary;
+      old.primary != primary || old.secondary != secondary || old.t != t;
 }
 
 /// An indicator drawn against its reference level — as a GAP.
@@ -238,11 +259,19 @@ class BenchmarkBar extends StatelessWidget {
                     ),
                   ),
                   if (v != null)
-                    Container(
-                      width: w * frac,
-                      decoration: BoxDecoration(
-                        color: col.withValues(alpha: 0.85),
-                        borderRadius: BorderRadius.circular(5),
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: frac),
+                      duration: Motion.slow,
+                      curve: Curves.easeOutCubic,
+                      builder: (ctx, f, __) => Container(
+                        width: w * (Motion.reduced(ctx) ? frac : f),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [
+                            col.withValues(alpha: 0.70),
+                            col,
+                          ]),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
                       ),
                     ),
                   // The reference marker — the whole reason this widget exists.
@@ -334,12 +363,25 @@ class BlockRankChart extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: v == null
                         ? null
-                        : Container(
-                            width: box.maxWidth * (v / maxV).clamp(0.0, 1.0),
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: col.withValues(alpha: 0.85),
-                              borderRadius: BorderRadius.circular(4),
+                        : TweenAnimationBuilder<double>(
+                            tween: Tween(
+                                begin: 0.0,
+                                end: (v / maxV).clamp(0.0, 1.0).toDouble()),
+                            duration: Motion.slow,
+                            curve: Curves.easeOutCubic,
+                            builder: (ctx, f, __) => Container(
+                              width: box.maxWidth *
+                                  (Motion.reduced(ctx)
+                                      ? (v / maxV).clamp(0.0, 1.0).toDouble()
+                                      : f),
+                              height: 8,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: [
+                                  col.withValues(alpha: 0.70),
+                                  col,
+                                ]),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
                             ),
                           ),
                   );

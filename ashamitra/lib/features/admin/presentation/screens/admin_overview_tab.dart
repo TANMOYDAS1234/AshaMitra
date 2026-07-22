@@ -11,6 +11,7 @@ import '../../../../shared/widgets/user_avatar.dart';
 import '../../../admin/controller/admin_controller.dart';
 import '../widgets/analytics_charts.dart';
 import '../widgets/action_queue.dart';
+import '../../../../shared/widgets/motion.dart';
 import '../../../../app/routes.dart';
 import '../../../../shared/widgets/skeleton.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -391,12 +392,20 @@ class _StatTile extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          Text(value,
-              style: AppTextStyles.h2.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-                height: 1.1,
-              )),
+          // Counts up when it is a plain number. Anything else — an em-dash, a
+          // percentage, a "3k" — renders as given, because animating a value
+          // whose format we do not control risks showing a nonsense intermediate.
+          Builder(builder: (_) {
+            final n = int.tryParse(value);
+            final style = AppTextStyles.h2.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+              height: 1.1,
+            );
+            return n == null
+                ? Text(value, style: style)
+                : CountUp(value: n, style: style);
+          }),
           const SizedBox(height: 2),
           Text(label,
               maxLines: 1,

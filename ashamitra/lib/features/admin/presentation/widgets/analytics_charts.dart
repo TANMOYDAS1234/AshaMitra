@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/panel_palette.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/motion.dart';
 
 /// Lightweight, dependency-free charts for the supervisor panels.
 ///
@@ -126,14 +127,23 @@ class BandDonut extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          CustomPaint(
-            size: Size(size, size),
-            painter: _DonutPainter(red: red, yellow: yellow, green: green),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: Motion.slow,
+            curve: Curves.easeOutCubic,
+            builder: (ctx, t, _) => CustomPaint(
+              size: Size(size, size),
+              painter: _DonutPainter(
+                red: red, yellow: yellow, green: green,
+                t: Motion.reduced(ctx) ? 1 : t,
+              ),
+            ),
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('$total',
+              CountUp(
+                  value: total,
                   style: AppTextStyles.h2.copyWith(fontWeight: FontWeight.w800)),
               Text('মোট', style: AppTextStyles.caption),
             ],
@@ -146,7 +156,13 @@ class BandDonut extends StatelessWidget {
 
 class _DonutPainter extends CustomPainter {
   final int red, yellow, green;
-  _DonutPainter({required this.red, required this.yellow, required this.green});
+
+  /// 0..1 — the ring sweeps in from 12 o'clock. Red is drawn first, so the
+  /// segment that matters is also the one that arrives first.
+  final double t;
+
+  _DonutPainter({required this.red, required this.yellow, required this.green,
+      this.t = 1});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -163,22 +179,34 @@ class _DonutPainter extends CustomPainter {
       return;
     }
 
+    final full = math.pi * 2 * t.clamp(0.0, 1.0);
     var start = -math.pi / 2; // start at 12 o'clock
+    var drawn = 0.0;
     void seg(int value, Color c) {
       if (value <= 0) return;
       final sweep = (value / total) * math.pi * 2;
-      canvas.drawArc(
-        rect,
-        start,
-        sweep - 0.03, // tiny gap so segments read as distinct
-        false,
-        Paint()
-          ..color = c
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = stroke
-          ..strokeCap = StrokeCap.round,
-      );
+      final visible = math.min(sweep, math.max(0, full - drawn));
+      if (visible > 0) {
+        canvas.drawArc(
+          rect,
+          start,
+          math.max(0, visible - 0.03), // tiny gap so segments read as distinct
+          false,
+          Paint()
+            // A sweep gradient gives the ring depth without a perspective
+            // transform — dimension that costs nothing once it has settled.
+            ..shader = SweepGradient(
+              startAngle: start,
+              endAngle: start + sweep,
+              colors: [c.withValues(alpha: 0.72), c],
+            ).createShader(rect)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = stroke
+            ..strokeCap = StrokeCap.round,
+        );
+      }
       start += sweep;
+      drawn += sweep;
     }
 
     // Most urgent first, clockwise — red is what the eye should hit.
@@ -189,7 +217,7 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter o) =>
-      o.red != red || o.yellow != yellow || o.green != green;
+      o.red != red || o.yellow != yellow || o.green != green || o.t != t;
 }
 
 // ── Sparkline: a mini trend for stat tiles ──────────────────────────────────

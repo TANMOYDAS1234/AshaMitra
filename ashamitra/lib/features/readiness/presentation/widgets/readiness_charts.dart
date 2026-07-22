@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/panel_palette.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../shared/widgets/motion.dart';
 import '../../controller/readiness_controller.dart';
 
 /// Colours shared by every readiness visual, so a red square means the same
@@ -77,7 +78,12 @@ class SupplyHeatmap extends StatelessWidget {
                       )),
                 ],
               ),
-              ...items.map((it) => _row(it)),
+              // Rows reveal top-down, which is the order that matters: critical
+              // supplies are sorted first, so the eye is walked from MgSO4 and
+              // oxytocin downward rather than being shown the whole grid at once.
+              ...items.asMap().entries.map(
+                    (e) => RevealIn(index: e.key, offsetY: 6, child: _row(e.value)),
+                  ),
             ],
           ),
         ),
@@ -217,29 +223,48 @@ class CoverageDonut extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = reported + stale + never;
+    final slices = <(double, Color)>[
+      (reported.toDouble(), RColors.ok),
+      (stale.toDouble(), RColors.low),
+      (never.toDouble(), PanelPalette.textSecondary.withValues(alpha: 0.45)),
+    ];
+    // The centre label is built once and passed through as `child`, so it is not
+    // rebuilt on every animation frame.
+    final label = Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // The reported count counts up alongside the ring, so number and
+          // shape arrive together instead of the figure being final while the
+          // ring is still drawing.
+          CountUp(
+            value: reported,
+            isNull: total == 0,
+            style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800),
+            suffix: total == 0 ? '' : '/$total',
+          ),
+          Text('খবর দিয়েছে',
+              style: AppTextStyles.caption
+                  .copyWith(color: PanelPalette.textSecondary)),
+        ],
+      ),
+    );
+
     return SizedBox(
       width: size,
       height: size,
-      child: CustomPaint(
-        painter: _DonutPainter(
-          slices: [
-            (reported.toDouble(), RColors.ok),
-            (stale.toDouble(), RColors.low),
-            (never.toDouble(), PanelPalette.textSecondary.withValues(alpha: 0.45)),
-          ],
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(total == 0 ? '—' : '$reported/$total',
-                  style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800)),
-              Text('খবর দিয়েছে',
-                  style: AppTextStyles.caption
-                      .copyWith(color: PanelPalette.textSecondary)),
-            ],
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.0, end: 1.0),
+        duration: Motion.slow,
+        curve: Curves.easeOutCubic,
+        builder: (ctx, t, child) => CustomPaint(
+          painter: _DonutPainter(
+            slices: slices,
+            t: Motion.reduced(ctx) ? 1 : t,
           ),
+          child: child,
         ),
+        child: label,
       ),
     );
   }
@@ -247,7 +272,14 @@ class CoverageDonut extends StatelessWidget {
 
 class _DonutPainter extends CustomPainter {
   final List<(double, Color)> slices;
-  _DonutPainter({required this.slices});
+
+  /// 0..1 — how much of the ring has been drawn. The donut sweeps in from 12
+  /// o'clock rather than appearing whole, so the eye follows the proportions
+  /// being laid down and reads the split rather than just seeing a coloured
+  /// ring. It settles and never moves again.
+  final double t;
+
+  _DonutPainter({required this.slices, this.t = 1});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -269,27 +301,53 @@ class _DonutPainter extends CustomPainter {
       return;
     }
 
+    // The unfilled track stays visible behind the sweep, so the ring reads as a
+    // whole being filled rather than a fragment floating in space.
+    canvas.drawArc(
+      rect, 0, math.pi * 2, false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = stroke
+        ..color = RColors.unknown.withValues(alpha: 0.5),
+    );
+
+    final full = math.pi * 2 * t.clamp(0.0, 1.0);
     var start = -math.pi / 2;
+    var drawn = 0.0;
+
     for (final (v, c) in slices) {
       if (v <= 0) continue;
       final sweep = (v / total) * math.pi * 2;
+      final remaining = full - drawn;
+      if (remaining <= 0) break;
+      final visible = math.min(sweep, remaining);
+
+      // A gentle radial gradient across each arc gives the ring depth without a
+      // perspective transform — dimension that costs nothing per frame once the
+      // sweep has settled.
       canvas.drawArc(
         rect,
         start,
-        sweep - 0.02, // hairline gap so adjacent slices stay legible
+        math.max(0, visible - 0.02), // hairline gap so slices stay legible
         false,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = stroke
           ..strokeCap = StrokeCap.butt
-          ..color = c,
+          ..shader = SweepGradient(
+            startAngle: start,
+            endAngle: start + sweep,
+            colors: [c.withValues(alpha: 0.72), c],
+          ).createShader(rect),
       );
       start += sweep;
+      drawn += sweep;
     }
   }
 
   @override
-  bool shouldRepaint(covariant _DonutPainter old) => old.slices != slices;
+  bool shouldRepaint(covariant _DonutPainter old) =>
+      old.slices != slices || old.t != t;
 }
 
 /// One stacked bar per block — the geography at a glance, worst on top.
@@ -337,17 +395,33 @@ class BlockBars extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 5),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: SizedBox(
-                      height: 8,
-                      child: Row(
-                        children: [
-                          if (out > 0) Expanded(flex: out * 100 ~/ total + 1, child: Container(color: RColors.out)),
-                          if (low > 0) Expanded(flex: low * 100 ~/ total + 1, child: Container(color: RColors.low)),
-                          if (ok > 0) Expanded(flex: ok * 100 ~/ total + 1, child: Container(color: RColors.ok)),
-                          if (unknown > 0) Expanded(flex: unknown * 100 ~/ total + 1, child: Container(color: RColors.unknown)),
-                        ],
+                  // The whole stacked bar wipes open from the left, so the
+                  // proportions are seen being laid down. The segments keep
+                  // their order — worst first — so the red is always the part
+                  // that appears first.
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: Motion.slow,
+                    curve: Curves.easeOutCubic,
+                    builder: (ctx, t, child) => ClipRect(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        widthFactor: Motion.reduced(ctx) ? 1 : t,
+                        child: child,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: SizedBox(
+                        height: 8,
+                        child: Row(
+                          children: [
+                            if (out > 0) Expanded(flex: out * 100 ~/ total + 1, child: Container(color: RColors.out)),
+                            if (low > 0) Expanded(flex: low * 100 ~/ total + 1, child: Container(color: RColors.low)),
+                            if (ok > 0) Expanded(flex: ok * 100 ~/ total + 1, child: Container(color: RColors.ok)),
+                            if (unknown > 0) Expanded(flex: unknown * 100 ~/ total + 1, child: Container(color: RColors.unknown)),
+                          ],
+                        ),
                       ),
                     ),
                   ),
