@@ -11,6 +11,7 @@ import '../../../auth/controller/auth_controller.dart';
 import '../../../admin/controller/admin_controller.dart';
 import '../../../readiness/controller/readiness_controller.dart';
 import '../../controller/programmes_controller.dart';
+import '../../controller/operations_controller.dart';
 import '../widgets/district_charts.dart';
 import '../../../../app/routes.dart';
 import '../../services/district_report_pdf.dart';
@@ -141,6 +142,8 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                 // actual remit was missing from this screen.
                 const SizedBox(height: 22),
                 _programmesEntry(),
+                const SizedBox(height: 10),
+                _operationsEntry(),
 
                 // ── 3. Accountability: rank the level directly below me ──
                 // This is what makes the BMHO and ANM panels real. A BMHO's
@@ -480,6 +483,86 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                             : urgent > 0
                                 ? '$urgent জনের জন্য এখনই ব্যবস্থা দরকার'
                                 : 'যক্ষ্মা · NCD · পরিবার পরিকল্পনা · জন্ম-মৃত্যু নিবন্ধন',
+                        style: AppTextStyles.caption.copyWith(
+                            color: urgent > 0 ? tone : AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                if (urgent > 0)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                        color: tone, borderRadius: AppRadius.smR),
+                    child: Text('$urgent',
+                        style: AppTextStyles.caption.copyWith(
+                            color: Colors.white, fontWeight: FontWeight.w800)),
+                  ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: AppColors.textSecondary),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  /// Entry to District Operations — the administrative half of the job:
+  /// disease clusters, outbreaks, cold chain, facilities, staffing, QA,
+  /// training, meetings, budget.
+  ///
+  /// Loads lazily and shows a live count, so the badge tells her whether it is
+  /// worth opening before she taps.
+  Widget _operationsEntry() {
+    final o = Get.put(OperationsController(), tag: 'operations');
+    if (o.data.isEmpty && !o.loading.value) o.loadAll();
+    return Obx(() {
+      final urgent = o.urgentCount;
+      final tone = urgent > 0 ? AppColors.emergencyRed : AppColors.primary;
+      final clusters = o.clusters.length;
+      return Material(
+        color: AppColors.surface,
+        borderRadius: AppRadius.xlR,
+        child: InkWell(
+          borderRadius: AppRadius.xlR,
+          onTap: () => Get.toNamed(AppRoutes.adminOperations),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.xlR,
+              boxShadow: AppShadows.low,
+              border: Border.all(color: tone.withValues(alpha: 0.22)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: tone.withValues(alpha: 0.10),
+                    borderRadius: AppRadius.mdR,
+                  ),
+                  child: Icon(Icons.apartment_rounded, size: 20, color: tone),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('জেলা পরিচালনা', style: AppTextStyles.h3),
+                      const SizedBox(height: 2),
+                      Text(
+                        o.loading.value
+                            ? 'দেখা হচ্ছে…'
+                            // A disease cluster outranks everything else on this
+                            // card — it is the only item that can still be
+                            // stopped from becoming an outbreak.
+                            : clusters > 0
+                                ? '$clusters টি গ্রামে রোগ বাড়ছে — এখনই দেখুন'
+                                : urgent > 0
+                                    ? '$urgent টি বিষয়ে ব্যবস্থা দরকার'
+                                    : 'কেন্দ্র · কোল্ড চেইন · কর্মী · পরিদর্শন · সভা',
                         style: AppTextStyles.caption.copyWith(
                             color: urgent > 0 ? tone : AppColors.textSecondary),
                       ),
