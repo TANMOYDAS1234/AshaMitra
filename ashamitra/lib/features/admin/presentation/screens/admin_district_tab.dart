@@ -10,6 +10,7 @@ import '../../../../shared/widgets/empty_state.dart';
 import '../../../auth/controller/auth_controller.dart';
 import '../../../admin/controller/admin_controller.dart';
 import '../../../readiness/controller/readiness_controller.dart';
+import '../../controller/programmes_controller.dart';
 import '../../../../app/routes.dart';
 import '../../services/district_report_pdf.dart';
 
@@ -120,6 +121,13 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                 _sectionTitle('HMIS মূল সূচক', 'সরকারি HMIS ফর্মুলা অনুযায়ী'),
                 const SizedBox(height: 12),
                 _indicatorGrid(ind, ctrl.dPrev),
+
+                // ── 2b. The rest of the job ──────────────────────────────
+                // Everything above is RCH. A CMHO also runs NTEP, NCD, family
+                // planning and civil registration — roughly six sevenths of her
+                // actual remit was missing from this screen.
+                const SizedBox(height: 22),
+                _programmesEntry(),
 
                 // ── 3. Accountability: rank the level directly below me ──
                 // This is what makes the BMHO and ANM panels real. A BMHO's
@@ -243,6 +251,80 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
           ),
         ],
       );
+
+  /// Entry to the National Health Programmes screen.
+  ///
+  /// Shows the live count of people needing action across NTEP, NCD, family
+  /// planning and CRS — so it is a signal, not just a link. Loads lazily: the
+  /// district tab must not wait on a second request to paint.
+  Widget _programmesEntry() {
+    final p = Get.put(ProgrammesController(), tag: 'programmes');
+    if (p.programmes.isEmpty && !p.loading.value) p.load();
+    return Obx(() {
+      final urgent = p.totalUrgent;
+      final tone = urgent > 0 ? AppColors.emergencyRed : AppColors.primary;
+      return Material(
+        color: AppColors.surface,
+        borderRadius: AppRadius.xlR,
+        child: InkWell(
+          borderRadius: AppRadius.xlR,
+          onTap: () => Get.toNamed(AppRoutes.adminProgrammes),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.xlR,
+              boxShadow: AppShadows.low,
+              border: Border.all(color: tone.withValues(alpha: 0.22)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: tone.withValues(alpha: 0.10),
+                    borderRadius: AppRadius.mdR,
+                  ),
+                  child: Icon(Icons.health_and_safety_rounded,
+                      size: 20, color: tone),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('স্বাস্থ্য কর্মসূচি', style: AppTextStyles.h3),
+                      const SizedBox(height: 2),
+                      Text(
+                        p.loading.value
+                            ? 'দেখা হচ্ছে…'
+                            : urgent > 0
+                                ? '$urgent জনের জন্য এখনই ব্যবস্থা দরকার'
+                                : 'যক্ষ্মা · NCD · পরিবার পরিকল্পনা · জন্ম-মৃত্যু নিবন্ধন',
+                        style: AppTextStyles.caption.copyWith(
+                            color: urgent > 0 ? tone : AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                if (urgent > 0)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                        color: tone, borderRadius: AppRadius.smR),
+                    child: Text('$urgent',
+                        style: AppTextStyles.caption.copyWith(
+                            color: Colors.white, fontWeight: FontWeight.w800)),
+                  ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: AppColors.textSecondary),
+              ],
+            ),
+          ),
+        ),
+      );
+    });
+  }
 
   Widget _sectionTitle(String t, String sub) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,

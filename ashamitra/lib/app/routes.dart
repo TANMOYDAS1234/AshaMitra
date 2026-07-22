@@ -32,6 +32,7 @@ import '../features/admin/presentation/screens/admin_asha_list_screen.dart';
 import '../features/admin/presentation/screens/admin_add_asha_screen.dart';
 import '../features/admin/presentation/screens/admin_reports_screen.dart';
 import '../features/admin/presentation/screens/admin_profile_screen.dart';
+import '../features/admin/presentation/screens/programmes_screen.dart';
 import '../features/assistant/presentation/screens/assistant_screen.dart';
 import '../features/schedule/presentation/screens/due_list_screen.dart';
 import '../features/schedule/presentation/screens/visit_screen.dart';
@@ -84,6 +85,8 @@ class AppRoutes {
   static const adminAddAsha    = '/admin/asha/add';
   static const adminReports    = '/admin/reports';
   static const adminProfile    = '/admin/profile';
+  // National Health Programmes — NTEP, NCD, family planning, CRS, drug logistics.
+  static const adminProgrammes = '/admin/programmes';
 
   // ── Duration tokens for transitions ────────────────────────────────────
   static const _fast   = Duration(milliseconds: 180);
@@ -334,6 +337,8 @@ class AppRoutes {
     GetPage(name: adminReports,   page: () => const AdminReportsScreen(),
         transition: Transition.rightToLeftWithFade, transitionDuration: _medium),
     GetPage(name: adminProfile,   page: () => const AdminProfileScreen(),
+        transition: Transition.rightToLeftWithFade, transitionDuration: _medium),
+    GetPage(name: adminProgrammes, page: () => const ProgrammesScreen(),
         transition: Transition.rightToLeftWithFade, transitionDuration: _medium),
   ];
 }
