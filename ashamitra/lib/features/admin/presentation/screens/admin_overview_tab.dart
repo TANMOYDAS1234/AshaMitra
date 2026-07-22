@@ -10,6 +10,8 @@ import '../../../../features/auth/controller/auth_controller.dart';
 import '../../../../shared/widgets/user_avatar.dart';
 import '../../../admin/controller/admin_controller.dart';
 import '../widgets/analytics_charts.dart';
+import '../widgets/action_queue.dart';
+import '../../../../app/routes.dart';
 import '../../../../shared/widgets/skeleton.dart';
 import '../../../../shared/widgets/empty_state.dart';
 
@@ -27,8 +29,65 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
       final ctrl = Get.find<AdminController>();
       ctrl.loadStats();
       ctrl.loadReports();
+      // The action queue reads district alerts (deaths, stranded referrals,
+      // silent workers, defaulters). Without this it silently renders half its
+      // sources as empty — worse than not showing them, because an incomplete
+      // "today's work" list reads as a complete one.
+      if (ctrl.district.value == null) ctrl.loadDistrict();
     });
   }
+
+  /// Direct routes into the three detail screens. These used to be buried below
+  /// the HMIS indicator grid on the analytics tab, which meant a CMHO had to
+  /// already know they existed to find them.
+  Widget _quickLinks() => Row(
+        children: [
+          _link(Icons.medication_liquid_rounded, 'ওষুধ ও\nপ্রস্তুতি',
+              AppRoutes.readinessSummary, AppColors.emergencyRed),
+          const SizedBox(width: 10),
+          _link(Icons.health_and_safety_rounded, 'স্বাস্থ্য\nকর্মসূচি',
+              AppRoutes.adminProgrammes, AppColors.primary),
+          const SizedBox(width: 10),
+          _link(Icons.apartment_rounded, 'জেলা\nপরিচালনা',
+              AppRoutes.adminOperations, AppColors.sky),
+        ],
+      );
+
+  Widget _link(IconData icon, String label, String route, Color col) => Expanded(
+        child: Material(
+          color: AppColors.surface,
+          borderRadius: AppRadius.lgR,
+          child: InkWell(
+            borderRadius: AppRadius.lgR,
+            onTap: () => Get.toNamed(route),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+              decoration: BoxDecoration(
+                borderRadius: AppRadius.lgR,
+                boxShadow: AppShadows.low,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: col.withValues(alpha: 0.10),
+                      borderRadius: AppRadius.mdR,
+                    ),
+                    child: Icon(icon, size: 19, color: col),
+                  ),
+                  const SizedBox(height: 7),
+                  Text(label,
+                      textAlign: TextAlign.center,
+                      style: AppTextStyles.caption.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onBackground)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +136,18 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 20),
+
+                // ── What needs a decision today ──────────────────
+                // This LEADS. The dashboard used to open on four totals and a
+                // sparkline while every escalation lived one tab over — an
+                // officer with ninety seconds between meetings should not have
+                // to go looking for the thing that is on fire.
+                const ActionQueue(),
+                const SizedBox(height: 20),
+
+                // ── Straight into the detail screens ─────────────
+                _quickLinks(),
                 const SizedBox(height: 24),
 
                 // ── Stats grid ───────────────────────────────────
