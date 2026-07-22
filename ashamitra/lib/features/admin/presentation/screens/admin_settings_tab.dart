@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/services/language_controller.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/panel_palette.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
@@ -94,7 +95,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
             _PhotoOption(
               icon: Icons.photo_library_rounded,
               label: 'photo_choose_gallery'.tr,
-              color: AppColors.primary,
+              color: PanelPalette.primary,
               onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); },
             ),
             _PhotoOption(
@@ -144,7 +145,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                     final badges = ['বাং', 'हिं', 'En'];
                     return Material(
                       color: selected
-                          ? AppColors.primary.withValues(alpha: 0.06)
+                          ? PanelPalette.primary.withValues(alpha: 0.06)
                           : AppColors.background,
                       borderRadius: AppRadius.lgR,
                       child: InkWell(
@@ -156,12 +157,12 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                               horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
                             color: selected
-                                ? AppColors.primary.withValues(alpha: 0.06)
+                                ? PanelPalette.primary.withValues(alpha: 0.06)
                                 : AppColors.background,
                             borderRadius: AppRadius.lgR,
                             border: Border.all(
                               color: selected
-                                  ? AppColors.primary
+                                  ? PanelPalette.primary
                                   : const Color(0xFFE2E8F0),
                               width: selected ? 1.5 : 1,
                             ),
@@ -172,14 +173,14 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                                 width: 36, height: 36,
                                 decoration: BoxDecoration(
                                   color: selected
-                                      ? AppColors.primary.withValues(alpha: 0.12)
-                                      : AppColors.primary.withValues(alpha: 0.06),
+                                      ? PanelPalette.primary.withValues(alpha: 0.12)
+                                      : PanelPalette.primary.withValues(alpha: 0.06),
                                   borderRadius: AppRadius.smR,
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(badges[i],
                                     style: AppTextStyles.label.copyWith(
-                                      color: AppColors.primary,
+                                      color: PanelPalette.primary,
                                       fontWeight: FontWeight.w800,
                                     )),
                               ),
@@ -191,13 +192,13 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                                           ? FontWeight.w700
                                           : FontWeight.w500,
                                       color: selected
-                                          ? AppColors.primary
-                                          : AppColors.onBackground,
+                                          ? PanelPalette.primary
+                                          : PanelPalette.onBackground,
                                     )),
                               ),
                               if (selected)
-                                const Icon(Icons.check_circle_rounded,
-                                    color: AppColors.primary, size: 20),
+                                Icon(Icons.check_circle_rounded,
+                                    color: PanelPalette.primary, size: 20),
                             ],
                           ),
                         ),
@@ -235,7 +236,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
               const SizedBox(height: 8),
               Text('confirm_logout'.tr,
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
+                  style: AppTextStyles.body.copyWith(color: PanelPalette.textSecondary)),
               const SizedBox(height: 24),
               Row(
                 children: [
@@ -250,7 +251,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                                 color: Color(0xFFE2E8F0))),
                       ),
                       child: Text('cancel'.tr,
-                          style: AppTextStyles.labelLg.copyWith(color: AppColors.textSecondary)),
+                          style: AppTextStyles.labelLg.copyWith(color: PanelPalette.textSecondary)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -307,10 +308,10 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                             Container(
                               width: 72, height: 72,
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
+                                color: PanelPalette.primary.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                    color: AppColors.primary
+                                    color: PanelPalette.primary
                                         .withValues(alpha: 0.2),
                                     width: 2),
                               ),
@@ -318,8 +319,8 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                                 user: u,
                                 size: 72,
                                 backgroundColor:
-                                    AppColors.primary.withValues(alpha: 0.1),
-                                textColor: AppColors.primary,
+                                    PanelPalette.primary.withValues(alpha: 0.1),
+                                textColor: PanelPalette.primary,
                               ),
                             ),
                             Positioned(
@@ -327,7 +328,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                               child: Container(
                                 width: 24, height: 24,
                                 decoration: BoxDecoration(
-                                    color: AppColors.primary,
+                                    color: PanelPalette.primary,
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                         color: AppColors.surface, width: 2)),
@@ -351,11 +352,11 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                  color: AppColors.primary
+                                  color: PanelPalette.primary
                                       .withValues(alpha: 0.08),
                                   borderRadius: AppRadius.smR),
                               child: Text('role_admin'.tr,
-                                  style: AppTextStyles.overline.copyWith(color: AppColors.primary)),
+                                  style: AppTextStyles.overline.copyWith(color: PanelPalette.primary)),
                             ),
                           ],
                         ),
@@ -394,7 +395,7 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                         child: ElevatedButton(
                           onPressed: _saving ? null : _save,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: PanelPalette.primary,
                             foregroundColor: AppColors.onPrimary,
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -508,7 +509,7 @@ class _Field extends StatelessWidget {
         style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: AppColors.primary, size: 18),
+          prefixIcon: Icon(icon, color: PanelPalette.primary, size: 18),
           filled: true,
           fillColor: const Color(0xFFF8FAFC),
           border: OutlineInputBorder(
@@ -520,7 +521,7 @@ class _Field extends StatelessWidget {
           focusedBorder: OutlineInputBorder(
               borderRadius: AppRadius.mdR,
               borderSide:
-                  const BorderSide(color: AppColors.primary, width: 1.5)),
+                  BorderSide(color: PanelPalette.primary, width: 1.5)),
           errorBorder: OutlineInputBorder(
               borderRadius: AppRadius.mdR,
               borderSide:
@@ -569,8 +570,8 @@ class _SettingsRow extends StatelessWidget {
               ),
               if (trailing != null) trailing!,
               const SizedBox(width: 6),
-              const Icon(Icons.chevron_right_rounded,
-                  size: 18, color: AppColors.textSecondary),
+              Icon(Icons.chevron_right_rounded,
+                  size: 18, color: PanelPalette.textSecondary),
             ],
           ),
         ),
@@ -603,7 +604,7 @@ class _PhotoOption extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: color == AppColors.emergencyRed
                   ? AppColors.emergencyRed
-                  : AppColors.onBackground,
+                  : PanelPalette.onBackground,
             )),
         onTap: onTap,
       );

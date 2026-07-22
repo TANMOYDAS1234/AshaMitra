@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/panel_palette.dart';
 import '../../../admin/controller/admin_controller.dart';
 import 'admin_overview_tab.dart';
 import 'admin_district_tab.dart';
@@ -78,13 +79,13 @@ class _AdminShellState extends State<AdminShell> {
         backgroundColor: Colors.white,
         elevation: 8,
         shadowColor: Colors.black12,
-        indicatorColor: AppColors.primary.withValues(alpha: 0.12),
+        indicatorColor: PanelPalette.primary.withValues(alpha: 0.12),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
         destinations: [
-          const NavigationDestination(
+          NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon:
-                Icon(Icons.dashboard_rounded, color: AppColors.primary),
+                Icon(Icons.dashboard_rounded, color: PanelPalette.primary),
             label: 'Overview',
           ),
           NavigationDestination(
@@ -105,27 +106,27 @@ class _AdminShellState extends State<AdminShell> {
                 isLabelVisible: n > 0,
                 label: Text('$n'),
                 backgroundColor: AppColors.emergencyRed,
-                child: const Icon(Icons.insights_rounded,
-                    color: AppColors.primary),
+                child: Icon(Icons.insights_rounded,
+                    color: PanelPalette.primary),
               );
             }),
             label: 'District',
           ),
-          const NavigationDestination(
+          NavigationDestination(
             icon: Icon(Icons.people_outline_rounded),
-            selectedIcon: Icon(Icons.people_rounded, color: AppColors.primary),
+            selectedIcon: Icon(Icons.people_rounded, color: PanelPalette.primary),
             label: 'Workers',
           ),
-          const NavigationDestination(
+          NavigationDestination(
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon:
-                Icon(Icons.bar_chart_rounded, color: AppColors.primary),
+                Icon(Icons.bar_chart_rounded, color: PanelPalette.primary),
             label: 'Reports',
           ),
-          const NavigationDestination(
+          NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon:
-                Icon(Icons.settings_rounded, color: AppColors.primary),
+                Icon(Icons.settings_rounded, color: PanelPalette.primary),
             label: 'Settings',
           ),
         ],

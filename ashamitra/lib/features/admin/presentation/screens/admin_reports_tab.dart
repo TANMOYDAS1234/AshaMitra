@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/panel_palette.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
@@ -60,12 +61,12 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                           onPressed: () => _openFilterSheet(context, ctrl),
                           style: IconButton.styleFrom(
                             backgroundColor: activeCount > 0
-                                ? AppColors.primary.withValues(alpha: 0.12)
+                                ? PanelPalette.primary.withValues(alpha: 0.12)
                                 : Colors.grey.shade100,
                             padding: const EdgeInsets.all(10),
                           ),
-                          icon: const Icon(Icons.filter_alt_rounded,
-                              color: AppColors.primary, size: 20),
+                          icon: Icon(Icons.filter_alt_rounded,
+                              color: PanelPalette.primary, size: 20),
                           tooltip: 'admin_filter_by_tooltip'.tr,
                         ),
                         if (activeCount > 0)
@@ -109,12 +110,12 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                         style: IconButton.styleFrom(
                           backgroundColor: ctrl.filteredReports.isEmpty
                               ? Colors.grey.shade200
-                              : AppColors.primary,
+                              : PanelPalette.primary,
                           padding: const EdgeInsets.all(10),
                         ),
                         icon: Icon(Icons.download_rounded,
                             color: ctrl.filteredReports.isEmpty
-                                ? AppColors.textSecondary
+                                ? PanelPalette.textSecondary
                                 : AppColors.onPrimary,
                             size: 20),
                         tooltip: 'admin_download_pdf'.tr,
@@ -176,7 +177,7 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                   child: Row(
                     children: [
                       _SummaryChip('total_n'.trParams({'count': '${ctrl.totalReports}'}),
-                          AppColors.primary),
+                          PanelPalette.primary),
                       const SizedBox(width: 8),
                       _SummaryChip('${ctrl.redReports}',
                           AppColors.emergencyRed),
@@ -208,7 +209,7 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                   );
                 }
                 return RefreshIndicator(
-                  color: AppColors.primary,
+                  color: PanelPalette.primary,
                   onRefresh: ctrl.loadReports,
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -612,7 +613,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? AppColors.primary;
+    final c = color ?? PanelPalette.primary;
     return Material(
       color: selected ? c : AppColors.surface,
       borderRadius: AppRadius.pillR,
@@ -627,11 +628,11 @@ class _FilterChip extends StatelessWidget {
             color: selected ? c : AppColors.surface,
             borderRadius: AppRadius.pillR,
             border: Border.all(
-                color: selected ? c : AppColors.cardBorder),
+                color: selected ? c : PanelPalette.line),
           ),
           child: Text(label,
               style: AppTextStyles.label.copyWith(
-                color: selected ? AppColors.onPrimary : AppColors.textSecondary,
+                color: selected ? AppColors.onPrimary : PanelPalette.textSecondary,
               )),
         ),
       ),
@@ -730,7 +731,7 @@ class _ReportCard extends StatelessWidget {
                     if ((r['ashaName']?.toString() ?? '').isNotEmpty)
                       Text('ASHA: ${r['ashaName']}',
                           style: AppTextStyles.caption.copyWith(
-                            color: AppColors.primary,
+                            color: PanelPalette.primary,
                             fontWeight: FontWeight.w600,
                           )),
                     Text(fmtDate, style: AppTextStyles.caption),

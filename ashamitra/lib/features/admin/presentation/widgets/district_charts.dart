@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/panel_palette.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
 /// A real monthly series with month labels.
@@ -16,7 +17,10 @@ class MonthlySeriesChart extends StatelessWidget {
   final List<String> months; // 'YYYY-MM', oldest to newest
   final List<int> primary;
   final List<int>? secondary; // drawn on top, usually the alarming subset
-  final Color primaryColor;
+  /// Null falls back to the panel's brand colour, resolved at build time. It
+  /// cannot be a default parameter: the palette is role-dependent, so it is a
+  /// getter, and a getter is not a compile-time constant.
+  final Color? primaryColor;
   final Color secondaryColor;
   final double height;
 
@@ -25,7 +29,7 @@ class MonthlySeriesChart extends StatelessWidget {
     required this.months,
     required this.primary,
     this.secondary,
-    this.primaryColor = AppColors.primary,
+    this.primaryColor,
     this.secondaryColor = AppColors.emergencyRed,
     this.height = 128,
   });
@@ -58,7 +62,7 @@ class MonthlySeriesChart extends StatelessWidget {
             painter: _MonthlyPainter(
               primary: primary,
               secondary: secondary,
-              primaryColor: primaryColor,
+              primaryColor: primaryColor ?? PanelPalette.primary,
               secondaryColor: secondaryColor,
               maxV: maxV,
             ),
@@ -72,14 +76,14 @@ class MonthlySeriesChart extends StatelessWidget {
           children: [
             Text(_label(months.first),
                 style: AppTextStyles.caption
-                    .copyWith(color: AppColors.textSecondary)),
+                    .copyWith(color: PanelPalette.textSecondary)),
             if (months.length > 2)
               Text(_label(months[months.length ~/ 2]),
                   style: AppTextStyles.caption
-                      .copyWith(color: AppColors.textSecondary)),
+                      .copyWith(color: PanelPalette.textSecondary)),
             Text(_label(months.last),
                 style: AppTextStyles.caption
-                    .copyWith(color: AppColors.textSecondary)),
+                    .copyWith(color: PanelPalette.textSecondary)),
           ],
         ),
       ],
@@ -109,7 +113,7 @@ class _MonthlyPainter extends CustomPainter {
     final barW = size.width / n;
 
     final grid = Paint()
-      ..color = AppColors.onBackground.withValues(alpha: 0.05)
+      ..color = PanelPalette.onBackground.withValues(alpha: 0.05)
       ..strokeWidth = 1;
     for (var i = 0; i <= 2; i++) {
       final y = size.height * (i / 2);
@@ -190,7 +194,7 @@ class BenchmarkBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final v = value;
     final col = v == null
-        ? AppColors.textLight
+        ? PanelPalette.textLight
         : _meets
             ? AppColors.safeGreen
             : AppColors.emergencyRed;
@@ -217,7 +221,7 @@ class BenchmarkBar extends StatelessWidget {
               const SizedBox(width: 8),
               Text(refText,
                   style: AppTextStyles.caption
-                      .copyWith(color: AppColors.textLight)),
+                      .copyWith(color: PanelPalette.textLight)),
             ],
           ),
           const SizedBox(height: 5),
@@ -229,7 +233,7 @@ class BenchmarkBar extends StatelessWidget {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: AppColors.onBackground.withValues(alpha: 0.05),
+                      color: PanelPalette.onBackground.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(5),
                     ),
                   ),
@@ -247,7 +251,7 @@ class BenchmarkBar extends StatelessWidget {
                     child: Container(
                       width: 2,
                       height: 10,
-                      color: AppColors.onBackground.withValues(alpha: 0.45),
+                      color: PanelPalette.onBackground.withValues(alpha: 0.45),
                     ),
                   ),
                 ],
@@ -291,7 +295,7 @@ class BlockRankChart extends StatelessWidget {
         final v = r.value;
         // No denominator is not a score of zero. Grey, and no bar at all.
         final col = v == null
-            ? AppColors.textLight
+            ? PanelPalette.textLight
             : higherIsBetter
                 ? (v >= maxV * 0.75 ? AppColors.safeGreen : AppColors.emergencyRed)
                 : (v <= maxV * 0.25 ? AppColors.safeGreen : AppColors.emergencyRed);
@@ -315,7 +319,7 @@ class BlockRankChart extends StatelessWidget {
                       const SizedBox(width: 6),
                       Text('n=${r.n}',
                           style: AppTextStyles.caption
-                              .copyWith(color: AppColors.textLight)),
+                              .copyWith(color: PanelPalette.textLight)),
                     ],
                   ],
                 ),
@@ -324,7 +328,7 @@ class BlockRankChart extends StatelessWidget {
                   return Container(
                     height: 8,
                     decoration: BoxDecoration(
-                      color: AppColors.onBackground.withValues(alpha: 0.05),
+                      color: PanelPalette.onBackground.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     alignment: Alignment.centerLeft,

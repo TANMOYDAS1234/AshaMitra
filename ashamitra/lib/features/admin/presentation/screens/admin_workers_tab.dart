@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/panel_palette.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
@@ -49,7 +50,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                   IconButton(
                     onPressed: () => _showAddSheet(context, ctrl),
                     style: IconButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: PanelPalette.primary,
                       padding: const EdgeInsets.all(10),
                     ),
                     icon: const Icon(Icons.person_add_alt_1_rounded,
@@ -69,8 +70,8 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                 decoration: InputDecoration(
                   hintText: '$child খুঁজুন — নাম, মোবাইল বা গ্রাম',
                   hintStyle: AppTextStyles.caption,
-                  prefixIcon: const Icon(Icons.search_rounded,
-                      color: AppColors.primary, size: 20),
+                  prefixIcon: Icon(Icons.search_rounded,
+                      color: PanelPalette.primary, size: 20),
                   isDense: true,
                   filled: true,
                   fillColor: const Color(0xFFF8FAFC),
@@ -81,8 +82,8 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                       borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
                   focusedBorder: OutlineInputBorder(
                       borderRadius: AppRadius.mdR,
-                      borderSide: const BorderSide(
-                          color: AppColors.primary, width: 1.5)),
+                      borderSide: BorderSide(
+                          color: PanelPalette.primary, width: 1.5)),
                 ),
               ),
             ),
@@ -95,17 +96,17 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                 margin: const EdgeInsets.fromLTRB(20, 0, 20, 10),
                 padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
+                  color: PanelPalette.primary.withValues(alpha: 0.08),
                   borderRadius: AppRadius.mdR,
                   border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.25)),
+                      color: PanelPalette.primary.withValues(alpha: 0.25)),
                 ),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text('$n জন বাছাই করা হয়েছে',
                           style: AppTextStyles.label
-                              .copyWith(color: AppColors.primary)),
+                              .copyWith(color: PanelPalette.primary)),
                     ),
                     TextButton(
                       onPressed: () => _runBulk(context, ctrl, true),
@@ -122,7 +123,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                     IconButton(
                       onPressed: ctrl.clearSelection,
                       icon: const Icon(Icons.close_rounded, size: 18),
-                      color: AppColors.textSecondary,
+                      color: PanelPalette.textSecondary,
                       tooltip: 'বাতিল',
                     ),
                   ],
@@ -181,7 +182,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                                 ),
                                 child: Text('দলে নিন',
                                     style: AppTextStyles.label
-                                        .copyWith(color: AppColors.primary)),
+                                        .copyWith(color: PanelPalette.primary)),
                               ),
                             ],
                           ),
@@ -211,7 +212,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                       icon: const Icon(Icons.add_rounded, size: 18),
                       label: Text('নতুন $child যোগ করুন'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
+                        backgroundColor: PanelPalette.primary,
                         foregroundColor: AppColors.onPrimary,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
@@ -229,7 +230,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                   );
                 }
                 return RefreshIndicator(
-                  color: AppColors.primary,
+                  color: PanelPalette.primary,
                   onRefresh: ctrl.loadAshaWorkers,
                   child: ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -366,7 +367,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                                 }
                               },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: PanelPalette.primary,
                           foregroundColor: AppColors.onPrimary,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
@@ -432,13 +433,13 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                       width: 52,
                       height: 52,
                       decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
+                          color: PanelPalette.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle),
                       child: UserAvatar(
                         user: worker,
                         size: 52,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                        textColor: AppColors.primary,
+                        backgroundColor: PanelPalette.primary.withValues(alpha: 0.1),
+                        textColor: PanelPalette.primary,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -460,7 +461,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                       decoration: BoxDecoration(
                           color: (worker.isActive
                                   ? AppColors.safeGreen
-                                  : AppColors.textSecondary)
+                                  : PanelPalette.textSecondary)
                               .withValues(alpha: 0.1),
                           borderRadius: AppRadius.smR),
                       child: Text(
@@ -470,7 +471,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                         style: AppTextStyles.overline.copyWith(
                           color: worker.isActive
                               ? AppColors.safeGreen
-                              : AppColors.textSecondary,
+                              : PanelPalette.textSecondary,
                         ),
                       ),
                     ),
@@ -483,7 +484,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                 child: Row(
                   children: [
                     _StatChip(Icons.people_rounded, '${patients.length}',
-                        'patients'.tr, AppColors.primary),
+                        'patients'.tr, PanelPalette.primary),
                     const SizedBox(width: 10),
                     _StatChip(Icons.analytics_rounded, '${reports.length}',
                         'reports'.tr, AppColors.purple),
@@ -515,7 +516,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                       Center(
                         child: Padding(
                           padding: const EdgeInsets.only(top: 32),
-                          child: Text('admin_no_activity'.tr, style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
+                          child: Text('admin_no_activity'.tr, style: AppTextStyles.body.copyWith(color: PanelPalette.textSecondary)),
                         ),
                       ),
                   ],
@@ -639,14 +640,14 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                       width: 46,
                       height: 46,
                       decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
+                          color: PanelPalette.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle),
                       child: UserAvatar(
                           user: node,
                           size: 46,
                           backgroundColor:
-                              AppColors.primary.withValues(alpha: 0.1),
-                          textColor: AppColors.primary),
+                              PanelPalette.primary.withValues(alpha: 0.1),
+                          textColor: PanelPalette.primary),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -670,7 +671,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
                           padding: const EdgeInsets.only(top: 32),
                           child: Text('এখনও কোনো $childLabel যোগ করা হয়নি',
                               style: AppTextStyles.body
-                                  .copyWith(color: AppColors.textSecondary)),
+                                  .copyWith(color: PanelPalette.textSecondary)),
                         ),
                       )
                     : ListView.separated(
@@ -714,7 +715,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
         style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w500),
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+          prefixIcon: Icon(icon, color: PanelPalette.primary, size: 20),
           filled: true,
           fillColor: const Color(0xFFF8FAFC),
           border: OutlineInputBorder(
@@ -726,7 +727,7 @@ class _AdminWorkersTabState extends State<AdminWorkersTab> {
           focusedBorder: OutlineInputBorder(
               borderRadius: AppRadius.mdR,
               borderSide:
-                  const BorderSide(color: AppColors.primary, width: 1.5)),
+                  BorderSide(color: PanelPalette.primary, width: 1.5)),
           errorBorder: OutlineInputBorder(
               borderRadius: AppRadius.mdR,
               borderSide:
@@ -758,7 +759,7 @@ class _WorkerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor =
-        worker.isActive ? AppColors.safeGreen : AppColors.textSecondary;
+        worker.isActive ? AppColors.safeGreen : PanelPalette.textSecondary;
 
     return Material(
       color: AppColors.surface,
@@ -771,12 +772,12 @@ class _WorkerCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: selected
-                ? AppColors.primary.withValues(alpha: 0.06)
+                ? PanelPalette.primary.withValues(alpha: 0.06)
                 : AppColors.surface,
             borderRadius: AppRadius.xlR,
             boxShadow: AppShadows.low,
             border: selected
-                ? Border.all(color: AppColors.primary, width: 1.5)
+                ? Border.all(color: PanelPalette.primary, width: 1.5)
                 : null,
           ),
           child: Row(
@@ -787,14 +788,14 @@ class _WorkerCard extends StatelessWidget {
                     width: 46,
                     height: 46,
                     decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.08),
+                        color: PanelPalette.primary.withValues(alpha: 0.08),
                         shape: BoxShape.circle),
                     child: UserAvatar(
                       user: worker,
                       size: 46,
                       backgroundColor:
-                          AppColors.primary.withValues(alpha: 0.08),
-                      textColor: AppColors.primary,
+                          PanelPalette.primary.withValues(alpha: 0.08),
+                      textColor: PanelPalette.primary,
                     ),
                   ),
                   if (selected)
@@ -804,8 +805,8 @@ class _WorkerCard extends StatelessWidget {
                       child: Container(
                         width: 18,
                         height: 18,
-                        decoration: const BoxDecoration(
-                            color: AppColors.primary, shape: BoxShape.circle),
+                        decoration: BoxDecoration(
+                            color: PanelPalette.primary, shape: BoxShape.circle),
                         child: const Icon(Icons.check_rounded,
                             size: 12, color: AppColors.onPrimary),
                       ),
@@ -834,11 +835,11 @@ class _WorkerCard extends StatelessWidget {
                                 horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                                 color:
-                                    AppColors.primary.withValues(alpha: 0.10),
+                                    PanelPalette.primary.withValues(alpha: 0.10),
                                 borderRadius: AppRadius.smR),
                             child: Text(worker.roleShort,
                                 style: AppTextStyles.overline
-                                    .copyWith(color: AppColors.primary)),
+                                    .copyWith(color: PanelPalette.primary)),
                           ),
                         ],
                       ],
@@ -892,8 +893,8 @@ class _WorkerCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Icon(Icons.chevron_right_rounded,
-                      size: 18, color: AppColors.textSecondary),
+                  Icon(Icons.chevron_right_rounded,
+                      size: 18, color: PanelPalette.textSecondary),
                 ],
               ),
             ],
@@ -913,7 +914,7 @@ class _MiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? AppColors.textSecondary;
+    final c = color ?? PanelPalette.textSecondary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -1008,8 +1009,8 @@ class _PatientRow extends StatelessWidget {
               ),
               Text(p['type']?.toString() ?? '', style: AppTextStyles.caption),
               const SizedBox(width: 6),
-              const Icon(Icons.chevron_right_rounded,
-                  size: 16, color: AppColors.textSecondary),
+              Icon(Icons.chevron_right_rounded,
+                  size: 16, color: PanelPalette.textSecondary),
             ],
           ),
         ),
@@ -1065,8 +1066,8 @@ class _ReportRow extends StatelessWidget {
                     style: AppTextStyles.body),
               ),
               const SizedBox(width: 6),
-              const Icon(Icons.chevron_right_rounded,
-                  size: 16, color: AppColors.textSecondary),
+              Icon(Icons.chevron_right_rounded,
+                  size: 16, color: PanelPalette.textSecondary),
             ],
           ),
         ),

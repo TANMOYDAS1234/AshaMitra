@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/panel_palette.dart';
 import '../../../../core/theme/app_text_styles.dart';
 
 /// Lightweight, dependency-free charts for the supervisor panels.
@@ -13,13 +14,16 @@ import '../../../../core/theme/app_text_styles.dart';
 // ── Trend: smooth area chart of a daily series ──────────────────────────────
 class TrendAreaChart extends StatelessWidget {
   final List<int> values; // oldest → newest
-  final Color color;
+  final Color? color;
   final double height;
 
+  /// Null falls back to the panel's brand colour, resolved at build time.
+  /// It cannot be a default parameter: the palette is role-dependent, so it is a
+  /// getter, and a getter is not a compile-time constant.
   const TrendAreaChart({
     super.key,
     required this.values,
-    this.color = AppColors.primary,
+    this.color,
     this.height = 96,
   });
 
@@ -27,7 +31,8 @@ class TrendAreaChart extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
         height: height,
         width: double.infinity,
-        child: CustomPaint(painter: _TrendPainter(values, color)),
+        child: CustomPaint(
+            painter: _TrendPainter(values, color ?? PanelPalette.primary)),
       );
 }
 
@@ -44,7 +49,7 @@ class _TrendPainter extends CustomPainter {
 
     // Baseline grid (3 faint rules) — gives the eye a scale without clutter.
     final grid = Paint()
-      ..color = AppColors.textSecondary.withValues(alpha: 0.10)
+      ..color = PanelPalette.textSecondary.withValues(alpha: 0.10)
       ..strokeWidth = 1;
     for (var i = 0; i <= 2; i++) {
       final y = size.height * (i / 2);
@@ -152,7 +157,7 @@ class _DonutPainter extends CustomPainter {
     if (total == 0) {
       canvas.drawArc(rect, 0, math.pi * 2, false,
           Paint()
-            ..color = AppColors.textSecondary.withValues(alpha: 0.12)
+            ..color = PanelPalette.textSecondary.withValues(alpha: 0.12)
             ..style = PaintingStyle.stroke
             ..strokeWidth = stroke);
       return;
@@ -190,14 +195,14 @@ class _DonutPainter extends CustomPainter {
 // ── Sparkline: a mini trend for stat tiles ──────────────────────────────────
 class Sparkline extends StatelessWidget {
   final List<int> values;
-  final Color color;
+  final Color? color;
   const Sparkline({super.key, required this.values, required this.color});
 
   @override
   Widget build(BuildContext context) => SizedBox(
         height: 22,
         width: double.infinity,
-        child: CustomPaint(painter: _SparkPainter(values, color)),
+        child: CustomPaint(painter: _SparkPainter(values, color ?? PanelPalette.primary)),
       );
 }
 

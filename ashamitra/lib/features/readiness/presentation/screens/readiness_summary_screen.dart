@@ -61,7 +61,7 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
                   IconButton(
                     onPressed: c.loadSummary,
                     icon: const Icon(Icons.refresh_rounded),
-                    color: AppColors.primary,
+                    color: PanelPalette.primary,
                   ),
                 ],
               ),
@@ -166,7 +166,7 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
               const SizedBox(height: 2),
               Text(subtitle,
                   style: AppTextStyles.caption
-                      .copyWith(color: AppColors.textSecondary)),
+                      .copyWith(color: PanelPalette.textSecondary)),
             ],
             const SizedBox(height: 14),
             child,
@@ -219,7 +219,7 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
             Text(l,
                 textAlign: TextAlign.center,
                 style: AppTextStyles.caption
-                    .copyWith(color: AppColors.textSecondary)),
+                    .copyWith(color: PanelPalette.textSecondary)),
           ],
         ),
       );
@@ -248,7 +248,7 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
             const SizedBox(height: 4),
             Text('একদিনে ঠিক করা যায় — এবং করলে জীবন বাঁচে',
                 style: AppTextStyles.caption
-                    .copyWith(color: AppColors.textSecondary)),
+                    .copyWith(color: PanelPalette.textSecondary)),
             const SizedBox(height: 12),
             ...c.critical.map((g) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -289,7 +289,7 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
                                   ].join(' · '))
                               .join('\n'),
                           style: AppTextStyles.bodySm
-                              .copyWith(color: AppColors.textSecondary),
+                              .copyWith(color: PanelPalette.textSecondary),
                         ),
                       ),
                     ],
@@ -307,7 +307,7 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
           Expanded(
             child: Text('— ট্যাপ করে ভিতরে দেখুন',
                 style: AppTextStyles.caption
-                    .copyWith(color: AppColors.textSecondary)),
+                    .copyWith(color: PanelPalette.textSecondary)),
           ),
         ],
       );
@@ -357,7 +357,7 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
                                 _pill('${b.low} কম', AppColors.warning),
                               if (b.unknown > 0)
                                 _pill('${b.unknown} খবর নেই',
-                                    AppColors.textSecondary),
+                                    PanelPalette.textSecondary),
                               if (b.criticalOut == 0 &&
                                   b.low == 0 &&
                                   b.unknown == 0)
@@ -368,7 +368,7 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
                       ),
                     ),
                     Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded,
-                        color: AppColors.textSecondary),
+                        color: PanelPalette.textSecondary),
                   ],
                 ),
               ),
@@ -386,7 +386,7 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
 
   Widget _unitRow(ReadinessUnit u) {
     final (Color col, String status) = switch (u.state) {
-      'never' => (AppColors.textSecondary, 'কখনও খবর দেয়নি'),
+      'never' => (PanelPalette.textSecondary, 'কখনও খবর দেয়নি'),
       'stale' => (AppColors.warning, '${u.daysAgo} দিন আগের খবর'),
       _ => u.criticalOut.isNotEmpty
           ? (AppColors.emergencyRed, '${u.criticalOut.length} টি জরুরি জিনিস নেই')
@@ -420,7 +420,7 @@ class _ReadinessSummaryScreenState extends State<ReadinessSummaryScreen> {
           ),
           Text(u.role.toUpperCase().replaceAll('_WORKER', ''),
               style: AppTextStyles.caption
-                  .copyWith(color: AppColors.textSecondary)),
+                  .copyWith(color: PanelPalette.textSecondary)),
         ],
       ),
     );

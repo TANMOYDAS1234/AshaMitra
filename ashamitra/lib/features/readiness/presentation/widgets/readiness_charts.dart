@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/panel_palette.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../controller/readiness_controller.dart';
@@ -17,7 +18,7 @@ class RColors {
   static const out = AppColors.emergencyRed;
   static const low = AppColors.warning;
   static const ok = AppColors.safeGreen;
-  static Color get unknown => AppColors.onBackground.withValues(alpha: 0.10);
+  static Color get unknown => PanelPalette.onBackground.withValues(alpha: 0.10);
 }
 
 /// Item × block heatmap — the district in one glance.
@@ -68,7 +69,7 @@ class SupplyHeatmap extends StatelessWidget {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textSecondary,
+                              color: PanelPalette.textSecondary,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -114,8 +115,8 @@ class SupplyHeatmap extends StatelessWidget {
                       style: AppTextStyles.caption.copyWith(
                         fontWeight: it.critical ? FontWeight.w800 : FontWeight.w500,
                         color: it.critical
-                            ? AppColors.onBackground
-                            : AppColors.textSecondary,
+                            ? PanelPalette.onBackground
+                            : PanelPalette.textSecondary,
                       ),
                     ),
                   ),
@@ -192,7 +193,7 @@ class _Legend extends StatelessWidget {
           const SizedBox(width: 5),
           Text(t,
               style: AppTextStyles.caption
-                  .copyWith(color: AppColors.textSecondary)),
+                  .copyWith(color: PanelPalette.textSecondary)),
         ],
       );
 }
@@ -224,7 +225,7 @@ class CoverageDonut extends StatelessWidget {
           slices: [
             (reported.toDouble(), RColors.ok),
             (stale.toDouble(), RColors.low),
-            (never.toDouble(), AppColors.textSecondary.withValues(alpha: 0.45)),
+            (never.toDouble(), PanelPalette.textSecondary.withValues(alpha: 0.45)),
           ],
         ),
         child: Center(
@@ -235,7 +236,7 @@ class CoverageDonut extends StatelessWidget {
                   style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800)),
               Text('খবর দিয়েছে',
                   style: AppTextStyles.caption
-                      .copyWith(color: AppColors.textSecondary)),
+                      .copyWith(color: PanelPalette.textSecondary)),
             ],
           ),
         ),
@@ -332,7 +333,7 @@ class BlockBars extends StatelessWidget {
                       if (out == 0 && unknown > 0)
                         Text('$unknown খবর নেই',
                             style: AppTextStyles.caption
-                                .copyWith(color: AppColors.textSecondary)),
+                                .copyWith(color: PanelPalette.textSecondary)),
                     ],
                   ),
                   const SizedBox(height: 5),

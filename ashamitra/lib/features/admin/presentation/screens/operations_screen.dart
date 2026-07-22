@@ -73,7 +73,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                   IconButton(
                     onPressed: c.loadAll,
                     icon: const Icon(Icons.refresh_rounded),
-                    color: AppColors.primary,
+                    color: PanelPalette.primary,
                   ),
                 ],
               ),
@@ -171,7 +171,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                             ? 'আগে এই রোগ ছিল না — হঠাৎ ${k['last7']} জন · ${k['block']}'
                             : 'স্বাভাবিক ${k['baseline']} → এখন ${k['last7']} (${k['multiple']}× বেশি) · ${k['block']}',
                         style: AppTextStyles.caption
-                            .copyWith(color: AppColors.textSecondary),
+                            .copyWith(color: PanelPalette.textSecondary),
                       ),
                       const SizedBox(height: 8),
                       ...((k['people'] as List?) ?? []).take(5).map((p) {
@@ -224,7 +224,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                               .copyWith(fontWeight: FontWeight.w700)),
                       Text('${o['caseCount']} কেস · ${o['deaths']} মৃত্যু · ${o['block']}',
                           style: AppTextStyles.caption
-                              .copyWith(color: AppColors.textSecondary)),
+                              .copyWith(color: PanelPalette.textSecondary)),
                       if (pending.isNotEmpty) ...[
                         const SizedBox(height: 6),
                         Wrap(
@@ -309,7 +309,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
               const SizedBox(height: 4),
               Text(silent.map((s) => '${s['name']} · ${s['block']}').join('\n'),
                   style: AppTextStyles.caption
-                      .copyWith(color: AppColors.textSecondary)),
+                      .copyWith(color: PanelPalette.textSecondary)),
             ],
           ],
         ],
@@ -349,7 +349,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                   runSpacing: 6,
                   children: byType
                       .map((t) => _pill('${t['type']} ${t['count']}',
-                          AppColors.primary))
+                          PanelPalette.primary))
                       .toList(),
                 ),
                 if (night.isNotEmpty) ...[
@@ -363,7 +363,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                           .map((n) => '${n['name']} (${n['type']}) · ${n['block']}')
                           .join('\n'),
                       style: AppTextStyles.caption
-                          .copyWith(color: AppColors.textSecondary)),
+                          .copyWith(color: PanelPalette.textSecondary)),
                 ],
               ],
             ),
@@ -403,7 +403,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                       ),
                       Text('${v['inPost']}/${v['sanctioned']}',
                           style: AppTextStyles.caption
-                              .copyWith(color: AppColors.textSecondary)),
+                              .copyWith(color: PanelPalette.textSecondary)),
                       const SizedBox(width: 8),
                       _pill('${v['gap']} শূন্য', AppColors.emergencyRed),
                     ],
@@ -493,7 +493,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                                 style: AppTextStyles.bodySm)),
                         Text('${r['attended']}/${r['invited']}',
                             style: AppTextStyles.caption
-                                .copyWith(color: AppColors.textSecondary)),
+                                .copyWith(color: PanelPalette.textSecondary)),
                       ],
                     ),
                   )).toList(),
@@ -536,7 +536,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                           size: 14,
                           color: od
                               ? AppColors.emergencyRed
-                              : AppColors.textSecondary),
+                              : PanelPalette.textSecondary),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Column(
@@ -553,7 +553,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                                 style: AppTextStyles.caption.copyWith(
                                     color: od
                                         ? AppColors.emergencyRed
-                                        : AppColors.textSecondary)),
+                                        : PanelPalette.textSecondary)),
                           ],
                         ),
                       ),
@@ -600,7 +600,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                         Text(u == null ? '—' : '$u%',
                             style: AppTextStyles.label.copyWith(
                                 color: u == null
-                                    ? AppColors.textLight
+                                    ? PanelPalette.textLight
                                     : (u < 50
                                         ? AppColors.warning
                                         : AppColors.safeGreen))),
@@ -615,7 +615,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                 Text(
                   'এটি শুধু নজরদারির জন্য — কোনও অনুমোদন, অডিট বা পেমেন্ট এখানে হয় না।',
                   style: AppTextStyles.caption
-                      .copyWith(color: AppColors.textLight),
+                      .copyWith(color: PanelPalette.textLight),
                 ),
               ],
             ),
@@ -635,7 +635,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
   }) {
     return Obx(() {
       final open = _open.contains(key);
-      final tone = alarm > 0 ? AppColors.emergencyRed : AppColors.primary;
+      final tone = alarm > 0 ? AppColors.emergencyRed : PanelPalette.primary;
       return Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
@@ -675,7 +675,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                               Text(title, style: AppTextStyles.h3),
                               Text(subtitle,
                                   style: AppTextStyles.caption.copyWith(
-                                      color: AppColors.textSecondary)),
+                                      color: PanelPalette.textSecondary)),
                             ],
                           ),
                         ),
@@ -696,7 +696,7 @@ class _OperationsScreenState extends State<OperationsScreen> {
                             open
                                 ? Icons.expand_less_rounded
                                 : Icons.expand_more_rounded,
-                            color: AppColors.textSecondary),
+                            color: PanelPalette.textSecondary),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -730,11 +730,11 @@ class _OperationsScreenState extends State<OperationsScreen> {
               style: AppTextStyles.h3.copyWith(
                   fontWeight: FontWeight.w800,
                   color: v == '—'
-                      ? AppColors.textLight
-                      : AppColors.onBackground)),
+                      ? PanelPalette.textLight
+                      : PanelPalette.onBackground)),
           Text(l,
               style: AppTextStyles.caption
-                  .copyWith(color: AppColors.textSecondary)),
+                  .copyWith(color: PanelPalette.textSecondary)),
         ],
       );
 
@@ -758,8 +758,8 @@ class _OperationsScreenState extends State<OperationsScreen> {
               IconButton(
                 visualDensity: VisualDensity.compact,
                 onPressed: () => launchUrl(Uri.parse('tel:$mobile')),
-                icon: const Icon(Icons.phone_rounded,
-                    size: 16, color: AppColors.primary),
+                icon: Icon(Icons.phone_rounded,
+                    size: 16, color: PanelPalette.primary),
               ),
           ],
         ),
@@ -792,13 +792,13 @@ class _OperationsScreenState extends State<OperationsScreen> {
   /// Distinct from [_allClear] on purpose: "no data entered" is not "all clear".
   Widget _emptyHint(String t) => Row(
         children: [
-          const Icon(Icons.info_outline_rounded,
-              size: 16, color: AppColors.textLight),
+          Icon(Icons.info_outline_rounded,
+              size: 16, color: PanelPalette.textLight),
           const SizedBox(width: 8),
           Expanded(
             child: Text(t,
                 style: AppTextStyles.caption
-                    .copyWith(color: AppColors.textLight)),
+                    .copyWith(color: PanelPalette.textLight)),
           ),
         ],
       );

@@ -46,7 +46,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
               AppRoutes.readinessSummary, AppColors.emergencyRed),
           const SizedBox(width: 10),
           _link(Icons.health_and_safety_rounded, 'স্বাস্থ্য\nকর্মসূচি',
-              AppRoutes.adminProgrammes, AppColors.primary),
+              AppRoutes.adminProgrammes, PanelPalette.primary),
           const SizedBox(width: 10),
           _link(Icons.apartment_rounded, 'জেলা\nপরিচালনা',
               AppRoutes.adminOperations, AppColors.sky),
@@ -81,7 +81,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                       textAlign: TextAlign.center,
                       style: AppTextStyles.caption.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: AppColors.onBackground)),
+                          color: PanelPalette.onBackground)),
                 ],
               ),
             ),
@@ -98,7 +98,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
       decoration: BoxDecoration(gradient: PanelPalette.background),
       child: SafeArea(
         child: RefreshIndicator(
-          color: AppColors.primary,
+          color: PanelPalette.primary,
           onRefresh: () async {
             await ctrl.loadStats();
             await ctrl.loadReports();
@@ -115,8 +115,8 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                     Obx(() => UserAvatar(
                           user: auth.user.value,
                           size: 44,
-                          backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-                          textColor: AppColors.primary,
+                          backgroundColor: PanelPalette.primary.withValues(alpha: 0.12),
+                          textColor: PanelPalette.primary,
                         )),
                     const SizedBox(width: 12),
                     Expanded(
@@ -165,7 +165,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                     childAspectRatio: 1.24, // room for the sparkline
                     children: [
                       _StatTile('admin_total_asha'.tr, '${ctrl.totalWorkers}',
-                          Icons.people_alt_rounded, AppColors.primary),
+                          Icons.people_alt_rounded, PanelPalette.primary),
                       _StatTile(
                           'admin_total_patients'.tr, '${ctrl.totalPatients}',
                           Icons.groups_rounded, AppColors.sky),
@@ -229,12 +229,12 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.08),
+                                color: PanelPalette.primary.withValues(alpha: 0.08),
                                 borderRadius: AppRadius.smR,
                               ),
                               child: Text('১৪ দিন',
                                   style: AppTextStyles.overline
-                                      .copyWith(color: AppColors.primary)),
+                                      .copyWith(color: PanelPalette.primary)),
                             ),
                           ],
                         ),

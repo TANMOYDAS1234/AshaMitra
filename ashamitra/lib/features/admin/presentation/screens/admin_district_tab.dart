@@ -69,7 +69,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
       decoration: BoxDecoration(gradient: PanelPalette.background),
       child: SafeArea(
         child: RefreshIndicator(
-          color: AppColors.primary,
+          color: PanelPalette.primary,
           onRefresh: () => ctrl.loadDistrict(months: _months),
           child: Obx(() {
             if (ctrl.isLoadingDistrict.value && ctrl.district.value == null) {
@@ -233,11 +233,11 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
             onPressed: () => _exportPdf(ctrl, role, scope),
             tooltip: 'HMIS পর্যালোচনা রিপোর্ট (PDF)',
             style: IconButton.styleFrom(
-              backgroundColor: AppColors.primary.withValues(alpha: 0.10),
+              backgroundColor: PanelPalette.primary.withValues(alpha: 0.10),
               padding: const EdgeInsets.all(9),
             ),
-            icon: const Icon(Icons.picture_as_pdf_rounded,
-                color: AppColors.primary, size: 19),
+            icon: Icon(Icons.picture_as_pdf_rounded,
+                color: PanelPalette.primary, size: 19),
           ),
           const SizedBox(width: 8),
           // Period switcher — a CMHO reviews monthly, but reads trends yearly.
@@ -260,14 +260,14 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: on ? AppColors.primary : Colors.transparent,
+                      color: on ? PanelPalette.primary : Colors.transparent,
                       borderRadius: AppRadius.mdR,
                     ),
                     child: Text('$m মাস',
                         style: AppTextStyles.overline.copyWith(
                           color: on
                               ? AppColors.onPrimary
-                              : AppColors.textSecondary,
+                              : PanelPalette.textSecondary,
                           fontWeight: FontWeight.w700,
                         )),
                   ),
@@ -318,7 +318,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                     child: Text('রিপোর্ট ও জরুরি (RED)',
                         style: AppTextStyles.label),
                   ),
-                  _legendDot(AppColors.primary.withValues(alpha: 0.30), 'মোট'),
+                  _legendDot(PanelPalette.primary.withValues(alpha: 0.30), 'মোট'),
                   const SizedBox(width: 10),
                   _legendDot(AppColors.emergencyRed, 'RED'),
                 ],
@@ -371,7 +371,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
           const SizedBox(width: 4),
           Text(t,
               style: AppTextStyles.caption
-                  .copyWith(color: AppColors.textSecondary)),
+                  .copyWith(color: PanelPalette.textSecondary)),
         ],
       );
 
@@ -455,7 +455,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
     if (p.programmes.isEmpty && !p.loading.value) p.load();
     return Obx(() {
       final urgent = p.totalUrgent;
-      final tone = urgent > 0 ? AppColors.emergencyRed : AppColors.primary;
+      final tone = urgent > 0 ? AppColors.emergencyRed : PanelPalette.primary;
       return Material(
         color: AppColors.surface,
         borderRadius: AppRadius.xlR,
@@ -494,7 +494,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                                 ? '$urgent জনের জন্য এখনই ব্যবস্থা দরকার'
                                 : 'যক্ষ্মা · NCD · পরিবার পরিকল্পনা · জন্ম-মৃত্যু নিবন্ধন',
                         style: AppTextStyles.caption.copyWith(
-                            color: urgent > 0 ? tone : AppColors.textSecondary),
+                            color: urgent > 0 ? tone : PanelPalette.textSecondary),
                       ),
                     ],
                   ),
@@ -509,8 +509,8 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                         style: AppTextStyles.caption.copyWith(
                             color: Colors.white, fontWeight: FontWeight.w800)),
                   ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: AppColors.textSecondary),
+                Icon(Icons.chevron_right_rounded,
+                    color: PanelPalette.textSecondary),
               ],
             ),
           ),
@@ -530,7 +530,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
     if (o.data.isEmpty && !o.loading.value) o.loadAll();
     return Obx(() {
       final urgent = o.urgentCount;
-      final tone = urgent > 0 ? AppColors.emergencyRed : AppColors.primary;
+      final tone = urgent > 0 ? AppColors.emergencyRed : PanelPalette.primary;
       final clusters = o.clusters.length;
       return Material(
         color: AppColors.surface,
@@ -574,7 +574,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                                     ? '$urgent টি বিষয়ে ব্যবস্থা দরকার'
                                     : 'কেন্দ্র · কোল্ড চেইন · কর্মী · পরিদর্শন · সভা',
                         style: AppTextStyles.caption.copyWith(
-                            color: urgent > 0 ? tone : AppColors.textSecondary),
+                            color: urgent > 0 ? tone : PanelPalette.textSecondary),
                       ),
                     ],
                   ),
@@ -589,8 +589,8 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                         style: AppTextStyles.caption.copyWith(
                             color: Colors.white, fontWeight: FontWeight.w800)),
                   ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: AppColors.textSecondary),
+                Icon(Icons.chevron_right_rounded,
+                    color: PanelPalette.textSecondary),
               ],
             ),
           ),
@@ -688,7 +688,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
       childAspectRatio: 1.32,
       children: [
         _kpiTile('প্রসূতি নথিভুক্ত', n('pregnanciesRegistered'),
-            Icons.pregnant_woman_rounded, AppColors.primary,
+            Icons.pregnant_woman_rounded, PanelPalette.primary,
             delta: d('pregnanciesRegistered'), polarity: 1),
         _kpiTile('১ম ত্রৈমাসিকে ANC', p('ancFirstTrimesterPct'),
             Icons.event_available_rounded, AppColors.sky,
@@ -737,7 +737,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
     final show = delta != null && delta.abs() >= 0.5;
     final rising = (delta ?? 0) >= 0;
     final verdict = polarity == 0
-        ? AppColors.textSecondary
+        ? PanelPalette.textSecondary
         : (rising == (polarity == 1)
             ? AppColors.safeGreen
             : AppColors.emergencyRed);
@@ -770,11 +770,11 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                      color: AppColors.textSecondary.withValues(alpha: 0.10),
+                      color: PanelPalette.textSecondary.withValues(alpha: 0.10),
                       borderRadius: AppRadius.smR),
                   child: Text(badge,
                       style: AppTextStyles.overline.copyWith(
-                          color: AppColors.textSecondary,
+                          color: PanelPalette.textSecondary,
                           fontWeight: FontWeight.w700)),
                 )
               else if (show)
@@ -905,8 +905,8 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.person_rounded,
-                                        size: 15, color: AppColors.primary),
+                                    Icon(Icons.person_rounded,
+                                        size: 15, color: PanelPalette.primary),
                                     const SizedBox(width: 6),
                                     Expanded(
                                       child: Text(asha,
@@ -1074,10 +1074,10 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
                     value: (inst ?? 0) / 100,
                     minHeight: 6,
                     backgroundColor:
-                        AppColors.textSecondary.withValues(alpha: 0.10),
+                        PanelPalette.textSecondary.withValues(alpha: 0.10),
                     valueColor: AlwaysStoppedAnimation(
                       inst == null
-                          ? AppColors.textSecondary.withValues(alpha: 0.25)
+                          ? PanelPalette.textSecondary.withValues(alpha: 0.25)
                           : (lagging
                               ? AppColors.emergencyRed
                               : AppColors.safeGreen),
@@ -1117,7 +1117,7 @@ class _AdminDistrictTabState extends State<AdminDistrictTab> {
   }
 
   Widget _chip(IconData i, String t, {Color? color}) {
-    final c = color ?? AppColors.textSecondary;
+    final c = color ?? PanelPalette.textSecondary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/panel_palette.dart';
 import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
@@ -151,10 +152,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               leading: Container(
                 width: 40, height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
+                  color: PanelPalette.primary.withValues(alpha: 0.1),
                   borderRadius: AppRadius.smR,
                 ),
-                child: const Icon(Icons.photo_library_rounded, color: AppColors.primary, size: 20),
+                child: Icon(Icons.photo_library_rounded, color: PanelPalette.primary, size: 20),
               ),
               title: Text('photo_choose_gallery'.tr,
                   style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
@@ -214,8 +215,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 child: UserAvatar(
                   user: u,
                   size: MediaQuery.of(context).size.width * 0.85,
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                  textColor: AppColors.primary,
+                  backgroundColor: PanelPalette.primary.withValues(alpha: 0.1),
+                  textColor: PanelPalette.primary,
                 ),
               ),
             ),
@@ -245,18 +246,18 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       Container(
                         width: 72, height: 72,
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
+                          color: PanelPalette.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.2),
+                            color: PanelPalette.primary.withValues(alpha: 0.2),
                             width: 2,
                           ),
                         ),
                         child: UserAvatar(
                           user: u,
                           size: 72,
-                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                          textColor: AppColors.primary,
+                          backgroundColor: PanelPalette.primary.withValues(alpha: 0.1),
+                          textColor: PanelPalette.primary,
                         ),
                       ),
                       // Camera badge
@@ -265,7 +266,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                         child: Container(
                           width: 24, height: 24,
                           decoration: BoxDecoration(
-                            color: AppColors.primary,
+                            color: PanelPalette.primary,
                             shape: BoxShape.circle,
                             border: Border.all(color: AppColors.surface, width: 2),
                           ),
@@ -293,7 +294,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.08),
+                            color: PanelPalette.primary.withValues(alpha: 0.08),
                             borderRadius: AppRadius.smR,
                           ),
                           // Her actual rank (CMHO / BMHO / ANM), not a flat
@@ -301,13 +302,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                           // are not the same job, and the panel says so everywhere
                           // else.
                           child: Text(u?.roleShort ?? 'role_admin'.tr,
-                              style: AppTextStyles.overline.copyWith(color: AppColors.primary)),
+                              style: AppTextStyles.overline.copyWith(color: PanelPalette.primary)),
                         ),
                         if (photoPath != null) ...[
                           const SizedBox(width: 6),
                           Text('photo_hold_to_view'.tr,
                               style: AppTextStyles.caption.copyWith(
-                                color: AppColors.textSecondary.withValues(alpha: 0.7),
+                                color: PanelPalette.textSecondary.withValues(alpha: 0.7),
                               )),
                         ],
                       ],
@@ -344,7 +345,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 child: ElevatedButton(
                   onPressed: _saving ? null : _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary, foregroundColor: AppColors.onPrimary,
+                    backgroundColor: PanelPalette.primary, foregroundColor: AppColors.onPrimary,
                     elevation: 0, padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: AppRadius.mdR),
                   ),
@@ -398,14 +399,14 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                 decoration: BoxDecoration(
                                   color: selected
                                       ? AppColors.sky.withValues(alpha: 0.12)
-                                      : AppColors.primary.withValues(alpha: 0.06),
+                                      : PanelPalette.primary.withValues(alpha: 0.06),
                                   borderRadius: AppRadius.smR,
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(badge,
                                     style: AppTextStyles.label.copyWith(
                                       fontWeight: FontWeight.w800,
-                                      color: selected ? AppColors.sky : AppColors.primary,
+                                      color: selected ? AppColors.sky : PanelPalette.primary,
                                     )),
                               ),
                               const SizedBox(width: 12),
@@ -413,7 +414,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                                 child: Text(LanguageController.labels[i],
                                     style: AppTextStyles.body.copyWith(
                                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                                      color: selected ? AppColors.sky : AppColors.onBackground,
+                                      color: selected ? AppColors.sky : PanelPalette.onBackground,
                                     )),
                               ),
                               if (selected)
@@ -465,7 +466,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             Text(
               'আপনার টিমের কোনও বিপদচিহ্ন (RED) ধরা পড়লে সঙ্গে সঙ্গে এই ফোনে '
               'নোটিফিকেশন আসবে — অ্যাপ বন্ধ থাকলেও।',
-              style: AppTextStyles.bodySm.copyWith(color: AppColors.textSecondary),
+              style: AppTextStyles.bodySm.copyWith(color: PanelPalette.textSecondary),
             ),
             const SizedBox(height: 14),
             SizedBox(
@@ -481,8 +482,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     : const Icon(Icons.send_rounded, size: 18),
                 label: const Text('নোটিফিকেশন পরীক্ষা করুন'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.4)),
+                  foregroundColor: PanelPalette.primary,
+                  side: BorderSide(color: PanelPalette.primary.withValues(alpha: 0.4)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: AppRadius.lgR),
                 ),
@@ -498,7 +499,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           ok ? 'পাঠানো হয়েছে' : 'পাঠানো যায়নি',
           msg,
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: (ok ? AppColors.primary : AppColors.emergencyRed)
+          backgroundColor: (ok ? PanelPalette.primary : AppColors.emergencyRed)
               .withValues(alpha: 0.95),
           colorText: Colors.white,
           margin: const EdgeInsets.all(16),
@@ -566,7 +567,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               const SizedBox(height: 10),
               Text('confirm_logout'.tr,
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
+                  style: AppTextStyles.body.copyWith(color: PanelPalette.textSecondary)),
               const SizedBox(height: 24),
               Row(
                 children: [
@@ -583,7 +584,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                       child: Text('cancel'.tr,
                           style: AppTextStyles.body.copyWith(
                             fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
+                            color: PanelPalette.textSecondary,
                           )),
                     ),
                   ),
@@ -628,12 +629,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           labelText: label,
           labelStyle: AppTextStyles.bodySm,
           counterText: '',
-          prefixIcon: Icon(icon, color: AppColors.primary, size: 18),
+          prefixIcon: Icon(icon, color: PanelPalette.primary, size: 18),
           filled: true,
           fillColor: const Color(0xFFF8FAFC),
           border: OutlineInputBorder(borderRadius: AppRadius.mdR, borderSide: BorderSide.none),
           enabledBorder: OutlineInputBorder(borderRadius: AppRadius.mdR, borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-          focusedBorder: OutlineInputBorder(borderRadius: AppRadius.mdR, borderSide: const BorderSide(color: AppColors.primary, width: 1.5)),
+          focusedBorder: OutlineInputBorder(borderRadius: AppRadius.mdR, borderSide: BorderSide(color: PanelPalette.primary, width: 1.5)),
           errorBorder: OutlineInputBorder(borderRadius: AppRadius.mdR, borderSide: const BorderSide(color: AppColors.emergencyRed)),
           focusedErrorBorder: OutlineInputBorder(borderRadius: AppRadius.mdR, borderSide: const BorderSide(color: AppColors.emergencyRed, width: 1.5)),
         ),

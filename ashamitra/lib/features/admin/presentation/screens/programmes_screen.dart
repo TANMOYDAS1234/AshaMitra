@@ -61,7 +61,7 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
                   IconButton(
                     onPressed: () => c.load(),
                     icon: const Icon(Icons.refresh_rounded),
-                    color: AppColors.primary,
+                    color: PanelPalette.primary,
                   ),
                 ],
               ),
@@ -106,7 +106,7 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
           return Padding(
             padding: const EdgeInsets.only(left: 8),
             child: Material(
-              color: sel ? AppColors.primary : AppColors.surface,
+              color: sel ? PanelPalette.primary : AppColors.surface,
               borderRadius: AppRadius.pillR,
               child: InkWell(
                 borderRadius: AppRadius.pillR,
@@ -115,7 +115,7 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                   child: Text('$m মাস',
                       style: AppTextStyles.label.copyWith(
-                        color: sel ? Colors.white : AppColors.textSecondary,
+                        color: sel ? Colors.white : PanelPalette.textSecondary,
                         fontWeight: FontWeight.w700,
                       )),
                 ),
@@ -157,7 +157,7 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
                           decoration: BoxDecoration(
                             color: (urgent > 0
                                     ? AppColors.emergencyRed
-                                    : AppColors.primary)
+                                    : PanelPalette.primary)
                                 .withValues(alpha: 0.10),
                             borderRadius: AppRadius.mdR,
                           ),
@@ -165,7 +165,7 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
                               size: 20,
                               color: urgent > 0
                                   ? AppColors.emergencyRed
-                                  : AppColors.primary),
+                                  : PanelPalette.primary),
                         ),
                         const SizedBox(width: 10),
                         Expanded(child: Text(p.name, style: AppTextStyles.h3)),
@@ -187,7 +187,7 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
                             open
                                 ? Icons.expand_less_rounded
                                 : Icons.expand_more_rounded,
-                            color: AppColors.textSecondary),
+                            color: PanelPalette.textSecondary),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -226,7 +226,7 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
                       const SizedBox(height: 12),
                       Text('ব্লক অনুযায়ী',
                           style: AppTextStyles.label
-                              .copyWith(color: AppColors.textSecondary)),
+                              .copyWith(color: PanelPalette.textSecondary)),
                       const SizedBox(height: 6),
                       ...p.blocks
                           .where((b) => b.flagged > 0)
@@ -265,15 +265,15 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
               // "—" is a real state (no denominator), not a failure. Render it
               // calm and grey so it reads as "not measured yet", not as zero.
               color: s.value == null
-                  ? AppColors.textLight
+                  ? PanelPalette.textLight
                   : s.alarm
                       ? AppColors.emergencyRed
-                      : AppColors.onBackground,
+                      : PanelPalette.onBackground,
             ),
           ),
           Text(s.label,
               style: AppTextStyles.caption
-                  .copyWith(color: AppColors.textSecondary)),
+                  .copyWith(color: PanelPalette.textSecondary)),
         ],
       );
 
@@ -308,7 +308,7 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
               padding: const EdgeInsets.only(left: 11, top: 4),
               child: Text('+ আরও ${a.rows.length - 8} জন',
                   style: AppTextStyles.caption
-                      .copyWith(color: AppColors.textSecondary)),
+                      .copyWith(color: PanelPalette.textSecondary)),
             ),
         ],
       ),
@@ -329,7 +329,7 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
                   Text(
                     [r.detail, if (r.where.isNotEmpty) r.where].join(' · '),
                     style: AppTextStyles.caption
-                        .copyWith(color: AppColors.textSecondary),
+                        .copyWith(color: PanelPalette.textSecondary),
                   ),
                 ],
               ),
@@ -357,8 +357,8 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.info_outline_rounded,
-                size: 16, color: AppColors.textSecondary),
+            Icon(Icons.info_outline_rounded,
+                size: 16, color: PanelPalette.textSecondary),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -366,7 +366,7 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
                 'অ্যাপে তোলেন। ম্যালেরিয়া/ডেঙ্গু সার্ভেইল্যান্স, কুষ্ঠ, অন্ধত্ব — '
                 'এগুলোর তথ্য এখনও সংগ্রহ করা হয় না, তাই দেখানো হয়নি।',
                 style: AppTextStyles.caption
-                    .copyWith(color: AppColors.textSecondary),
+                    .copyWith(color: PanelPalette.textSecondary),
               ),
             ),
           ],
