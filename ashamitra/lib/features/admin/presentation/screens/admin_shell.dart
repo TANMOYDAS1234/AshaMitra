@@ -80,7 +80,10 @@ class _AdminShellState extends State<AdminShell> {
         elevation: 8,
         shadowColor: Colors.black12,
         indicatorColor: PanelPalette.primary.withValues(alpha: 0.12),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
+        // Labels shown. Five unlabelled icons is a memory test, and this panel is
+        // used occasionally rather than daily — an officer should not have to
+        // learn which glyph means "programmes".
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),

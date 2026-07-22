@@ -4,10 +4,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
-import '../../../../core/theme/app_shadows.dart';
 import "../../../../core/theme/app_text_styles.dart";
 import "../../../../core/theme/panel_palette.dart";
 import '../../../../shared/components/app_header.dart';
+import '../../../../shared/widgets/accent_card.dart';
+import '../../../../shared/widgets/motion.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../auth/controller/auth_controller.dart';
 import '../../controller/operations_controller.dart';
@@ -636,86 +637,60 @@ class _OperationsScreenState extends State<OperationsScreen> {
     return Obx(() {
       final open = _open.contains(key);
       final tone = alarm > 0 ? AppColors.emergencyRed : PanelPalette.primary;
-      return Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.xlR,
-          boxShadow: AppShadows.low,
-          border: alarm > 0
-              ? Border.all(color: AppColors.emergencyRed.withValues(alpha: 0.28))
-              : null,
-        ),
+      return AccentCard(
+        accent: tone,
+        emphasised: alarm > 0,
+        padding: EdgeInsets.zero,
+        onTap: () => open ? _open.remove(key) : _open.add(key),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            InkWell(
-              borderRadius: AppRadius.xlR,
-              onTap: () => open ? _open.remove(key) : _open.add(key),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: tone.withValues(alpha: 0.10),
-                            borderRadius: AppRadius.mdR,
-                          ),
-                          child: Icon(icon, size: 20, color: tone),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(title, style: AppTextStyles.h3),
-                              Text(subtitle,
-                                  style: AppTextStyles.caption.copyWith(
-                                      color: PanelPalette.textSecondary)),
-                            ],
-                          ),
-                        ),
-                        if (alarm > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                                color: AppColors.emergencyRed,
-                                borderRadius: AppRadius.smR),
-                            child: Text('$alarm',
-                                style: AppTextStyles.caption.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800)),
-                          ),
-                        const SizedBox(width: 6),
-                        Icon(
-                            open
-                                ? Icons.expand_less_rounded
-                                : Icons.expand_more_rounded,
-                            color: PanelPalette.textSecondary),
-                      ],
+            Padding(
+              padding: const EdgeInsets.all(15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AccentCardHeader(
+                    icon: icon,
+                    title: title,
+                    subtitle: subtitle,
+                    accent: tone,
+                    badge: alarm,
+                    trailing: AnimatedRotation(
+                      turns: open ? 0.5 : 0,
+                      duration: Motion.fast,
+                      child: Icon(Icons.expand_more_rounded,
+                          color: PanelPalette.textSecondary),
                     ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 18,
-                      runSpacing: 10,
-                      children: headline.map((h) => _stat(h.$1, h.$2)).toList(),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 18,
+                    runSpacing: 10,
+                    children: headline.map((h) => _stat(h.$1, h.$2)).toList(),
+                  ),
+                ],
               ),
             ),
-            if (open) ...[
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-                child: body,
+            // Height animates so the list does not jump under the finger — you
+            // keep your place in a nine-card screen.
+            AnimatedCrossFade(
+              firstChild: const SizedBox(width: double.infinity),
+              secondChild: Column(
+                children: [
+                  const Divider(height: 1),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(15, 12, 15, 16),
+                    child: body,
+                  ),
+                ],
               ),
-            ],
+              crossFadeState: open
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: Motion.fast,
+              sizeCurve: Curves.easeOutCubic,
+            ),
           ],
         ),
       );

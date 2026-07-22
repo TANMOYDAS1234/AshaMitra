@@ -8,6 +8,8 @@ import '../../../../core/theme/app_shadows.dart';
 import "../../../../core/theme/app_text_styles.dart";
 import "../../../../core/theme/panel_palette.dart";
 import '../../../../shared/components/app_header.dart';
+import '../../../../shared/widgets/accent_card.dart';
+import '../../../../shared/widgets/motion.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../auth/controller/auth_controller.dart';
 import '../../controller/programmes_controller.dart';
@@ -129,84 +131,52 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
     return Obx(() {
       final open = _open.contains(p.key);
       final urgent = p.urgentCount;
-      return Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.xlR,
-          boxShadow: AppShadows.low,
-          border: urgent > 0
-              ? Border.all(color: AppColors.emergencyRed.withValues(alpha: 0.28))
-              : null,
-        ),
+      return AccentCard(
+        accent: urgent > 0 ? AppColors.emergencyRed : PanelPalette.primary,
+        emphasised: urgent > 0,
+        padding: EdgeInsets.zero,
+        onTap: () => open ? _open.remove(p.key) : _open.add(p.key),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            InkWell(
-              borderRadius: AppRadius.xlR,
-              onTap: () => open ? _open.remove(p.key) : _open.add(p.key),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: (urgent > 0
-                                    ? AppColors.emergencyRed
-                                    : PanelPalette.primary)
-                                .withValues(alpha: 0.10),
-                            borderRadius: AppRadius.mdR,
-                          ),
-                          child: Icon(_icon(p.icon),
-                              size: 20,
-                              color: urgent > 0
-                                  ? AppColors.emergencyRed
-                                  : PanelPalette.primary),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(child: Text(p.name, style: AppTextStyles.h3)),
-                        if (urgent > 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: AppColors.emergencyRed,
-                              borderRadius: AppRadius.smR,
-                            ),
-                            child: Text('$urgent',
-                                style: AppTextStyles.caption.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w800)),
-                          ),
-                        const SizedBox(width: 6),
-                        Icon(
-                            open
-                                ? Icons.expand_less_rounded
-                                : Icons.expand_more_rounded,
-                            color: PanelPalette.textSecondary),
-                      ],
+            Padding(
+              padding: const EdgeInsets.all(15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AccentCardHeader(
+                    icon: _icon(p.icon),
+                    title: p.name,
+                    accent: urgent > 0
+                        ? AppColors.emergencyRed
+                        : PanelPalette.primary,
+                    badge: urgent,
+                    trailing: AnimatedRotation(
+                      turns: open ? 0.5 : 0,
+                      duration: Motion.fast,
+                      child: Icon(Icons.expand_more_rounded,
+                          color: PanelPalette.textSecondary),
                     ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 18,
-                      runSpacing: 10,
-                      children: p.headline.map(_stat).toList(),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 18,
+                    runSpacing: 10,
+                    children: p.headline.map(_stat).toList(),
+                  ),
+                ],
               ),
             ),
-            if (open) ...[
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            // Height animates so the list does not jump under the finger.
+            AnimatedCrossFade(
+              firstChild: const SizedBox(width: double.infinity),
+              secondChild: Padding(
+                padding: const EdgeInsets.fromLTRB(15, 0, 15, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
                     if (p.liveActions.isEmpty)
                       Row(
                         children: [
@@ -247,7 +217,11 @@ class _ProgrammesScreenState extends State<ProgrammesScreen> {
                   ],
                 ),
               ),
-            ],
+              crossFadeState:
+                  open ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              duration: Motion.fast,
+              sizeCurve: Curves.easeOutCubic,
+            ),
           ],
         ),
       );
