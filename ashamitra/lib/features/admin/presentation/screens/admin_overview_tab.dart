@@ -11,8 +11,8 @@ import '../../../../shared/widgets/user_avatar.dart';
 import '../../../admin/controller/admin_controller.dart';
 import '../widgets/analytics_charts.dart';
 import '../widgets/action_queue.dart';
+import '../widgets/dashboard_blocks.dart';
 import '../../../../shared/widgets/motion.dart';
-import '../../../../shared/widgets/accent_card.dart';
 import '../../../../app/routes.dart';
 import '../../../../shared/widgets/skeleton.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -38,6 +38,97 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
       if (ctrl.district.value == null) ctrl.loadDistrict();
     });
   }
+
+  /// The hero band. Reads the same ranked list the queue below renders, so the
+  /// headline count and the cards under it can never contradict each other.
+  Widget _hero() {
+    ensureActionSources();
+    return Obx(() {
+      final items = buildActionItems();
+      // Name the two or three biggest contributors rather than a bare total —
+      // "7" alone tells her to look; "3 ওষুধ · 2 টিকা" tells her what she is
+      // about to be looking at.
+      final byKind = <String, int>{};
+      for (final i in items) {
+        final k = switch (i.rank) {
+          1 => 'রোগ',
+          2 => 'ওষুধ',
+          3 => 'মৃত্যু',
+          4 => 'কোল্ড চেইন',
+          5 => 'প্রাদুর্ভাব',
+          6 => 'রেফারেল',
+          7 => 'কর্মসূচি',
+          8 => 'নিষ্ক্রিয় ASHA',
+          9 => 'টিকা',
+          _ => 'খবর নেই',
+        };
+        byKind[k] = (byKind[k] ?? 0) + 1;
+      }
+      final parts = byKind.entries.take(3).map((e) => '${e.value} ${e.key}');
+      return DashboardHero(
+        count: items.length,
+        breakdown: parts.join(' · '),
+        onTap: items.isEmpty
+            ? null
+            : () => Get.find<AdminController>().goToTab(1),
+      );
+    });
+  }
+
+  /// The risk donut, sized to fill the right half of the asymmetric block.
+  Widget _riskCard(AdminController ctrl) => Container(
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.lgR,
+          boxShadow: AppShadows.low,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('ঝুঁকির ভাগ',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption
+                    .copyWith(color: PanelPalette.textSecondary)),
+            const SizedBox(height: 8),
+            Center(
+              child: BandDonut(
+                red: ctrl.redReports.value,
+                yellow: ctrl.yellowReports.value,
+                green: ctrl.greenReports.value,
+                size: 104,
+              ),
+            ),
+            const SizedBox(height: 10),
+            _bandLegend('RED', ctrl.redReports.value, AppColors.emergencyRed),
+            const SizedBox(height: 3),
+            _bandLegend('YELLOW', ctrl.yellowReports.value, AppColors.warningYellow),
+            const SizedBox(height: 3),
+            _bandLegend('GREEN', ctrl.greenReports.value, AppColors.safeGreen),
+          ],
+        ),
+      );
+
+  Widget _bandLegend(String label, int n, Color c) => Row(
+        children: [
+          Container(width: 7, height: 7,
+              decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.caption
+                    .copyWith(color: PanelPalette.textSecondary)),
+          ),
+          Text('$n',
+              style: AppTextStyles.caption.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: PanelPalette.onBackground)),
+        ],
+      );
 
   /// Direct routes into the three detail screens. These used to be buried below
   /// the HMIS indicator grid on the analytics tab, which meant a CMHO had to
@@ -138,6 +229,13 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 18),
+
+                // ── Hero ─────────────────────────────────────────
+                // The mockup's focal band, carrying the one number that is both
+                // real and actionable. It reads from the SAME list the queue
+                // below renders, so the two can never disagree.
+                _hero(),
                 const SizedBox(height: 20),
 
                 // ── What needs a decision today ──────────────────
@@ -152,46 +250,67 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                 _quickLinks(),
                 const SizedBox(height: 24),
 
-                // ── Stats grid ───────────────────────────────────
-                Obx(() {
-                  final rTrend = ctrl.reportsTrend();
-                  final redT = ctrl.bandTrend('RED');
-                  final yelT = ctrl.bandTrend('YELLOW');
-                  final grnT = ctrl.bandTrend('GREEN');
-                  return GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.24, // room for the sparkline
-                    children: [
-                      _StatTile('admin_total_asha'.tr, '${ctrl.totalWorkers}',
-                          Icons.people_alt_rounded, PanelPalette.primary),
-                      _StatTile(
-                          'admin_total_patients'.tr, '${ctrl.totalPatients}',
-                          Icons.groups_rounded, AppColors.sky),
-                      _StatTile('admin_total_reports'.tr, '${ctrl.totalReports}',
-                          Icons.analytics_rounded, AppColors.purple,
-                          spark: rTrend, delta: ctrl.trendDelta(rTrend)),
-                      // More emergencies is BAD → inverse, so a rise shows red.
-                      _StatTile('admin_emergency_red'.tr, '${ctrl.redReports}',
-                          Icons.gpp_bad_rounded, AppColors.emergencyRed,
-                          spark: redT,
-                          delta: ctrl.trendDelta(redT),
-                          inverse: true),
-                      _StatTile(
-                          'admin_warning_yellow'.tr, '${ctrl.yellowReports}',
-                          Icons.warning_amber_rounded, AppColors.warningYellow,
-                          spark: yelT,
-                          delta: ctrl.trendDelta(yelT),
-                          inverse: true),
-                      _StatTile('admin_safe_green'.tr, '${ctrl.greenReports}',
-                          Icons.check_circle_rounded, AppColors.safeGreen,
-                          spark: grnT, delta: ctrl.trendDelta(grnT)),
-                    ],
-                  );
-                }),
+                // ── The asymmetric stat block ────────────────────
+                // The mockup's shape: two narrow cards stacked on the left, the
+                // risk donut filling the right. IntrinsicHeight so both columns
+                // match whichever is taller — that holds when the system font is
+                // scaled up and the Bengali labels grow, where fixed heights
+                // would clip.
+                Obx(() => IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            flex: 47,
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: MiniStat(
+                                    label: 'মোট ASHA',
+                                    value: ctrl.totalWorkers.value,
+                                    icon: Icons.people_alt_rounded,
+                                    accent: PanelPalette.primary,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Expanded(
+                                  child: MiniStat(
+                                    label: 'মোট রোগী',
+                                    value: ctrl.totalPatients.value,
+                                    icon: Icons.groups_rounded,
+                                    accent: AppColors.sky,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(flex: 53, child: _riskCard(ctrl)),
+                        ],
+                      ),
+                    )),
+                const SizedBox(height: 10),
+                Obx(() => Row(
+                      children: [
+                        Expanded(
+                          child: MiniStat(
+                            label: 'মোট রিপোর্ট',
+                            value: ctrl.totalReports.value,
+                            icon: Icons.analytics_rounded,
+                            accent: AppColors.purple,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: MiniStat(
+                            label: 'জরুরি (RED)',
+                            value: ctrl.redReports.value,
+                            icon: Icons.gpp_bad_rounded,
+                            accent: AppColors.emergencyRed,
+                          ),
+                        ),
+                      ],
+                    )),
                 const SizedBox(height: 28),
 
                 // ── Analytics — the server scopes these numbers to this
@@ -268,7 +387,11 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                 const SizedBox(height: 28),
 
                 // ── Recent reports ───────────────────────────────
-                Text('admin_recent_reports'.tr, style: AppTextStyles.label),
+                SectionHead(
+                  title: 'admin_recent_reports'.tr,
+                  actionLabel: 'সব দেখুন',
+                  onAction: () => ctrl.goToTab(3),
+                ),
                 const SizedBox(height: 12),
                 Obx(() {
                   if (ctrl.isLoading.value) {
@@ -292,13 +415,46 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
                     );
                   }
                   final recent = ctrl.reports.take(5).toList();
-                  return Column(
-                    children: recent
-                        .map((r) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _RecentReportCard(r: r),
-                            ))
-                        .toList(),
+                  // One card holding rows, rather than five separate cards. With
+                  // a caseload that is three-quarters RED, five full red-striped
+                  // cards becomes a wall of alarm — and a wall of alarm gets read
+                  // as wallpaper. The band survives as a dot.
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppRadius.xlR,
+                      boxShadow: AppShadows.low,
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: List.generate(recent.length, (i) {
+                        final r = recent[i];
+                        final band = (r['finalBand'] ?? '').toString();
+                        final when = DateTime.tryParse(
+                            (r['createdAt'] ?? '').toString());
+                        return RevealIn(
+                          index: i,
+                          offsetY: 6,
+                          child: DocRow(
+                            title: (r['caseLabel'] ?? r['caseType'] ?? '—')
+                                .toString(),
+                            subtitle: (r['patientName'] ?? '—').toString(),
+                            trailing: when == null
+                                ? ''
+                                : DateFormat('d MMM, HH:mm').format(when),
+                            band: switch (band) {
+                              'RED' => AppColors.emergencyRed,
+                              'YELLOW' => AppColors.warningYellow,
+                              'GREEN' => AppColors.safeGreen,
+                              // An unbanded report is unknown, not safe.
+                              _ => PanelPalette.textLight,
+                            },
+                            icon: Icons.description_outlined,
+                            last: i == recent.length - 1,
+                          ),
+                        );
+                      }),
+                    ),
                   );
                 }),
               ],
@@ -310,178 +466,3 @@ class _AdminOverviewTabState extends State<AdminOverviewTab> {
   }
 }
 
-class _StatTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  /// Optional 14-day micro-trend drawn under the number.
-  final List<int>? spark;
-
-  /// Percent change (last 7 days vs the 7 before). Null = no baseline, so
-  /// nothing is shown rather than a misleading figure.
-  final double? delta;
-
-  /// True when a RISE is bad (emergencies, referrals). The arrow always shows
-  /// direction; the colour shows whether that direction is good — so a climbing
-  /// RED count reads red, never a reassuring green.
-  final bool inverse;
-
-  const _StatTile(
-    this.label,
-    this.value,
-    this.icon,
-    this.color, {
-    this.spark,
-    this.delta,
-    this.inverse = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final d = delta;
-    final rising = (d ?? 0) >= 0;
-    final good = inverse ? !rising : rising;
-    final deltaColor = good ? AppColors.safeGreen : AppColors.emergencyRed;
-
-    // Same leading-edge bar as every other card in the panel, so the whole
-    // screen scans as one system rather than a grid of unrelated boxes.
-    return AccentCard(
-      accent: color,
-      margin: EdgeInsets.zero,
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: AppRadius.smR),
-                child: Icon(icon, color: color, size: 18),
-              ),
-              const Spacer(),
-              if (d != null && d.abs() >= 1)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: deltaColor.withValues(alpha: 0.10),
-                    borderRadius: AppRadius.smR,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                          rising
-                              ? Icons.trending_up_rounded
-                              : Icons.trending_down_rounded,
-                          size: 11,
-                          color: deltaColor),
-                      const SizedBox(width: 2),
-                      Text('${d.abs().round()}%',
-                          style: AppTextStyles.overline.copyWith(
-                              color: deltaColor, fontWeight: FontWeight.w700)),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          const Spacer(),
-          // Counts up when it is a plain number. Anything else — an em-dash, a
-          // percentage, a "3k" — renders as given, because animating a value
-          // whose format we do not control risks showing a nonsense intermediate.
-          Builder(builder: (_) {
-            final n = int.tryParse(value);
-            final style = AppTextStyles.h2.copyWith(
-              color: color,
-              fontWeight: FontWeight.w800,
-              height: 1.1,
-            );
-            return n == null
-                ? Text(value, style: style)
-                : CountUp(value: n, style: style);
-          }),
-          const SizedBox(height: 2),
-          Text(label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600)),
-          if (spark != null && spark!.length > 1) ...[
-            const SizedBox(height: 7),
-            Sparkline(values: spark!, color: color),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _RecentReportCard extends StatelessWidget {
-  final Map<String, dynamic> r;
-  const _RecentReportCard({required this.r});
-
-  Color get _bandColor {
-    final band = r['finalBand']?.toString().toUpperCase() ?? '';
-    if (band == 'RED') return AppColors.emergencyRed;
-    if (band == 'YELLOW') return AppColors.warningYellow;
-    return AppColors.safeGreen;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final color = _bandColor;
-    final band = r['finalBand']?.toString().toUpperCase() ?? '-';
-    final caseLabel = r['caseLabel']?.toString() ?? '';
-    final patientName = r['patientName']?.toString() ?? '';
-    String fmtDate = '';
-    try {
-      fmtDate = DateFormat('dd MMM, HH:mm')
-          .format(DateTime.parse(r['createdAt']?.toString() ?? ''));
-    } catch (_) {}
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.lgR,
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-            child: Center(
-              child: Text(band.isNotEmpty ? band[0] : '?',
-                  style: AppTextStyles.label.copyWith(color: color)),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (caseLabel.isNotEmpty)
-                  Text(caseLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTextStyles.label),
-                if (patientName.isNotEmpty)
-                  Text(patientName, style: AppTextStyles.caption),
-              ],
-            ),
-          ),
-          Text(fmtDate, style: AppTextStyles.caption),
-        ],
-      ),
-    );
-  }
-}

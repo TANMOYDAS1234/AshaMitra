@@ -14,7 +14,7 @@ import '../../controller/operations_controller.dart';
 import '../../controller/programmes_controller.dart';
 
 /// One item that needs a decision.
-class _Item {
+class ActionItem {
   final int rank; // lower = more urgent
   final IconData icon;
   final String title;
@@ -22,7 +22,7 @@ class _Item {
   final Color color;
   final String route;
 
-  const _Item(this.rank, this.icon, this.title, this.detail, this.color, this.route);
+  const ActionItem(this.rank, this.icon, this.title, this.detail, this.color, this.route);
 }
 
 /// "আজ যা করতে হবে" — everything across the whole district that needs the
@@ -49,30 +49,37 @@ class _Item {
 ///   8  silent worker
 ///   9  immunisation defaulters
 ///  10  unknown / not reported — never rendered as "fine"
-class ActionQueue extends StatelessWidget {
-  const ActionQueue({super.key});
+/// Kicks off the four requests the queue draws from. Lazy on purpose: the
+/// dashboard paints immediately and fills in, rather than blocking on all four.
+void ensureActionSources() {
+  final readiness = Get.put(ReadinessController(), tag: 'readiness');
+  final progs = Get.put(ProgrammesController(), tag: 'programmes');
+  final ops = Get.put(OperationsController(), tag: 'operations');
+  if (readiness.blocks.isEmpty && !readiness.loadingSummary.value) {
+    readiness.loadSummary();
+  }
+  if (progs.programmes.isEmpty && !progs.loading.value) progs.load();
+  if (ops.data.isEmpty && !ops.loading.value) ops.loadAll();
+}
 
-  @override
-  Widget build(BuildContext context) {
-    final admin = Get.find<AdminController>();
-    final readiness = Get.put(ReadinessController(), tag: 'readiness');
-    final progs = Get.put(ProgrammesController(), tag: 'programmes');
-    final ops = Get.put(OperationsController(), tag: 'operations');
-
-    // Everything the queue draws from loads lazily, so the dashboard paints
-    // immediately and fills in rather than blocking on four requests.
-    if (readiness.blocks.isEmpty && !readiness.loadingSummary.value) {
-      readiness.loadSummary();
-    }
-    if (progs.programmes.isEmpty && !progs.loading.value) progs.load();
-    if (ops.data.isEmpty && !ops.loading.value) ops.loadAll();
-
-    return Obx(() {
-      final items = <_Item>[];
+/// The single ranked list of things needing a decision.
+///
+/// Hoisted out of the widget so the dashboard hero and the queue below it read
+/// the SAME list. Two independent counts of "what needs doing" would eventually
+/// disagree, and a hero number that contradicts the list beneath it is worse
+/// than no hero at all.
+///
+/// Must be called inside an Obx to stay reactive.
+List<ActionItem> buildActionItems() {
+      final admin = Get.find<AdminController>();
+      final readiness = Get.put(ReadinessController(), tag: 'readiness');
+      final progs = Get.put(ProgrammesController(), tag: 'programmes');
+      final ops = Get.put(OperationsController(), tag: 'operations');
+      final items = <ActionItem>[];
 
       // 1 — disease clusters
       for (final k in ops.clusters.take(3)) {
-        items.add(_Item(
+        items.add(ActionItem(
           1,
           Icons.coronavirus_rounded,
           '${k['village']} — রোগ বাড়ছে',
@@ -84,7 +91,7 @@ class ActionQueue extends StatelessWidget {
 
       // 2 — life-saving supply gaps
       for (final g in readiness.critical.take(3)) {
-        items.add(_Item(
+        items.add(ActionItem(
           2,
           Icons.medication_liquid_rounded,
           '${g.label} নেই',
@@ -98,11 +105,11 @@ class ActionQueue extends StatelessWidget {
       final mat = admin.dAlert('maternalDeaths');
       final inf = admin.dAlert('infantDeaths');
       if (mat.isNotEmpty) {
-        items.add(_Item(3, Icons.female_rounded, '${mat.length} টি মাতৃমৃত্যু',
+        items.add(ActionItem(3, Icons.female_rounded, '${mat.length} টি মাতৃমৃত্যু',
             'ডেথ রিভিউ (MDSR) দরকার', AppColors.emergencyRed, ''));
       }
       if (inf.isNotEmpty) {
-        items.add(_Item(3, Icons.child_care_rounded, '${inf.length} টি শিশুমৃত্যু',
+        items.add(ActionItem(3, Icons.child_care_rounded, '${inf.length} টি শিশুমৃত্যু',
             'শিশু ডেথ রিভিউ (CDR) দরকার', AppColors.emergencyRed, ''));
       }
 
@@ -110,7 +117,7 @@ class ActionQueue extends StatelessWidget {
       final cold = ops.section('coldChain');
       final coldFail = ((cold['failures'] as List?) ?? []).length;
       if (coldFail > 0) {
-        items.add(_Item(4, Icons.ac_unit_rounded, 'কোল্ড চেইনে সমস্যা ($coldFail)',
+        items.add(ActionItem(4, Icons.ac_unit_rounded, 'কোল্ড চেইনে সমস্যা ($coldFail)',
             'টিকা নষ্ট হতে পারে', AppColors.emergencyRed,
             AppRoutes.adminOperations));
       }
@@ -118,7 +125,7 @@ class ActionQueue extends StatelessWidget {
       // 5 — open outbreaks
       final open = ((ops.section('outbreaks')['open'] as List?) ?? []).length;
       if (open > 0) {
-        items.add(_Item(5, Icons.emergency_rounded, '$open টি প্রাদুর্ভাব চলছে',
+        items.add(ActionItem(5, Icons.emergency_rounded, '$open টি প্রাদুর্ভাব চলছে',
             'ব্যবস্থা কতদূর — দেখুন', AppColors.emergencyRed,
             AppRoutes.adminOperations));
       }
@@ -126,7 +133,7 @@ class ActionQueue extends StatelessWidget {
       // 6 — stranded referrals
       final refs = admin.dAlert('overdueReferrals');
       if (refs.isNotEmpty) {
-        items.add(_Item(6, Icons.local_shipping_rounded,
+        items.add(ActionItem(6, Icons.local_shipping_rounded,
             '${refs.length} টি রেফারেল আটকে আছে', '৭ দিনের বেশি',
             AppColors.warning, ''));
       }
@@ -134,7 +141,7 @@ class ActionQueue extends StatelessWidget {
       // 7 — programme defaulters, by name where it matters most
       for (final p in progs.programmes) {
         for (final a in p.liveActions.where((a) => a.severity == 'high')) {
-          items.add(_Item(7, Icons.health_and_safety_rounded, a.title,
+          items.add(ActionItem(7, Icons.health_and_safety_rounded, a.title,
               '${a.rows.length} জন · ${p.name}', AppColors.emergencyRed,
               AppRoutes.adminProgrammes));
         }
@@ -143,7 +150,7 @@ class ActionQueue extends StatelessWidget {
       // 8 — silent workers
       final silent = admin.dAlert('silentAshas');
       if (silent.isNotEmpty) {
-        items.add(_Item(8, Icons.person_off_rounded,
+        items.add(ActionItem(8, Icons.person_off_rounded,
             '${silent.length} জন ASHA ৩০ দিন নিষ্ক্রিয়',
             silent.take(2).map((s) => s['name']).join(', '),
             AppColors.sky, ''));
@@ -152,7 +159,7 @@ class ActionQueue extends StatelessWidget {
       // 9 — immunisation defaulters
       final def = (admin.district.value?['defaultersTotal'] as num?)?.toInt() ?? 0;
       if (def > 0) {
-        items.add(_Item(9, Icons.vaccines_rounded, '$def টি টিকা বাকি',
+        items.add(ActionItem(9, Icons.vaccines_rounded, '$def টি টিকা বাকি',
             'নাম ধরে তালিকা আছে', AppColors.warning, ''));
       }
 
@@ -161,13 +168,24 @@ class ActionQueue extends StatelessWidget {
       // dropping it here would let silence read as health.
       final unknown = readiness.unknownCount;
       if (unknown > 0) {
-        items.add(_Item(10, Icons.help_outline_rounded,
+        items.add(ActionItem(10, Icons.help_outline_rounded,
             '$unknown জায়গা থেকে ওষুধের খবর নেই',
             '"খবর নেই" মানে "ঠিক আছে" নয়', AppColors.textSecondary,
             AppRoutes.readinessSummary));
       }
 
       items.sort((a, b) => a.rank.compareTo(b.rank));
+      return items;
+}
+
+class ActionQueue extends StatelessWidget {
+  const ActionQueue({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    ensureActionSources();
+    return Obx(() {
+      final items = buildActionItems();
 
       if (items.isEmpty) {
         return Container(
