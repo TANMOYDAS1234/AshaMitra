@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/services/language_controller.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/panel_palette.dart';
-import '../../../../core/theme/app_gradients.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_shadows.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -299,7 +298,10 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
               _Card(
                 child: Obx(() {
                   final u = _auth.user.value;
-                  return Row(
+                  // Centred rather than left-aligned: this is an identity card,
+                  // and the officer's rank is the one fact on it that changes
+                  // what the rest of the app shows her.
+                  return Column(
                     children: [
                       GestureDetector(
                         onTap: _showPhotoOptions,
@@ -339,15 +341,15 @@ class _AdminSettingsTabState extends State<AdminSettingsTab> {
                           ],
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
+                      const SizedBox(height: 14),
+                      Center(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(u?.name ?? 'role_admin'.tr, style: AppTextStyles.h3),
+                            Text(u?.name ?? 'role_admin'.tr, style: AppTextStyles.h2),
                             const SizedBox(height: 4),
                             Text(u?.phone ?? '', style: AppTextStyles.bodySm),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 10, vertical: 4),

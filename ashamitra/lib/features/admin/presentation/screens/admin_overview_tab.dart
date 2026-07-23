@@ -12,6 +12,7 @@ import '../../../admin/controller/admin_controller.dart';
 import '../widgets/analytics_charts.dart';
 import '../widgets/action_queue.dart';
 import '../../../../shared/widgets/motion.dart';
+import '../../../../shared/widgets/accent_card.dart';
 import '../../../../app/routes.dart';
 import '../../../../shared/widgets/skeleton.dart';
 import '../../../../shared/widgets/empty_state.dart';
@@ -344,12 +345,11 @@ class _StatTile extends StatelessWidget {
     final good = inverse ? !rising : rising;
     final deltaColor = good ? AppColors.safeGreen : AppColors.emergencyRed;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.xlR,
-        boxShadow: AppShadows.tinted(color),
-      ),
+    // Same leading-edge bar as every other card in the panel, so the whole
+    // screen scans as one system rather than a grid of unrelated boxes.
+    return AccentCard(
+      accent: color,
+      margin: EdgeInsets.zero,
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
